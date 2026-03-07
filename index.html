@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>スマグラ</title>
+    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div id="error-report"></div>
+    <div id="version-display">v412</div>
+    <div id="game-container">
+        <!-- New Notification Overlay -->
+        <div id="notification-overlay">
+            <div id="notification-box">
+                <div id="notification-text"></div>
+            </div>
+        </div>
+
+        <!-- UI elements -->
+        <div id="hud-layer">
+            <div id="p1-hud" class="hud-panel">
+                <div id="p1-name" class="name-label" style="color:#ff7675">1P</div>
+                <div id="p1-percent" class="percent" style="color:#ff7675">0%</div>
+                <div id="p1-stock" class="stock">●●●</div>
+            </div>
+            <div id="p2-hud" class="hud-panel">
+                <div id="p2-name" class="name-label" style="color:#74b9ff">2P</div>
+                <div id="p2-percent" class="percent" style="color:#74b9ff">0%</div>
+                <div id="p2-stock" class="stock">●●●</div>
+            </div>
+        </div>
+        <div id="text-overlay"><div id="overlay-msg">LOADING...</div></div>
+        <canvas id="gameCanvas"></canvas>
+        <div id="controller-area" style="display:none;">
+            <div id="joystick-area"><div id="joystick-base"><div id="joystick-knob"></div></div></div>
+            <div id="btn-attack" class="btn">A</div>
+            <div id="btn-grab" class="btn">Grab</div>
+            <div id="btn-jump" class="btn">Jump</div>
+            <div id="btn-shield" class="btn">Shield</div>
+            <div id="controls-hint" style="position:absolute; bottom:5px; width:100%; text-align:center; color:#636e72; font-size:10px;">Slide: 移動 | A: 攻撃 | Shield: シールド/回避</div>
+        </div>
+        
+        <div id="config-overlay" class="hidden">
+            <div id="config-controls">
+                <div class="drag-hint">ボタンをドラッグして配置を変更</div>
+                <button id="btn-save-layout" class="menu-btn primary">保存して戻る</button>
+                <button id="btn-reset-layout" class="menu-btn">初期配置に戻す</button>
+            </div>
+        </div>
+
+        <div id="menu-screen" class="screen">
+            <h1>スマグラ</h1>
+            <input type="text" id="username" placeholder="名前を入力" maxlength="8">
+            <button id="btn-solo" class="menu-btn primary">ひとりで遊ぶ</button>
+            <button id="btn-online" class="menu-btn">オンライン対戦</button>
+            <button id="btn-config" class="menu-btn">ボタン配置変更</button>
+            <button id="btn-sound" class="menu-btn">サウンド: ON</button>
+            <button id="btn-help" class="menu-btn">遊び方・ルール</button>
+        </div>
+
+        <div id="online-menu-screen" class="screen hidden">
+            <h2>オンライン対戦</h2>
+            <button id="btn-create" class="menu-btn">部屋を作る</button>
+            <button id="btn-join" class="menu-btn">部屋を探す</button>
+            <button id="btn-online-back" class="menu-btn">戻る</button>
+        </div>
+
+        <div id="help-screen" class="screen hidden">
+            <h2>遊び方・ルール</h2>
+            <div id="help-content">
+                <h3>基本ルール</h3>
+                <ul>
+                    <li>相手に攻撃を当てて吹っ飛ばそう！</li>
+                    <li>ダメージ(%)が溜まるほど、遠くへ吹っ飛ぶようになるぞ。</li>
+                    <li>画面外に落ちたらミス。残機(ストック)が0になったら負けだ。</li>
+                </ul>
+                <h3>基本操作</h3>
+                <ul>
+                    <li><b>移動</b>: スティック / 画面スライド</li>
+                    <li><b>ジャンプ</b>: Jumpボタン (2段ジャンプ可)</li>
+                    <li><b>小ジャンプ</b>: 下入力 + Jumpボタン</li>
+                    <li><b>ガード</b>: Shieldボタン長押し (防ぎ続けると割れるぞ)</li>
+                    <li><b>緊急回避</b>: Shieldボタン + 移動 (無敵状態で移動)</li>
+                    <li><b>つかみ</b>: Grabボタン (ガード中の相手もつかめる)</li>
+                </ul>
+                <h3>攻撃 (Aボタン)</h3>
+                <ul>
+                    <li><b>通常攻撃(NA)</b>: そのままAボタン</li>
+                    <li><b>横攻撃</b>: 横に入れながらAボタン</li>
+                    <li><b>上攻撃</b>: 上に入れながらAボタン</li>
+                    <li><b>下攻撃</b>: 下に入れながらAボタン</li>
+                    <li><b>空中攻撃</b>: 空中でAボタン (方向入力で変化)</li>
+                    <li><b>溜め攻撃</b>: Aボタン長押しでチャージ！離すと強力な技が出るぞ！</li>
+                </ul>
+            </div>
+            <button id="btn-close-help" class="menu-btn primary">閉じる</button>
+        </div>
+
+        <!-- STAGE SELECT SCREEN -->
+        <div id="stage-select-screen" class="screen hidden">
+            <h2>ステージ選択</h2>
+            <div style="display:flex; gap:20px; flex-wrap:wrap; justify-content:center;">
+                <div id="stage-battlefield" class="stage-card selected">
+                    <div class="stage-preview">
+                        <div style="position:relative; width:80px; height:40px;">
+                            <div style="position:absolute; bottom:0; width:80px; height:4px; background:#fff;"></div>
+                            <div style="position:absolute; top:10px; left:10px; width:20px; height:2px; background:#fff;"></div>
+                            <div style="position:absolute; top:0; left:30px; width:20px; height:2px; background:#fff;"></div>
+                            <div style="position:absolute; top:10px; right:10px; width:20px; height:2px; background:#fff;"></div>
+                        </div>
+                    </div>
+                    <div class="stage-name">戦場 (夜)</div>
+                </div>
+                <div id="stage-final" class="stage-card">
+                    <div class="stage-preview">
+                        <div style="position:relative; width:80px; height:40px;">
+                            <div style="position:absolute; bottom:0; width:80px; height:4px; background:#fff;"></div>
+                        </div>
+                    </div>
+                    <div class="stage-name">終点 (夕方)</div>
+                </div>
+            </div>
+            <div id="stage-status-bar">
+                <div class="p-status">
+                    <div class="p-status-label" id="sss-p1-name">1P</div>
+                    <div id="sss-p1-box" class="p-status-box">選択中... <span class="check-icon">✅</span></div>
+                </div>
+                <div class="p-status">
+                    <div class="p-status-label" id="sss-p2-name">2P</div>
+                    <div id="sss-p2-box" class="p-status-box">選択中... <span class="check-icon">✅</span></div>
+                </div>
+            </div>
+            <button id="btn-sss-ready" class="menu-btn primary">決定！</button>
+            <button id="btn-sss-start" class="menu-btn primary hidden">キャラ選択へ</button>
+            <button id="btn-sss-back" class="menu-btn">戻る</button>
+        </div>
+
+        <div id="char-select-screen" class="screen hidden">
+            <h2>キャラクター選択</h2>
+            <div id="char-grid">
+                <div id="card-sword" class="char-card selected">
+                    <div class="icon">⚔️</div>
+                    <div class="label">剣士</div>
+                </div>
+                <div id="card-mage" class="char-card">
+                    <div class="icon">🪄</div>
+                    <div class="label">メイジ</div>
+                </div>
+                <div id="card-brawler" class="char-card">
+                    <div class="icon">👊</div>
+                    <div class="label">武闘家</div>
+                </div>
+                <div id="card-spear" class="char-card">
+                    <div class="icon">🔱</div>
+                    <div class="label">槍使い</div>
+                </div>
+                <div id="card-hammer" class="char-card">
+                    <div class="icon">🔨</div>
+                    <div class="label">ハンマー使い</div>
+                </div>
+                <!-- 6th Slot -->
+                <div id="card-locked" class="char-card locked">
+                    <div class="icon">?</div>
+                    <div class="label">Coming Soon...</div>
+                </div>
+            </div>
+            <div id="player-status-bar">
+                <div class="p-status">
+                    <div class="p-status-label" id="css-p1-name">1P</div>
+                    <div id="css-p1-box" class="p-status-box">選択中... <span class="check-icon">✅</span></div>
+                </div>
+                <div class="p-status">
+                    <div class="p-status-label" id="css-p2-name">2P</div>
+                    <div id="css-p2-box" class="p-status-box">待機中... <span class="check-icon">✅</span></div>
+                </div>
+            </div>
+            <button id="btn-css-ready" class="menu-btn primary">準備完了！</button>
+            <button id="btn-css-start" class="menu-btn primary hidden">対戦開始！</button>
+            <button id="btn-css-back" class="menu-btn">戻る</button>
+        </div>
+
+        <div id="create-room-screen" class="screen hidden">
+            <h2>部屋番号</h2>
+            <div id="room-id-display">----</div>
+            <div id="lobby-info">
+                <div id="slot-p1" class="player-slot">1P: あなた</div>
+                <div id="slot-p2" class="player-slot">2P: 待機中...</div>
+                <div style="font-size:12px; color:#aaa; margin-top:5px;">観戦者: <span id="spec-list">なし</span></div>
+            </div>
+            <button id="btn-goto-sss" class="menu-btn primary disabled">ステージ選択へ</button>
+            <button id="btn-create-cancel" class="menu-btn">キャンセル</button>
+        </div>
+        <div id="join-room-screen" class="screen hidden">
+            <h2>部屋番号を入力</h2>
+            <input type="number" id="join-input" placeholder="0000" maxlength="4">
+            <button id="btn-join-action" class="menu-btn primary">対戦に参加</button>
+            <button id="btn-spec-action" class="menu-btn">観戦する</button>
+            <button id="btn-join-cancel" class="menu-btn">戻る</button>
+            <div id="join-status"></div>
+        </div>
+        <div id="game-over-screen" class="screen hidden">
+            <h1 id="result-text">GAME OVER</h1>
+            <button id="btn-title" class="menu-btn primary">タイトルへ</button>
+        </div>
+    </div>
+
+    <!-- MAIN SCRIPT -->
+    <script src="js/main.js"></script>
+</body>
+</html>
