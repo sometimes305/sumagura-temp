@@ -575,6 +575,7 @@ function reportError(e) {
                                 var p = window.SMA.projectiles[i]; 
                                 if (p.type === 'fire_trap') { p.life--; } else if (p.type === 'spear_throw' || p.type === 'shockwave') { 
                                     p.life--; if (p.type==='spear_throw') { 
+                                        if (p.life === 30) { p.dmg *= 0.5; p.kb *= 0.5; p.scale *= 0.5; }
                                         if (p.life > 30) { p.vx *= 0.9; p.vy *= 0.9; } else { 
                                             var owner = (p.ownerRole === 'p1') ? window.SMA.pOne : window.SMA.pTwo; 
                                             if(owner) { var dx = owner.x + owner.w/2 - p.x; var dy = owner.y + owner.h/2 - p.y; var dist = Math.sqrt(dx*dx+dy*dy); if (dist < 30) { window.SMA.projectiles.splice(i,1); continue; } p.vx += dx * 0.05; p.vy += dy * 0.05; } 
@@ -704,12 +705,14 @@ function reportError(e) {
                                     var armX = cx + Math.cos(angle) * r * 0.6;
                                     var armY = cY + 30 + Math.sin(angle) * r * 0.6;
                                     ctx.beginPath(); ctx.moveTo(cx, cY + 20); ctx.lineTo(armX, armY); ctx.stroke();
-                                    // 短剣（回転軌跡）
-                                    ctx.strokeStyle = '#00cec9';
-                                    ctx.lineWidth = 3;
+                                    // 鏡
+                                    ctx.strokeStyle = '#81ecec';
+                                    ctx.lineWidth = 2.6;
                                     var dx = Math.cos(angle) * r;
                                     var dy = Math.sin(angle) * r;
-                                    ctx.beginPath(); ctx.moveTo(cx + dx - 5, cY + 30 + dy); ctx.lineTo(cx + dx + 5, cY + 30 + dy - 10); ctx.stroke();
+                                    ctx.beginPath(); ctx.moveTo(cx + dx, cY + 30 + dy); ctx.lineTo(cx + dx + 13 * Math.cos(angle), cY + 30 + dy + 13 * Math.sin(angle)); ctx.stroke();
+                                    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+                                    ctx.beginPath(); ctx.arc(cx + dx + 6.5 * Math.cos(angle), cY + 30 + dy + 6.5 * Math.sin(angle), 5.2, 0, Math.PI*2); ctx.fill();
                                     // 軌跡エフェクト
                                     ctx.globalAlpha = 0.15;
                                     ctx.strokeStyle = '#81ecec';
@@ -741,17 +744,17 @@ function reportError(e) {
                                     ctx.fillStyle = 'rgba(255,255,255,0.4)';
                                     ctx.beginPath(); ctx.arc(mirX2, mirY2, 4, 0, Math.PI*2); ctx.fill();
                                 } else if (atkType === 'mirror_slash') {
-                                    // NA: 短剣振り
-                                    var swingAng = (-30 + p * 120) * Math.PI / 180;
-                                    var armX = cx + (fr ? 12 : -12);
+                                    // NA: 鏡突き
+                                    var ext2 = p < 0.5 ? p * 39 : (1-p) * 39;
+                                    var armTargetX = cx + (fr ? 12 + ext2 : -12 - ext2);
                                     var armY = cY + 25;
-                                    ctx.beginPath(); ctx.moveTo(cx, cY + 20); ctx.lineTo(armX, armY); ctx.stroke();
-                                    ctx.strokeStyle = '#00cec9';
-                                    ctx.lineWidth = 3;
-                                    var bladeLen = 22;
-                                    var bx = armX + Math.cos(swingAng) * bladeLen * (fr ? 1 : -1);
-                                    var by = armY + Math.sin(swingAng) * bladeLen;
-                                    ctx.beginPath(); ctx.moveTo(armX, armY); ctx.lineTo(bx, by); ctx.stroke();
+                                    ctx.beginPath(); ctx.moveTo(cx, cY + 20); ctx.lineTo(armTargetX, armY); ctx.stroke();
+                                    ctx.strokeStyle = '#81ecec';
+                                    ctx.lineWidth = 2.6;
+                                    var mirLen = 26;
+                                    ctx.beginPath(); ctx.moveTo(armTargetX, armY); ctx.lineTo(armTargetX + (fr ? mirLen : -mirLen), armY); ctx.stroke();
+                                    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+                                    ctx.beginPath(); ctx.arc(armTargetX + (fr ? 20 : -20), armY, 5.2, 0, Math.PI*2); ctx.fill();
                                 } else if (atkType === 'mirror_place') {
                                     // 鏡設置: 待機
                                     ctx.beginPath(); ctx.moveTo(cx, cY + 20); ctx.lineTo(hx, hy); ctx.stroke();
@@ -2103,7 +2106,19 @@ function reportError(e) {
                                     var r = 32;
                                     var dx = Math.cos(angle) * r;
                                     var dy = Math.sin(angle) * r;
-                                    ctx.beginPath(); ctx.moveTo(cx + dx - 6.5, this.y + 30 + dy); ctx.lineTo(cx + dx + 6.5, this.y + 30 + dy - 13); ctx.stroke();
+                                    ctx.save();
+                                    // 腕の描画
+                                    ctx.strokeStyle = this.color;
+                                    ctx.lineWidth = 3;
+                                    if (this.actionState === 'LEDGE' || this.actionState === 'LEDGE_UP') { ctx.strokeStyle = (this.invincible > 0) ? '#fff' : this.color; }
+                                    ctx.beginPath(); ctx.moveTo(cx, this.y + 20); ctx.lineTo(cx + dx * 0.5, this.y + 30 + dy * 0.5); ctx.stroke();
+                                    // 鏡の描画
+                                    ctx.strokeStyle = mirrorColor;
+                                    ctx.lineWidth = 2.6;
+                                    ctx.beginPath(); ctx.moveTo(cx + dx, this.y + 30 + dy); ctx.lineTo(cx + dx + 13 * Math.cos(angle), this.y + 30 + dy + 13 * Math.sin(angle)); ctx.stroke();
+                                    ctx.fillStyle = mirrorGlowColor;
+                                    ctx.beginPath(); ctx.arc(cx + dx + 6.5 * Math.cos(angle), this.y + 30 + dy + 6.5 * Math.sin(angle), 5.2, 0, Math.PI*2); ctx.fill();
+                                    ctx.restore();
                                 } else if (this.currentAttack.type === 'mirror_throw_up') {
                                     // 上A: 頭上に鏡を投げて回転
                                     var throwH = 45;
@@ -2138,8 +2153,19 @@ function reportError(e) {
                                 } else if (this.currentAttackType === 'NEUTRAL') {
                                     // 地上NA: 前方鏡突き
                                     var ext2 = p < 0.5 ? p * 39 : (1-p) * 39;
-                                    ctx.beginPath(); ctx.moveTo(hx, hy);
-                                    ctx.lineTo(hx + (this.facingRight ? 20 + ext2 : -20 - ext2), hy - 3); ctx.stroke();
+                                    ctx.save();
+                                    // 腕
+                                    ctx.strokeStyle = this.color;
+                                    ctx.lineWidth = 3;
+                                    var armTargetX = hx + (this.facingRight ? ext2 : -ext2);
+                                    ctx.beginPath(); ctx.moveTo(cx, this.y + 20); ctx.lineTo(armTargetX, hy); ctx.stroke();
+                                    // 鏡
+                                    ctx.strokeStyle = mirrorColor;
+                                    ctx.lineWidth = 2.6;
+                                    ctx.beginPath(); ctx.moveTo(armTargetX, hy); ctx.lineTo(armTargetX + (this.facingRight ? 26 : -26), hy); ctx.stroke();
+                                    ctx.fillStyle = mirrorGlowColor;
+                                    ctx.beginPath(); ctx.arc(armTargetX + (this.facingRight ? 20 : -20), hy, 5.2, 0, Math.PI*2); ctx.fill();
+                                    ctx.restore();
                                 } else if (this.currentAttackType === 'LEDGE_ATK') {
                                     // 崖攻撃
                                     ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(hx + (this.facingRight ? 22 : -22), hy - 8); ctx.stroke();
