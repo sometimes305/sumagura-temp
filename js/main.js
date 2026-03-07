@@ -296,9 +296,9 @@ function reportError(e) {
             if(window.SMA.p2StageReady) p2Box.classList.add('ready'); else p2Box.classList.remove('ready'); 
         };
 
-        window.SMA.selectChar = function(id) { 
+         window.SMA.selectChar = function(id) { 
             if(window.SMA.myRole === 'spec') return; 
-            window.SMA.myCharId = id; var cards = document.querySelectorAll('.char-card'); cards.forEach(function(c) { c.classList.remove('selected'); }); if(id==='sword') document.getElementById('card-sword').classList.add('selected'); else if(id==='mage') document.getElementById('card-mage').classList.add('selected'); else if(id==='brawler') document.getElementById('card-brawler').classList.add('selected'); else if(id==='spear') document.getElementById('card-spear').classList.add('selected'); else if(id==='hammer') document.getElementById('card-hammer').classList.add('selected'); if(window.SMA.isOnline && window.SMA.isHost) { window.SMA.p1CharId = id; window.SMA.updateCSSUI(); window.SMA.sendCharUpdate(); } else if(window.SMA.isOnline && !window.SMA.isHost) { window.SMA.p2CharId = id; window.SMA.updateCSSUI(); window.SMA.sendCharUpdate(); } 
+            window.SMA.myCharId = id; var cards = document.querySelectorAll('.char-card'); cards.forEach(function(c) { c.classList.remove('selected'); }); if(id==='sword') document.getElementById('card-sword').classList.add('selected'); else if(id==='mage') document.getElementById('card-mage').classList.add('selected'); else if(id==='brawler') document.getElementById('card-brawler').classList.add('selected'); else if(id==='spear') document.getElementById('card-spear').classList.add('selected'); else if(id==='hammer') document.getElementById('card-hammer').classList.add('selected'); else if(id==='mirror') document.getElementById('card-mirror').classList.add('selected'); if(window.SMA.isOnline && window.SMA.isHost) { window.SMA.p1CharId = id; window.SMA.updateCSSUI(); window.SMA.sendCharUpdate(); } else if(window.SMA.isOnline && !window.SMA.isHost) { window.SMA.p2CharId = id; window.SMA.updateCSSUI(); window.SMA.sendCharUpdate(); } 
         };
         window.SMA.startSolo = function() { 
             // ACTUAL GAME START LOGIC
@@ -359,6 +359,7 @@ function reportError(e) {
                 if(id==='brawler') return '武闘家'; 
                 if(id==='spear') return '槍使い'; 
                 if(id==='hammer') return 'ハンマー使い'; 
+                if(id==='mirror') return '鏡の魔術師'; 
                 return '???'; 
             }; 
             var n1 = getCharName(window.SMA.p1CharId); 
@@ -581,7 +582,7 @@ function reportError(e) {
                                     } p.x += p.vx; p.y += p.vy; 
                                 } else { p.x += p.vx; p.y += p.vy; p.life--; if (p.type === 'fire') { for(var j=0; j<window.SMA.platforms.length; j++) { var plat=window.SMA.platforms[j]; if(p.y > plat.y && p.y < plat.y+plat.h && p.x > plat.x && p.x < plat.x+plat.w) { p.type = 'fire_trap'; p.vx = 0; p.vy = 0; p.y = plat.y - 10; p.life = 60; p.w = 60; p.h = 40; window.SMA.playSound('special'); window.SMA.createParticles(p.x, p.y, 10, '#e17055'); break; } } } } if(p.life <= 0) window.SMA.projectiles.splice(i,1); 
                             } 
-                            window.SMA.checkHit(window.SMA.pOne, window.SMA.pTwo); window.SMA.checkHit(window.SMA.pTwo, window.SMA.pOne); window.SMA.checkGameSet(); 
+                            window.SMA.checkHit(window.SMA.pOne, window.SMA.pTwo); window.SMA.checkHit(window.SMA.pTwo, window.SMA.pOne); window.SMA.checkMirrorHit(window.SMA.pOne, window.SMA.pTwo); window.SMA.checkMirrorHit(window.SMA.pTwo, window.SMA.pOne); window.SMA.checkGameSet(); 
                             if(window.SMA.isOnline) { var pkt = { type:'sync', stg:window.SMA.selectedStage, gState:window.SMA.gameState, cd:window.SMA.countdownTimer, p1:window.SMA.pOne.serialize(), p2:window.SMA.pTwo.serialize(), events:window.SMA.syncEvents, projs:window.SMA.projectiles.map(function(p){ return {x:p.x, y:p.y, vx:p.vx, vy:p.vy, type:p.type, w:p.w, h:p.h, color:p.color, angle:p.angle||0}; }), win:(window.SMA.gameState==='GAMEOVER'?document.getElementById('result-text').innerText:null) }; window.SMA.connections.forEach(function(c) { if(c.conn.open) try { c.conn.send({type:'sync', data:JSON.stringify(pkt)}); } catch(e){} }); window.SMA.syncEvents = []; } 
                         } 
                     } else { if(window.SMA.netConn && window.SMA.netConn.open) window.SMA.netConn.send({type:'input', keys:window.SMA.myKeys}); [window.SMA.pOne, window.SMA.pTwo].forEach(function(p) { if (p && p.actionState !== 'DEAD') { p.animScale.x += (1.0 - p.animScale.x) * 0.2; p.animScale.y += (1.0 - p.animScale.y) * 0.2; if(p.actionState !== 'LEDGE_ROLL') p.rotation = 0; } }); } 
@@ -617,7 +618,170 @@ function reportError(e) {
                         window.SMA.ctx.fillStyle = "rgba(255, 255, 200, " + (0.5 + Math.random()*0.5) + ")"; 
                         window.SMA.ctx.beginPath(); window.SMA.ctx.arc(s.x, s.y, s.s, 0, Math.PI*2); window.SMA.ctx.fill(); 
                     }
-                } if(window.SMA.platforms.length>0) { var m = window.SMA.platforms[0]; window.SMA.ctx.fillStyle = "#3e2723"; window.SMA.ctx.beginPath(); window.SMA.ctx.moveTo(m.x, m.y); window.SMA.ctx.lineTo(m.x+m.w, m.y); window.SMA.ctx.lineTo(m.x+m.w/2, m.y+200); window.SMA.ctx.fill(); for(var i=0; i<window.SMA.platforms.length; i++) { var p = window.SMA.platforms[i]; window.SMA.ctx.fillStyle = "#3e2723"; window.SMA.ctx.fillRect(p.x, p.y, p.w, p.h); window.SMA.ctx.fillStyle="#a1887f"; window.SMA.ctx.fillRect(p.x,p.y,p.w,5); } } try { if(window.SMA.pOne) window.SMA.pOne.draw(window.SMA.ctx); } catch(e){} try { if(window.SMA.pTwo) window.SMA.pTwo.draw(window.SMA.ctx); } catch(e){} for(var i=0; i<window.SMA.projectiles.length; i++) { var p = window.SMA.projectiles[i]; if(p.type === 'fire_trap') { window.SMA.ctx.save(); for(var k=0; k<3; k++) { window.SMA.ctx.fillStyle = "rgba(255, " + (Math.floor(Math.random()*150)+50) + ", 0, " + (0.5+Math.random()*0.5) + ")"; var w = p.w * (0.8+Math.random()*0.4); var h = p.h * (1.0+Math.random()*0.5); var fx = p.x + (Math.random()-0.5)*20; window.SMA.ctx.beginPath(); window.SMA.ctx.moveTo(fx-w/2, p.y+40); window.SMA.ctx.lineTo(fx+w/2, p.y+40); window.SMA.ctx.lineTo(fx, p.y-h); window.SMA.ctx.fill(); } window.SMA.ctx.restore(); } else if (p.type === 'spear_throw') { try { window.SMA.ctx.save(); window.SMA.ctx.translate(p.x, p.y); window.SMA.ctx.rotate(p.angle); window.SMA.ctx.translate(-35, 0); window.SMA.drawTrident(window.SMA.ctx, 0, 0, 0, p.color); window.SMA.ctx.restore(); } catch(e){} } else if (p.type === 'shockwave') { window.SMA.ctx.fillStyle = "#ffeaa7"; window.SMA.ctx.beginPath(); window.SMA.ctx.arc(p.x, p.y, p.w/2, 0, Math.PI, true); window.SMA.ctx.fill(); } else { window.SMA.ctx.fillStyle = p.color; window.SMA.ctx.beginPath(); window.SMA.ctx.arc(p.x, p.y, p.w/2, 0, Math.PI*2); window.SMA.ctx.fill(); } } window.SMA.drawComets(window.SMA.ctx); window.SMA.updateParticles(window.SMA.ctx); window.SMA.ctx.restore(); } window.SMA.updateHud(); } catch(e) { reportError("Loop Error: " + e); } window.SMA.animationFrameId = requestAnimationFrame(window.SMA.gameLoop); };
+                } if(window.SMA.platforms.length>0) { var m = window.SMA.platforms[0]; window.SMA.ctx.fillStyle = "#3e2723"; window.SMA.ctx.beginPath(); window.SMA.ctx.moveTo(m.x, m.y); window.SMA.ctx.lineTo(m.x+m.w, m.y); window.SMA.ctx.lineTo(m.x+m.w/2, m.y+200); window.SMA.ctx.fill(); for(var i=0; i<window.SMA.platforms.length; i++) { var p = window.SMA.platforms[i]; window.SMA.ctx.fillStyle = "#3e2723"; window.SMA.ctx.fillRect(p.x, p.y, p.w, p.h); window.SMA.ctx.fillStyle="#a1887f"; window.SMA.ctx.fillRect(p.x,p.y,p.w,5); } } try { if(window.SMA.pOne) window.SMA.pOne.draw(window.SMA.ctx); } catch(e){} try { if(window.SMA.pTwo) window.SMA.pTwo.draw(window.SMA.ctx); } catch(e){} 
+                // 鏡オブジェクトと鏡像の描画
+                try {
+                    [window.SMA.pOne, window.SMA.pTwo].forEach(function(fighter) {
+                        if (!fighter || fighter.charId !== 'mirror') return;
+                        // 鏡設置中: プレビュー表示
+                        if (!fighter.mirror && fighter.actionState === 'ATTACK' && fighter.currentAttack && fighter.currentAttack.type === 'mirror_place') {
+                            var ctx = window.SMA.ctx;
+                            ctx.save();
+                            var previewX = fighter.x + fighter.w/2 + (fighter.facingRight ? fighter.mirrorPlaceRange : -fighter.mirrorPlaceRange);
+                            var previewY = fighter.y + fighter.h;
+                            ctx.globalAlpha = 0.3 + Math.sin(Date.now() * 0.01) * 0.15;
+                            ctx.strokeStyle = '#81ecec';
+                            ctx.lineWidth = 2;
+                            ctx.setLineDash([4, 4]);
+                            ctx.strokeRect(previewX - 4, previewY - 56, 8, 57);
+                            ctx.setLineDash([]);
+                            ctx.restore();
+                        }
+                        // 鏡オブジェクトの描画
+                        if (fighter.mirror) {
+                            var mx = fighter.mirror.x;
+                            var my = fighter.mirror.y;
+                            var ctx = window.SMA.ctx;
+                            ctx.save();
+                            // 鏡本体（細い縦長の矩形）
+                            var grad = ctx.createLinearGradient(mx - 3, my - 50, mx + 3, my);
+                            grad.addColorStop(0, 'rgba(129, 236, 236, 0.9)');
+                            grad.addColorStop(0.5, 'rgba(255, 255, 255, 0.95)');
+                            grad.addColorStop(1, 'rgba(129, 236, 236, 0.9)');
+                            ctx.fillStyle = grad;
+                            ctx.fillRect(mx - 3, my - 55, 6, 55);
+                            // 光のエフェクト
+                            ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+                            ctx.lineWidth = 1;
+                            ctx.strokeRect(mx - 4, my - 56, 8, 57);
+                            // タイマー表示（残り時間バー）
+                            var ratio = fighter.mirror.timer / 480;
+                            ctx.fillStyle = 'rgba(129, 236, 236, ' + (0.3 + ratio * 0.5) + ')';
+                            ctx.fillRect(mx - 10, my + 2, 20 * ratio, 3);
+                            ctx.restore();
+                        }
+                        // 鏡像の描画（攻撃モーション反映）
+                        if (fighter.mirrorClone && fighter.mirror) {
+                            var ctx = window.SMA.ctx;
+                            ctx.save();
+                            ctx.globalAlpha = 0.45;
+                            var cX = fighter.mirrorClone.x;
+                            var cY = fighter.mirrorClone.y;
+                            var cx = cX + fighter.w / 2;
+                            ctx.strokeStyle = '#81ecec';
+                            ctx.lineWidth = 4;
+                            ctx.lineCap = 'round';
+                            ctx.lineJoin = 'round';
+                            var fr = fighter.mirrorClone.facingRight;
+                            // 頭
+                            ctx.beginPath(); ctx.arc(cx, cY + 10, 10, 0, Math.PI * 2); ctx.stroke();
+                            // 体
+                            ctx.beginPath(); ctx.moveTo(cx, cY + 10); ctx.lineTo(cx, cY + 40); ctx.stroke();
+                            // 足（走りモーション模倣）
+                            if (fighter.actionState === 'IDLE' && (fighter.vx > 1 || fighter.vx < -1)) {
+                                var legPhase = Math.sin(Date.now() * 0.015) * 12;
+                                ctx.beginPath(); ctx.moveTo(cx, cY + 40); ctx.lineTo(cx + legPhase, cY + 60); ctx.stroke();
+                                ctx.beginPath(); ctx.moveTo(cx, cY + 40); ctx.lineTo(cx - legPhase, cY + 60); ctx.stroke();
+                            } else {
+                                ctx.beginPath(); ctx.moveTo(cx, cY + 40); ctx.lineTo(cx - 10, cY + 60); ctx.stroke();
+                                ctx.beginPath(); ctx.moveTo(cx, cY + 40); ctx.lineTo(cx + 10, cY + 60); ctx.stroke();
+                            }
+                            // 腕と短剣（攻撃モーション反映）
+                            ctx.strokeStyle = '#00cec9';
+                            ctx.lineWidth = 3;
+                            var hx = cx + (fr ? 15 : -15);
+                            var hy = cY + 30;
+                            if (fighter.actionState === 'ATTACK' && fighter.currentAttack) {
+                                var p = fighter.stateTimer / fighter.currentAttack.frames;
+                                var atkType = fighter.currentAttack.type;
+                                // 腕描画
+                                ctx.strokeStyle = '#81ecec';
+                                ctx.lineWidth = 4;
+                                if (atkType === 'mirror_spin') {
+                                    // 空中NA: 回転斬り
+                                    var angle = p * Math.PI * 2;
+                                    var r = 39;
+                                    var armX = cx + Math.cos(angle) * r * 0.6;
+                                    var armY = cY + 30 + Math.sin(angle) * r * 0.6;
+                                    ctx.beginPath(); ctx.moveTo(cx, cY + 20); ctx.lineTo(armX, armY); ctx.stroke();
+                                    // 短剣（回転軌跡）
+                                    ctx.strokeStyle = '#00cec9';
+                                    ctx.lineWidth = 3;
+                                    var dx = Math.cos(angle) * r;
+                                    var dy = Math.sin(angle) * r;
+                                    ctx.beginPath(); ctx.moveTo(cx + dx - 5, cY + 30 + dy); ctx.lineTo(cx + dx + 5, cY + 30 + dy - 10); ctx.stroke();
+                                    // 軌跡エフェクト
+                                    ctx.globalAlpha = 0.15;
+                                    ctx.strokeStyle = '#81ecec';
+                                    ctx.lineWidth = 2;
+                                    ctx.beginPath(); ctx.arc(cx, cY + 30, r, angle - 1.5, angle); ctx.stroke();
+                                    ctx.globalAlpha = 0.45;
+                                } else if (atkType === 'mirror_throw_up') {
+                                    // 上A: 頭上に鏡を投げて回転（鏡像）
+                                    var throwH = 35;
+                                    var throwAng = p * Math.PI * 4;
+                                    var mirX = cx;
+                                    var mirY = cY - 10 - throwH * Math.sin(p * Math.PI);
+                                    ctx.beginPath(); ctx.moveTo(cx, cY + 20); ctx.lineTo(mirX, mirY + 15); ctx.stroke();
+                                    ctx.strokeStyle = '#81ecec'; ctx.lineWidth = 2;
+                                    var mw = 15 * Math.cos(throwAng);
+                                    ctx.beginPath(); ctx.moveTo(mirX - mw, mirY); ctx.lineTo(mirX + mw, mirY); ctx.stroke();
+                                    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+                                    ctx.beginPath(); ctx.arc(mirX, mirY, 4, 0, Math.PI*2); ctx.fill();
+                                } else if (atkType === 'mirror_throw') {
+                                    // 横A: 前方に鏡を投げて回転（鏡像）
+                                    var throwDist = 35;
+                                    var throwAng2 = p * Math.PI * 4;
+                                    var mirX2 = cx + (fr ? throwDist : -throwDist);
+                                    var mirY2 = cY + 20 - 10 * Math.sin(p * Math.PI);
+                                    ctx.beginPath(); ctx.moveTo(cx, cY + 20); ctx.lineTo(mirX2 - (fr ? 15 : -15), mirY2); ctx.stroke();
+                                    ctx.strokeStyle = '#81ecec'; ctx.lineWidth = 2;
+                                    var mh2 = 15 * Math.cos(throwAng2);
+                                    ctx.beginPath(); ctx.moveTo(mirX2, mirY2 - mh2); ctx.lineTo(mirX2, mirY2 + mh2); ctx.stroke();
+                                    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+                                    ctx.beginPath(); ctx.arc(mirX2, mirY2, 4, 0, Math.PI*2); ctx.fill();
+                                } else if (atkType === 'mirror_slash') {
+                                    // NA: 短剣振り
+                                    var swingAng = (-30 + p * 120) * Math.PI / 180;
+                                    var armX = cx + (fr ? 12 : -12);
+                                    var armY = cY + 25;
+                                    ctx.beginPath(); ctx.moveTo(cx, cY + 20); ctx.lineTo(armX, armY); ctx.stroke();
+                                    ctx.strokeStyle = '#00cec9';
+                                    ctx.lineWidth = 3;
+                                    var bladeLen = 22;
+                                    var bx = armX + Math.cos(swingAng) * bladeLen * (fr ? 1 : -1);
+                                    var by = armY + Math.sin(swingAng) * bladeLen;
+                                    ctx.beginPath(); ctx.moveTo(armX, armY); ctx.lineTo(bx, by); ctx.stroke();
+                                } else if (atkType === 'mirror_place') {
+                                    // 鏡設置: 待機
+                                    ctx.beginPath(); ctx.moveTo(cx, cY + 20); ctx.lineTo(hx, hy); ctx.stroke();
+                                    ctx.strokeStyle = '#00cec9'; ctx.lineWidth = 2;
+                                    ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(hx + (fr ? 20 : -20), hy - 5); ctx.stroke();
+                                } else {
+                                    // その他の攻撃
+                                    ctx.beginPath(); ctx.moveTo(cx, cY + 20); ctx.lineTo(hx, hy); ctx.stroke();
+                                    ctx.strokeStyle = '#00cec9';
+                                    ctx.lineWidth = 3;
+                                    ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(hx + (fr ? 22 : -22), hy - 6); ctx.stroke();
+                                }
+                            } else {
+                                // 待機ポーズ（手持ち鏡）
+                                ctx.strokeStyle = '#81ecec';
+                                ctx.lineWidth = 4;
+                                ctx.beginPath(); ctx.moveTo(cx, cY + 20); ctx.lineTo(hx, hy); ctx.stroke();
+                                ctx.strokeStyle = '#81ecec';
+                                ctx.lineWidth = 2.6;
+                                var cmLen = 26;
+                                ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(hx + (fr ? 6 : -6), hy - cmLen); ctx.stroke();
+                                ctx.fillStyle = 'rgba(255,255,255,0.4)';
+                                ctx.beginPath(); ctx.arc(hx + (fr ? 6 : -6), hy - cmLen, 5.2, 0, Math.PI*2); ctx.fill();
+                            }
+
+                            ctx.restore();
+                        }
+                    });
+                } catch(e) {}
+ for(var i=0; i<window.SMA.projectiles.length; i++) { var p = window.SMA.projectiles[i]; if(p.type === 'fire_trap') { window.SMA.ctx.save(); for(var k=0; k<3; k++) { window.SMA.ctx.fillStyle = "rgba(255, " + (Math.floor(Math.random()*150)+50) + ", 0, " + (0.5+Math.random()*0.5) + ")"; var w = p.w * (0.8+Math.random()*0.4); var h = p.h * (1.0+Math.random()*0.5); var fx = p.x + (Math.random()-0.5)*20; window.SMA.ctx.beginPath(); window.SMA.ctx.moveTo(fx-w/2, p.y+40); window.SMA.ctx.lineTo(fx+w/2, p.y+40); window.SMA.ctx.lineTo(fx, p.y-h); window.SMA.ctx.fill(); } window.SMA.ctx.restore(); } else if (p.type === 'spear_throw') { try { window.SMA.ctx.save(); window.SMA.ctx.translate(p.x, p.y); window.SMA.ctx.rotate(p.angle); window.SMA.ctx.translate(-35, 0); window.SMA.drawTrident(window.SMA.ctx, 0, 0, 0, p.color); window.SMA.ctx.restore(); } catch(e){} } else if (p.type === 'shockwave') { window.SMA.ctx.fillStyle = "#ffeaa7"; window.SMA.ctx.beginPath(); window.SMA.ctx.arc(p.x, p.y, p.w/2, 0, Math.PI, true); window.SMA.ctx.fill(); } else { window.SMA.ctx.fillStyle = p.color; window.SMA.ctx.beginPath(); window.SMA.ctx.arc(p.x, p.y, p.w/2, 0, Math.PI*2); window.SMA.ctx.fill(); } } window.SMA.drawComets(window.SMA.ctx); window.SMA.updateParticles(window.SMA.ctx); window.SMA.ctx.restore(); } window.SMA.updateHud(); } catch(e) { reportError("Loop Error: " + e); } window.SMA.animationFrameId = requestAnimationFrame(window.SMA.gameLoop); };
         window.SMA.checkHit = function(atk, vic) { 
             if(vic.invincible > 0 || vic.actionState === 'RESPAWN' || vic.actionState === 'DEAD') return;
 
@@ -700,6 +864,63 @@ function reportError(e) {
                 } 
             } 
         };
+
+        // 鏡像のヒットボックスチェック
+        window.SMA.checkMirrorHit = function(atk, vic) {
+            if (!atk.mirrorClone || !atk.mirror) return;
+            if (vic.invincible > 0 || vic.actionState === 'RESPAWN' || vic.actionState === 'DEAD') return;
+            if (!atk.hitbox.active || atk.actionState !== 'ATTACK') return;
+            if (vic.stocks <= 0) return;
+            // 鏡像用の独立したhasHitフラグ
+            if (atk.mirrorHasHit) return;
+            
+            // 鏡像のヒットボックス位置を計算
+            // 鏡像は既に鏡の反対側にいるので、攻撃方向を左右反転するだけ
+            var cloneCx = atk.mirrorClone.x + atk.w/2;
+            var offset = atk.hitbox.x - (atk.x + atk.w/2);
+            var cloneHb = {
+                x: cloneCx - offset - atk.hitbox.w,
+                y: atk.hitbox.y,
+                w: atk.hitbox.w,
+                h: atk.hitbox.h
+            };
+            
+            if (cloneHb.x < vic.x + vic.w && cloneHb.x + cloneHb.w > vic.x && cloneHb.y < vic.y + vic.h && cloneHb.y + cloneHb.h > vic.y) {
+                if (!atk.currentAttack) return;
+                atk.mirrorHasHit = true;
+                if (vic.actionState === 'DODGE') return;
+                var data = atk.currentAttack;
+                var p = atk.chargePower;
+                if (vic.superArmor) {
+                    if (data.dmg) vic.percent += data.dmg * p * 0.5;
+                    window.SMA.createParticles(vic.x + vic.w/2, vic.y + vic.h/2, 3, '#636e72');
+                    window.SMA.playSound('hit');
+                    return;
+                }
+                if (vic.actionState === 'SHIELD') {
+                    vic.shieldHP -= 10 * atk.chargePower;
+                    window.SMA.createParticles(vic.x + vic.w/2, vic.y + vic.h/2, 3, '#0984e3');
+                    if (vic.shieldHP <= 0) { vic.shieldHP = 0; vic.enterState('STUN', 120); }
+                    return;
+                }
+                // ダメージ0.5倍、吹っ飛ばし1.5倍
+                if (data.dmg) vic.percent += data.dmg * p * 0.5;
+                var atkScale = (data.scale !== undefined) ? data.scale : 0.1;
+                var kbMult = window.SMA.CHAR_DATA[vic.charId].kbMult || 1.0;
+                var kbValue = data.kb * 2.5;
+                var kb = (kbValue * p + (Math.pow(vic.percent, 1.2) * atkScale * p * 0.5)) * kbMult;
+                var r = data.angle * (Math.PI / 180);
+                // 鏡像の向きで吹っ飛ばし方向を決定
+                var cloneFR = atk.mirrorClone.facingRight;
+                vic.vx = Math.cos(r) * kb * 2.5 * (cloneFR ? 1 : -1);
+                vic.vy = Math.sin(r) * kb * 2.5;
+                var stunTime = data.hitstun ? data.hitstun : Math.min(60, kb * 1.5);
+                vic.enterState('STUN', stunTime);
+                window.SMA.shake = 5;
+                window.SMA.createParticles(vic.x, vic.y, 8, '#81ecec');
+                window.SMA.playSound('hit');
+            }
+        };
         window.SMA.checkGameSet = function() { if(window.SMA.pOne.stocks<=0 || window.SMA.pTwo.stocks<=0) { window.SMA.gameRunning = false; window.SMA.gameState = 'GAMEOVER'; var win = window.SMA.pOne.stocks>0 ? (window.SMA.isOnline?(window.SMA.isHost?"1P":"2P"):"1P") : (window.SMA.isOnline?(window.SMA.isHost?"2P":"1P"):"CPU"); document.getElementById('result-text').innerText = win + " WINS!"; document.getElementById('game-over-screen').classList.remove('hidden'); window.SMA.playSound('win'); window.parent.postMessage({ type: 'gameOver', winner: win }, '*'); if(window.SMA.isOnline && window.SMA.isHost) window.SMA.connections.forEach(function(c) { c.conn.send({type:'sync', gState:'GAMEOVER', win:win}); }); } };
         window.SMA.updateHud = function() { var elP1Pct = document.getElementById('p1-percent'); var elP1Stk = document.getElementById('p1-stock'); var elP2Pct = document.getElementById('p2-percent'); var elP2Stk = document.getElementById('p2-stock'); var elOvlMsg = document.getElementById('overlay-msg'); var elTxtOvl = document.getElementById('text-overlay'); if(elP1Pct) elP1Pct.innerText = Math.floor(window.SMA.pOne.percent) + "%"; if(elP1Stk) elP1Stk.innerText = "●".repeat(Math.max(0, window.SMA.pOne.stocks)); if(elP2Pct) elP2Pct.innerText = Math.floor(window.SMA.pTwo.percent) + "%"; if(elP2Stk) elP2Stk.innerText = "●".repeat(Math.max(0, window.SMA.pTwo.stocks)); if(window.SMA.gameState==='COUNTDOWN') { var t = "3"; if(window.SMA.countdownTimer<60)t="1"; else if(window.SMA.countdownTimer<120)t="2"; if(elOvlMsg) elOvlMsg.innerText=t; if(elTxtOvl) elTxtOvl.style.opacity=1; } else if(window.SMA.gameState==='PLAYING') { if(window.SMA.countdownTimer > -30) { if(elOvlMsg) elOvlMsg.innerText="GO!"; if(elTxtOvl) elTxtOvl.style.opacity=1; } else { if(elTxtOvl) elTxtOvl.style.opacity=0; } } };
         window.SMA.applySync = function(d) { 
@@ -724,6 +945,13 @@ function reportError(e) {
             this.hasAirDodged = false;
             this.hasUpSpecial = false;
             this.superArmor = false;
+            // 鏡キャラ用プロパティ
+            this.mirror = null;       // {x, y, timer} 設置中の鏡
+            this.mirrorClone = null;  // {x, y, facingRight} 鏡像の位置
+            this.mirrorPlaceRange = 0;
+            this.mirrorHasHit = false;
+            this.mirrorCooldown = 0; // 鏡のクールタイム（フレーム数, 300=5秒）
+            // 長押し時の設置距離
         };
 
         // 6. CHAR DATA
@@ -838,6 +1066,26 @@ function reportError(e) {
                     THROW_UP: { dmg: 11, kb: 6.0, scale: 0.1, angle: -90 }, 
                     THROW_DN: { dmg: 11, kb: 8.0, scale: 0.1, angle: 45 }
                 }
+            },
+            mirror: {
+                jumpMult: 1.1, speed: 1.035, kbMult: 1.5,
+                attacks: {
+                    NEUTRAL: { type:'mirror_slash', range: 50, dmg: 4, kb: 1.2, scale: 0.06, angle: -30, frames: 10, lag: 6, stun: 3, color: '#81ecec' },
+                    SIDE:    { type:'mirror_throw', dmg: 8, kb: 1.5, scale: 0.06, angle: -20, frames: 22, lag: 12, stun: 5, color: '#81ecec' },
+                    UP:      { type:'mirror_throw_up', dmg: 7, kb: 1.8, scale: 0.08, angle: -80, frames: 22, lag: 12, stun: 5, color: '#81ecec' },
+                    DOWN:    { type:'mirror_place', dmg: 0, kb: 0, scale: 0, angle: 0, frames: 200, lag: 12, stun: 0, color: '#dfe6e9' },
+                    AIR_NEUTRAL: { type:'mirror_spin', dmg: 8, kb: 1.6, scale: 0.08, angle: -45, frames: 24, lag: 10, stun: 5, color: '#81ecec' },
+                    AIR_SIDE: { type:'mirror_throw', dmg: 8, kb: 1.5, scale: 0.06, angle: -20, frames: 22, lag: 12, stun: 5, color: '#81ecec' },
+                    AIR_UP:   { type:'mirror_throw_up', dmg: 7, kb: 1.8, scale: 0.08, angle: -80, frames: 22, lag: 12, stun: 5, color: '#81ecec' },
+                    AIR_DOWN: { type:'mirror_place', dmg: 0, kb: 0, scale: 0, angle: 0, frames: 200, lag: 12, stun: 0, color: '#dfe6e9' },
+                    LEDGE_ATK: { dmg: 6, kb: 9.0, scale: 0.01, angle: -45, frames: 30, lag: 10, stun: 10 }
+                },
+                throws: {
+                    THROW_FW: { dmg: 6, kb: 6.0, scale: 0.06, angle: -30 },
+                    THROW_BK: { dmg: 6, kb: 6.0, scale: 0.06, angle: -150 },
+                    THROW_UP: { dmg: 6, kb: 6.0, scale: 0.06, angle: -90 },
+                    THROW_DN: { dmg: 6, kb: 7.0, scale: 0.06, angle: 45 }
+                }
             }
         };
 
@@ -876,18 +1124,35 @@ function reportError(e) {
             if (this.actionState === 'LEDGE_ROLL') { this.stateTimer--; var rollSpeed = 5; this.vx = this.facingRight ? rollSpeed : -rollSpeed; this.rotation += 0.5; if (this.stateTimer <= 0) { this.vx = 0; this.actionState = 'IDLE'; this.rotation = 0; } this.x += this.vx; return; }
             switch(this.actionState) {
                 case 'LAG': this.stateTimer--; if(this.stateTimer <= 0) this.actionState = 'IDLE'; this.vx *= S.FRICTION; this.applyPhysics(); break;
-                case 'ATTACK': if (!this.isGrounded) { var moveSpd = S.SPEED * 0.5; if(this.charId==='mage') moveSpd *= 0.9; if(this.charId==='brawler') moveSpd *= 1.4; if(this.charId==='spear') moveSpd *= 0.9; if(this.charId==='hammer') moveSpd *= 0.7; if (inputKeys.left) this.vx -= moveSpd; if (inputKeys.right) this.vx += moveSpd; if (this.vx > 5) this.vx = 5; if (this.vx < -5) this.vx = -5; } if (this.currentAttack && (this.currentAttack.type === 'meteor' || this.currentAttack.type === 'beam' || this.currentAttack.type === 'dive' || this.currentAttack.type === 'axe' || this.currentAttack.type === 'stall_fall' || this.currentAttack.type === 'up_rush' || this.currentAttack.type === 'ground_shock')) { this.handleAttackFrame(); this.applyPhysics(); } else if (this.currentAttack && (this.currentAttack.type === 'slide' || this.currentAttack.type === 'lunge' || this.currentAttack.type === 'spin_hammer' || this.currentAttack.type === 'hammer_spin_air' || this.currentAttack.type === 'tornado')) { this.handleAttackFrame(); this.vx *= 0.95; this.vy += S.GRAVITY; this.checkPlatforms(inputKeys); this.x += this.vx; this.y += this.vy; if (this.y > 2000) this.checkBounds(); } else { this.handleAttackFrame(); this.applyPhysics(); } break;
+                case 'ATTACK': if (!this.isGrounded) { var moveSpd = S.SPEED * 0.5; if(this.charId==='mage') moveSpd *= 0.9; if(this.charId==='brawler') moveSpd *= 1.4; if(this.charId==='spear') moveSpd *= 0.9; if(this.charId==='hammer') moveSpd *= 0.7; if(this.charId==='mirror') moveSpd *= 1.1; if (inputKeys.left) this.vx -= moveSpd; if (inputKeys.right) this.vx += moveSpd; if (this.vx > 5) this.vx = 5; if (this.vx < -5) this.vx = -5; } if (this.currentAttack && (this.currentAttack.type === 'meteor' || this.currentAttack.type === 'beam' || this.currentAttack.type === 'dive' || this.currentAttack.type === 'axe' || this.currentAttack.type === 'stall_fall' || this.currentAttack.type === 'up_rush' || this.currentAttack.type === 'ground_shock')) { this.handleAttackFrame(); this.applyPhysics(); } else if (this.currentAttack && (this.currentAttack.type === 'slide' || this.currentAttack.type === 'lunge' || this.currentAttack.type === 'spin_hammer' || this.currentAttack.type === 'hammer_spin_air' || this.currentAttack.type === 'tornado')) { this.handleAttackFrame(); this.vx *= 0.95; this.vy += S.GRAVITY; this.checkPlatforms(inputKeys); this.x += this.vx; this.y += this.vy; if (this.y > 2000) this.checkBounds(); } else { this.handleAttackFrame(); this.applyPhysics(); } break;
                 case 'CHARGE': this.faceOpponent(opponent); this.vx *= 0.6; this.chargePower += 0.02; if (this.chargePower > 1.7) this.chargePower = 1.7; this.applyPhysics(); break;
                 case 'SHIELD': this.shieldHP -= 0.6; if (inputKeys.left || inputKeys.right || inputKeys.down) { if (this.performDodge(inputKeys)) return; } if (this.shieldHP <= 0) { this.shieldHP = 0; this.enterState('STUN', 120); } else if (!inputKeys.shield) { this.actionState = 'IDLE'; } this.vx *= 0.5; this.applyPhysics(); break;
                 case 'GRABBING': this.handleGrabbing(inputKeys); this.vx = 0; this.applyPhysics(); break;
                 case 'THROWING': this.stateTimer--; if (this.stateTimer <= 0) this.actionState = 'IDLE'; this.vx *= 0.5; this.applyPhysics(); break;
-                case 'IDLE': this.faceOpponent(opponent); if(this.shieldHP < 100) this.shieldHP += 0.2; if (inputKeys.shield) { if (this.dodgeCooldown <= 0) { if (!this.isGrounded) { this.performDodge(inputKeys); } else { this.actionState = 'SHIELD'; } } } else { var moveSpd = S.SPEED; if(this.charId==='mage') moveSpd *= 0.9; if(this.charId==='brawler') moveSpd *= 1.4; if(this.charId==='spear') moveSpd *= 0.9; if(this.charId==='hammer') moveSpd *= 0.8; if (inputKeys.left) this.vx -= moveSpd; if (inputKeys.right) this.vx += moveSpd; } if (this.vx > 7) this.vx = 7; if (this.vx < -7) this.vx = -7; this.applyPhysics(); break;
+                case 'IDLE': this.faceOpponent(opponent); if(this.shieldHP < 100) this.shieldHP += 0.2; if (inputKeys.shield) { if (this.dodgeCooldown <= 0) { if (!this.isGrounded) { this.performDodge(inputKeys); } else { this.actionState = 'SHIELD'; } } } else { var moveSpd = S.SPEED; if(this.charId==='mage') moveSpd *= 0.9; if(this.charId==='brawler') moveSpd *= 1.4; if(this.charId==='spear') moveSpd *= 0.9; if(this.charId==='hammer') moveSpd *= 0.8; if(this.charId==='mirror') moveSpd *= 1.15; if (inputKeys.left) this.vx -= moveSpd; if (inputKeys.right) this.vx += moveSpd; } if (this.vx > 7) this.vx = 7; if (this.vx < -7) this.vx = -7; this.applyPhysics(); break;
+            }
+
+            // 鏡キャラ: 鏡タイマー更新と鏡像座標計算
+            if (this.charId === 'mirror') {
+                if (this.mirrorCooldown > 0) this.mirrorCooldown--;
+                if (this.mirror) {
+                this.mirror.timer--;
+                if (this.mirror.timer <= 0) { this.mirror = null; this.mirrorClone = null; this.mirrorCooldown = 300; }
+                else {
+                    var cx = this.x + this.w/2;
+                    this.mirrorClone = {
+                        x: 2 * this.mirror.x - cx - this.w/2,
+                        y: this.y,
+                        facingRight: !this.facingRight
+                    };
+                }
+                } // mirror存在チェック
             }
             if (this.isGrounded) { this.hasAirDodged = false; this.hasUpSpecial = false; }
             this.checkPlatforms(inputKeys); this.checkLedgeGrab(); this.checkSolids(); this.checkBounds();
         };
-        window.SMA.Fighter.prototype.serialize = function() { return { x: this.x, y: this.y, vx: this.vx, vy: this.vy, state: this.actionState, timer: this.stateTimer, atkType: this.currentAttackType, grounded: this.isGrounded, pct: this.percent, st: this.stocks, face: this.facingRight, chg: this.chargePower, sh: this.shieldHP, inv: this.invincible, grInv: this.grabInvincible }; };
-        window.SMA.Fighter.prototype.deserialize = function(data) { var S=window.SMA; if(!data) return; this.x = data.x; this.y = data.y; this.vx = data.vx; this.vy = data.vy; this.actionState = data.state; this.stateTimer = data.timer; this.isGrounded = data.grounded; this.currentAttackType = data.atkType; if (this.currentAttackType) { var set = S.CHAR_DATA[this.charId]; if(set.attacks[this.currentAttackType]) this.currentAttack = set.attacks[this.currentAttackType]; else if(set.throws[this.currentAttackType]) this.currentAttack = set.throws[this.currentAttackType]; } else this.currentAttack = null; this.percent = data.pct; this.stocks = data.st; this.facingRight = data.face; this.chargePower = data.chg; this.shieldHP = data.sh; this.invincible = data.inv; this.grabInvincible = data.grInv || 0; };
+        window.SMA.Fighter.prototype.serialize = function() { return { x: this.x, y: this.y, vx: this.vx, vy: this.vy, state: this.actionState, timer: this.stateTimer, atkType: this.currentAttackType, grounded: this.isGrounded, pct: this.percent, st: this.stocks, face: this.facingRight, chg: this.chargePower, sh: this.shieldHP, inv: this.invincible, grInv: this.grabInvincible, mirror: this.mirror, mirrorClone: this.mirrorClone, mirrorCooldown: this.mirrorCooldown, mirrorPlaceRange: this.mirrorPlaceRange, hitboxActive: this.hitbox.active, hitboxX: this.hitbox.x, hitboxY: this.hitbox.y, hitboxW: this.hitbox.w, hitboxH: this.hitbox.h }; };
+        window.SMA.Fighter.prototype.deserialize = function(data) { var S=window.SMA; if(!data) return; this.x = data.x; this.y = data.y; this.vx = data.vx; this.vy = data.vy; this.actionState = data.state; this.stateTimer = data.timer; this.isGrounded = data.grounded; this.currentAttackType = data.atkType; if (this.currentAttackType) { var set = S.CHAR_DATA[this.charId]; if(set.attacks[this.currentAttackType]) this.currentAttack = set.attacks[this.currentAttackType]; else if(set.throws[this.currentAttackType]) this.currentAttack = set.throws[this.currentAttackType]; } else this.currentAttack = null; this.percent = data.pct; this.stocks = data.st; this.facingRight = data.face; this.chargePower = data.chg; this.shieldHP = data.sh; this.invincible = data.inv; this.grabInvincible = data.grInv || 0; this.mirror = data.mirror || null; this.mirrorClone = data.mirrorClone || null; this.mirrorCooldown = data.mirrorCooldown || 0; this.mirrorPlaceRange = data.mirrorPlaceRange || 0; if (data.hitboxActive !== undefined) { this.hitbox.active = data.hitboxActive; this.hitbox.x = data.hitboxX; this.hitbox.y = data.hitboxY; this.hitbox.w = data.hitboxW; this.hitbox.h = data.hitboxH; } };
         window.SMA.Fighter.prototype.enterState = function(state, duration) { this.actionState = state; this.stateTimer = duration; this.hitbox.active = false; };
         window.SMA.Fighter.prototype.faceOpponent = function(opponent) { if (opponent && opponent.stocks > 0 && opponent.actionState !== 'RESPAWN' && this.actionState !== 'ATTACK') { if (this.x < opponent.x - 10) this.facingRight = true; if (this.x > opponent.x + 10) this.facingRight = false; } };
         window.SMA.Fighter.prototype.applyPhysics = function() { var S = window.SMA; if (this.actionState === 'ATTACK' && this.currentAttack && (this.currentAttack.type === 'meteor' || this.currentAttack.type === 'dive' || this.currentAttack.type === 'axe' || this.currentAttack.type === 'stall_fall' || this.currentAttack.type === 'up_rush')) { if (this.vy > 30) this.vy = 30; } else { var cap = S.MAX_FALL_SPEED; if (this.actionState === 'STUN' && this.vy > cap) cap = 40; if (this.vy > cap) this.vy = cap; } if (this.actionState === 'STUN') { var speed = Math.sqrt(this.vx*this.vx + this.vy*this.vy); if (speed < 4.0) { this.vx *= S.FRICTION; this.vy += S.GRAVITY; } else { this.vx *= S.KB_FRICTION; this.vy *= S.KB_FRICTION; } } else { this.vx *= S.FRICTION; this.vy += S.GRAVITY; } if(isNaN(this.x)) this.x = 0; if(isNaN(this.y)) this.y = 0; if(isNaN(this.vx)) this.vx = 0; if(isNaN(this.vy)) this.vy = 0; this.x += this.vx; this.y += this.vy; };
@@ -903,11 +1168,36 @@ function reportError(e) {
         window.SMA.Fighter.prototype.tryGrab = function(opponent) { var S=window.SMA; if(this.actionState !== 'IDLE' || !this.isGrounded) return; var dist = Math.sqrt(Math.pow(opponent.x - this.x, 2) + Math.pow(opponent.y - this.y, 2)); if (dist < 60 && opponent.invincible === 0 && opponent.grabInvincible <= 0 && opponent.actionState !== 'DEAD' && opponent.actionState !== 'RESPAWN') { this.actionState = 'GRABBING'; this.grabbedTarget = opponent; this.stateTimer = 120; opponent.chargePower = 1.0; opponent.actionState = 'GRABBED'; opponent.isShielding = false; S.createParticles(opponent.x + 15, opponent.y + 30, 5, '#a29bfe'); } else { this.enterState('LAG', 20); } };
         window.SMA.Fighter.prototype.handleGrabbing = function(inputKeys) { if (!this.grabbedTarget) { this.actionState = 'IDLE'; return; } this.grabbedTarget.x = this.x + (this.facingRight ? 25 : -25); this.grabbedTarget.y = this.y - 5; this.stateTimer--; if (this.stateTimer > 108) return; var throwType = null; if (inputKeys.left) throwType = this.facingRight ? 'THROW_BK' : 'THROW_FW'; else if (inputKeys.right) throwType = this.facingRight ? 'THROW_FW' : 'THROW_BK'; else if (inputKeys.up) throwType = 'THROW_UP'; else if (inputKeys.down) throwType = 'THROW_DN'; else if (this.stateTimer <= 0) throwType = 'THROW_FW'; if (throwType) this.performThrow(throwType); };
         window.SMA.Fighter.prototype.performThrow = function(typeStr) { var S=window.SMA; var vic = this.grabbedTarget; if (!vic) return; this.actionState = 'THROWING'; this.stateTimer = 15; var data = S.CHAR_DATA[this.charId].throws[typeStr]; vic.percent += data.dmg; var rad = data.angle * (Math.PI/180); var force = data.kb + (vic.percent * data.scale); var vx = Math.cos(rad) * force; var vy = Math.sin(rad) * force; if (!this.facingRight) vx *= -1; vic.vx = vx; vic.vy = vy; vic.enterState('STUN', 40); vic.grabInvincible = 60; vic.chargePower = 1.0; this.grabbedTarget = null; S.createParticles(vic.x+15, vic.y+30, 15, '#fff'); S.shake = 10; S.updateHud(); S.playSound('hit'); };
-        window.SMA.Fighter.prototype.die = function(direction, dx, dy) { var S=window.SMA; this.stocks--; S.updateHud(); this.chargePower = 1.0; this.hitbox.active = false; S.playSound('hit'); S.triggerComet(dx, dy, direction, this.color); S.freezeFrame = 10; this.actionState = 'DEAD'; this.percent = 0; if (this.stocks > 0) { this.actionState = 'RESPAWN'; this.respawnTimer = 90; this.x = -9999; } else { S.checkGameSet(); } };
+        window.SMA.Fighter.prototype.die = function(direction, dx, dy) { var S=window.SMA; this.stocks--; if (this.charId === 'mirror') { this.mirror = null; this.mirrorClone = null; this.mirrorCooldown = 300; } S.updateHud(); this.chargePower = 1.0; this.hitbox.active = false; S.playSound('hit'); S.triggerComet(dx, dy, direction, this.color); S.freezeFrame = 10; this.actionState = 'DEAD'; this.percent = 0; if (this.stocks > 0) { this.actionState = 'RESPAWN'; this.respawnTimer = 90; this.x = -9999; } else { S.checkGameSet(); } };
         window.SMA.Fighter.prototype.respawn = function() { var S=window.SMA; this.actionState = 'IDLE'; this.x = S.WORLD_W/2 - this.w/2; this.y = (S.WORLD_H * 0.7) - 300; this.vx = 0; this.vy = 0; this.percent = 0; this.shieldHP = 100; this.chargePower = 1.0; this.invincible = 180; this.isGrounded = false; this.hitbox.active = false; };
         window.SMA.Fighter.prototype.triggerJump = function(keys) { var S=window.SMA; if (this.actionState === 'LEDGE') return; if(keys && keys.down && this.isGrounded) { if (this.currentPlatform && this.currentPlatform.type === 'main') { this.vy = S.JUMP_FORCE * 0.6; this.jumps++; this.animScale.x = 0.7; this.animScale.y = 1.3; S.playSound('jump'); return; } else { this.dropThrough = true; this.isGrounded = false; this.y += 1; return; } } if(this.actionState === 'IDLE' && this.jumps < 2) { var force = keys && keys.down ? S.JUMP_FORCE * 0.6 : S.JUMP_FORCE; var jm = S.CHAR_DATA[this.charId].jumpMult || 1.0; this.vy = force * jm; this.jumps++; this.animScale.x = 0.7; this.animScale.y = 1.3; if (this.jumps === 2) { this.vx *= 0.8; S.createParticles(this.x+this.w/2, this.y+this.h, 10, '#fff'); } S.playSound('jump'); } };
-        window.SMA.Fighter.prototype.startCharge = function() { if (this.actionState === 'IDLE' || this.actionState === 'CHARGE') { this.actionState = 'CHARGE'; if(this.chargePower === 1.0) this.chargePower = 1.0; } };
-        window.SMA.Fighter.prototype.releaseAttack = function(typeStr) { var S=window.SMA; if (this.actionState === 'CHARGE' || this.actionState === 'IDLE') { var power = this.chargePower; if (this.actionState === 'IDLE') power = 1.0; this.actionState = 'ATTACK'; if (!this.isGrounded) { if (typeStr === 'DOWN') typeStr = 'AIR_DOWN'; else if (typeStr === 'SIDE') typeStr = 'AIR_SIDE'; else if (typeStr === 'NEUTRAL') typeStr = 'AIR_NEUTRAL'; if(this.charId==='spear' && typeStr==='AIR_UP' && this.hasUpSpecial) return; } var set = S.CHAR_DATA[this.charId].attacks; if(set[typeStr]) this.currentAttack = set[typeStr]; else this.currentAttack = null; this.currentAttackType = typeStr; this.chargePower = power; this.hasHit = false; this.stateTimer = 0; if(this.currentAttack) { if(this.currentAttack.type === 'shot') S.playSound('magic'); else if(this.currentAttack.type === 'fire_shot') S.playSound('magic'); else if(this.currentAttack.type === 'up_rush') S.playSound('jump'); else if(this.currentAttack.type === 'ground_shock') {} else if(this.currentAttack.type === 'boomerang' || this.currentAttack.type === 'boomerang_up') S.playSound('sword'); else if(this.currentAttackType === 'UP' && this.charId === 'mage') S.playSound('spin'); else S.playSound('sword'); } } };
+        window.SMA.Fighter.prototype.startCharge = function() {
+            if (this.actionState === 'IDLE' || this.actionState === 'CHARGE') {
+                // 鏡キャラ: ↓入力中なら即座にmirror_placeを発動（長押し距離調整のため）
+                if (this.charId === 'mirror') {
+                    var keys = (this.isP2 ? window.SMA.remoteKeys : window.SMA.myKeys) || {};
+                    if (keys.down) {
+                        var S = window.SMA;
+                        var typeStr = this.isGrounded ? 'DOWN' : 'AIR_DOWN';
+                        var set = S.CHAR_DATA[this.charId].attacks;
+                        if (set[typeStr]) {
+                            this.actionState = 'ATTACK';
+                            this.currentAttack = set[typeStr];
+                            this.currentAttackType = typeStr;
+                            this.chargePower = 1.0;
+                            this.hasHit = false;
+                            this.mirrorHasHit = false;
+                            this.stateTimer = 0;
+                            S.playSound('sword');
+                            return;
+                        }
+                    }
+                }
+                this.actionState = 'CHARGE';
+                if(this.chargePower === 1.0) this.chargePower = 1.0;
+            }
+        };
+        window.SMA.Fighter.prototype.releaseAttack = function(typeStr) { var S=window.SMA; if (this.actionState === 'CHARGE' || this.actionState === 'IDLE') { var power = this.chargePower; if (this.actionState === 'IDLE') power = 1.0; this.actionState = 'ATTACK'; if (!this.isGrounded) { if (typeStr === 'DOWN') typeStr = 'AIR_DOWN'; else if (typeStr === 'SIDE') typeStr = 'AIR_SIDE'; else if (typeStr === 'NEUTRAL') typeStr = 'AIR_NEUTRAL'; if(this.charId==='spear' && typeStr==='AIR_UP' && this.hasUpSpecial) return; } var set = S.CHAR_DATA[this.charId].attacks; if(set[typeStr]) this.currentAttack = set[typeStr]; else this.currentAttack = null; this.currentAttackType = typeStr; this.chargePower = power; this.hasHit = false; this.mirrorHasHit = false; this.stateTimer = 0; if(this.currentAttack) { if(this.currentAttack.type === 'shot') S.playSound('magic'); else if(this.currentAttack.type === 'fire_shot') S.playSound('magic'); else if(this.currentAttack.type === 'up_rush') S.playSound('jump'); else if(this.currentAttack.type === 'ground_shock') {} else if(this.currentAttack.type === 'boomerang' || this.currentAttack.type === 'boomerang_up') S.playSound('sword'); else if(this.currentAttackType === 'UP' && this.charId === 'mage') S.playSound('spin'); else S.playSound('sword'); } } };
         window.SMA.Fighter.prototype.handleAttackFrame = function() { 
             var S=window.SMA; this.stateTimer++; var atk = this.currentAttack; if(!atk) return; 
             
@@ -921,6 +1211,155 @@ function reportError(e) {
             if (this.charId === 'hammer' && this.currentAttackType === 'NEUTRAL') {
                 if(this.stateTimer >= 18 && this.stateTimer <= 22) this.superArmor = true;
                 else this.superArmor = false;
+            }
+
+
+            // *** 鏡キャラ攻撃処理 ***
+            if (atk.type === 'mirror_place') {
+                if (this.stateTimer === 1) {
+                    if (this.mirror) {
+                        // 入れ替わり: 本体と鏡像の位置を交換
+                        var oldX = this.x; var oldY = this.y;
+                        if (this.mirrorClone) {
+                            this.x = this.mirrorClone.x; this.y = this.mirrorClone.y;
+                            this.facingRight = !this.facingRight;
+                        }
+                        this.mirror = null; this.mirrorClone = null;
+                        this.mirrorCooldown = 300; // 入れ替わり後5秒クールタイム
+                        S.createParticles(oldX + this.w/2, oldY + this.h/2, 15, '#81ecec');
+                        S.createParticles(this.x + this.w/2, this.y + this.h/2, 15, '#81ecec');
+                        S.playSound('magic');
+                        this.actionState = 'LAG'; this.stateTimer = 18;
+                        this.currentAttack = null; this.chargePower = 1.0; return;
+                    } else {
+                        // クールタイム中は設置不可 → すぐLAGに移行
+                        if (this.mirrorCooldown > 0) {
+                            this.actionState = 'LAG'; this.stateTimer = 8;
+                            this.currentAttack = null; this.chargePower = 1.0; return;
+                        }
+                        // 鏡設置開始: ちょん押し=60px（横A間合い程度）
+                        this.mirrorPlaceRange = 60;
+                    }
+                }
+                // 鏡がまだ無い場合: 長押しでスライド
+                if (!this.mirror && this.stateTimer > 1) {
+                    // Aボタンが押されている間、設置距離が増加（最大300px）
+                    var keys = (this.isP2 ? S.remoteKeys : S.myKeys) || {};
+                    if (keys.attack) {
+                        this.mirrorPlaceRange += 3.83;
+                        if (this.mirrorPlaceRange > 750) this.mirrorPlaceRange = 750;
+                        // 長押し中はタイマーを延長（ボタンを離すまで待機）
+                        if (this.stateTimer >= atk.frames - 1) this.stateTimer = atk.frames - 2;
+                    } else {
+                        // ボタンを離した → 設置確定
+                        var placeX = this.x + this.w/2 + (this.facingRight ? this.mirrorPlaceRange : -this.mirrorPlaceRange);
+                        // プラットフォームの高さに合わせて設置
+                        var placeY = this.y + this.h;
+                        for (var pi = 0; pi < S.platforms.length; pi++) {
+                            var plat = S.platforms[pi];
+                            if (placeX > plat.x && placeX < plat.x + plat.w) {
+                                placeY = plat.y; break;
+                            }
+                        }
+                        this.mirror = { x: placeX, y: placeY, timer: 480 };
+                        this.mirrorClone = {
+                            x: 2 * placeX - (this.x + this.w/2) - this.w/2,
+                            y: this.y,
+                            facingRight: !this.facingRight
+                        };
+                        S.createParticles(placeX, placeY, 10, '#dfe6e9');
+                        S.playSound('magic');
+                        this.actionState = 'LAG'; this.stateTimer = atk.lag;
+                        this.currentAttack = null; this.chargePower = 1.0;
+                        return;
+                    }
+                }
+                if (this.stateTimer >= atk.frames) {
+                    // タイマー切れ（ボタン離さずにフレーム到達）: そのまま設置
+                    if (!this.mirror) {
+                        var placeX = this.x + this.w/2 + (this.facingRight ? this.mirrorPlaceRange : -this.mirrorPlaceRange);
+                        var placeY = this.y + this.h;
+                        for (var pi = 0; pi < S.platforms.length; pi++) {
+                            var plat = S.platforms[pi];
+                            if (placeX > plat.x && placeX < plat.x + plat.w) {
+                                placeY = plat.y; break;
+                            }
+                        }
+                        this.mirror = { x: placeX, y: placeY, timer: 480 };
+                        this.mirrorClone = {
+                            x: 2 * placeX - (this.x + this.w/2) - this.w/2,
+                            y: this.y,
+                            facingRight: !this.facingRight
+                        };
+                        S.createParticles(placeX, placeY, 10, '#dfe6e9');
+                        S.playSound('magic');
+                    }
+                    this.actionState = 'LAG'; this.stateTimer = atk.lag;
+                    this.currentAttack = null; this.chargePower = 1.0;
+                }
+                return;
+            }
+            if (atk.type === 'mirror_slash') {
+                var range = atk.range || 50;
+                if (this.stateTimer >= 3 && this.stateTimer <= 8) {
+                    this.hitbox.active = true; this.hitbox.w = range; this.hitbox.h = 25;
+                    this.hitbox.x = this.x + (this.facingRight ? 15 : -15 - range) + this.w/2;
+                    this.hitbox.y = this.y + 20;
+                } else { this.hitbox.active = false; }
+                if (this.stateTimer >= atk.frames) { this.actionState = 'LAG'; this.stateTimer = atk.lag; this.chargePower = 1.0; this.hitbox.active = false; this.currentAttack = null; }
+                return;
+            }
+            if (atk.type === 'mirror_throw_up') {
+                // 上A: 頭上に鏡を投げて回転（短射程の上方向判定）
+                if (this.stateTimer >= 4 && this.stateTimer <= 18) {
+                    this.hitbox.active = true;
+                    this.hitbox.w = 45; this.hitbox.h = 50;
+                    this.hitbox.x = this.x + this.w/2 - 22;
+                    this.hitbox.y = this.y - 45;
+                } else { this.hitbox.active = false; }
+                if (this.stateTimer >= atk.frames) { this.actionState = 'LAG'; this.stateTimer = atk.lag; this.chargePower = 1.0; this.hitbox.active = false; this.currentAttack = null; }
+                return;
+            }
+            if (atk.type === 'mirror_throw') {
+                // 横A: 前方に鏡を投げて回転（体の内側にも判定あり）
+                if (this.stateTimer >= 4 && this.stateTimer <= 18) {
+                    this.hitbox.active = true;
+                    this.hitbox.w = 70; this.hitbox.h = 45;
+                    this.hitbox.x = this.x + (this.facingRight ? -5 : -5 - 70) + this.w/2;
+                    this.hitbox.y = this.y + 3;
+                } else { this.hitbox.active = false; }
+                if (this.stateTimer >= atk.frames) { this.actionState = 'LAG'; this.stateTimer = atk.lag; this.chargePower = 1.0; this.hitbox.active = false; this.currentAttack = null; }
+                return;
+            }
+            if (atk.type === 'mirror_spin') {
+                if (this.stateTimer >= 4 && this.stateTimer <= 20) {
+                    this.hitbox.active = true; this.hitbox.w = 80; this.hitbox.h = 80;
+                    this.hitbox.x = this.x + this.w/2 - 40; this.hitbox.y = this.y + this.h/2 - 40;
+                } else { this.hitbox.active = false; }
+                if (this.stateTimer >= atk.frames) { this.actionState = 'LAG'; this.stateTimer = atk.lag; this.chargePower = 1.0; this.hitbox.active = false; this.currentAttack = null; }
+                return;
+            }
+            if (atk.type === 'mirror_triple' || atk.type === 'mirror_triple_hit3') {
+                var hit1S = 4, hit1E = 8, hit2S = 12, hit2E = 16, hit3S = 20, hit3E = 25;
+                if (this.stateTimer >= hit1S && this.stateTimer <= hit1E) {
+                    this.hitbox.active = true; this.hitbox.w = 55; this.hitbox.h = 20;
+                    this.hitbox.x = this.x + (this.facingRight ? 20 : -20 - 55) + this.w/2; this.hitbox.y = this.y + 25;
+                } else if (this.stateTimer === hit2S) {
+                    this.hasHit = false;
+                    this.hitbox.active = true; this.hitbox.w = 60; this.hitbox.h = 20;
+                    this.hitbox.x = this.x + (this.facingRight ? 25 : -25 - 60) + this.w/2; this.hitbox.y = this.y + 25;
+                } else if (this.stateTimer > hit2S && this.stateTimer <= hit2E) {
+                    this.hitbox.active = true;
+                } else if (this.stateTimer === hit3S) {
+                    this.hasHit = false;
+                    this.currentAttack = { type:'mirror_triple_hit3', dmg: atk.hit3_dmg || 6, kb: atk.hit3_kb || 2.8, scale: atk.hit3_scale || 0.1, angle: atk.hit3_angle || -40, stun: atk.hit3_stun || 8, frames: atk.frames, lag: atk.lag, color: atk.color };
+                    this.hitbox.active = true; this.hitbox.w = 65; this.hitbox.h = 25;
+                    this.hitbox.x = this.x + (this.facingRight ? 30 : -30 - 65) + this.w/2; this.hitbox.y = this.y + 20;
+                } else if (this.stateTimer > hit3S && this.stateTimer <= hit3E) {
+                    this.hitbox.active = true;
+                } else { this.hitbox.active = false; }
+                if (this.stateTimer >= atk.frames) { this.actionState = 'LAG'; this.stateTimer = atk.lag; this.chargePower = 1.0; this.hitbox.active = false; this.currentAttack = null; }
+                return;
             }
 
             // *** MAGE PROJECTILE LOGIC ***
@@ -1573,7 +2012,7 @@ function reportError(e) {
                         }
                         
                         if (!drawn) {
-                            if (this.actionState === 'LEDGE' || this.actionState === 'LEDGE_UP' || this.actionState === 'LEDGE_ATK') { 
+                            if ((this.actionState === 'LEDGE' || this.actionState === 'LEDGE_UP' || this.actionState === 'LEDGE_ATK') && this.charId !== 'mirror') { 
                                 // V410 FIX: Only draw white if invincible
                                 ctx.strokeStyle = (this.invincible > 0) ? "#fff" : this.color; 
                                 
@@ -1588,13 +2027,155 @@ function reportError(e) {
                                     if (this.charId === 'hammer') {
                                         window.SMA.drawHammer(ctx, handX, handY, angleDeg + (this.facingRight?180:-180), "#636e72");
                                     } else if (this.charId === 'spear') {
-                                        var spearAngle = angleDeg + (this.facingRight?90:-90); // Adjust spear angle
+                                        var spearAngle = angleDeg + (this.facingRight?90:-90);
                                         window.SMA.drawTrident(ctx, handX, handY, spearAngle, "#00b894");
+                                    } else if (this.charId === 'mirror') {
+                                        // 鏡キャラ: 小さな鏡を振り回す崖攻撃
+                                        ctx.save();
+                                        ctx.strokeStyle = '#81ecec';
+                                        ctx.lineWidth = 2;
+                                        var mirAngRad = angleDeg * Math.PI / 180;
+                                        var mirEndX = handX + Math.sin(mirAngRad) * 23;
+                                        var mirEndY = handY - Math.cos(mirAngRad) * 23;
+                                        ctx.beginPath(); ctx.moveTo(handX, handY); ctx.lineTo(mirEndX, mirEndY); ctx.stroke();
+                                        // 鏡の頭部分
+                                        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+                                        ctx.beginPath(); ctx.arc(mirEndX, mirEndY, 6.5, 0, Math.PI * 2); ctx.fill();
+                                        ctx.restore();
                                     } else {
                                         this.drawSword(ctx, handX, handY, angleDeg); 
                                     }
                                 } 
-                            } else if (this.charId !== 'spear' && this.charId !== 'hammer') {
+                            } else if (this.charId === 'mirror') {
+
+                            // 鏡キャラ本体描画
+                            ctx.save();
+                            ctx.strokeStyle = this.color;
+                            if (this.actionState === 'STUN') ctx.strokeStyle = '#ffeaa7';
+                            if (this.actionState === 'LAG') ctx.strokeStyle = '#b2bec3';
+                            if (this.actionState === 'GRABBED') ctx.strokeStyle = '#a29bfe';
+                            if (this.actionState === 'LEDGE' || this.actionState === 'LEDGE_UP') {
+                                ctx.strokeStyle = (this.invincible > 0) ? '#fff' : this.color;
+                            }
+                            ctx.lineWidth = 3;
+                            // 崖つかまり中の描画
+                            if (this.actionState === 'LEDGE' || this.actionState === 'LEDGE_UP' || this.actionState === 'LEDGE_ATK') {
+                                ctx.beginPath(); ctx.arc(cx, this.y+10, 8, 0, Math.PI*2); ctx.stroke();
+                                ctx.beginPath(); ctx.moveTo(cx, this.y+10); ctx.lineTo(cx, this.y+40); ctx.stroke();
+                                ctx.beginPath(); ctx.moveTo(cx, this.y+40); ctx.lineTo(cx-10, this.y+60); ctx.stroke();
+                                ctx.beginPath(); ctx.moveTo(cx, this.y+40); ctx.lineTo(cx+10, this.y+60); ctx.stroke();
+                                ctx.beginPath(); ctx.moveTo(cx, this.y+15); ctx.lineTo(this.facingRight?cx+10:cx-10, this.y-5); ctx.stroke();
+                                if (this.actionState === 'LEDGE_ATK' && this.currentAttack) {
+                                    var progress = (30 - this.stateTimer) / 30;
+                                    var throwAng3 = progress * Math.PI * 3;
+                                    var mAtkX = cx + (this.facingRight ? 25 : -25);
+                                    var mAtkY = this.y + 15;
+                                    ctx.strokeStyle = '#81ecec'; ctx.lineWidth = 2;
+                                    var mw3 = 12 * Math.cos(throwAng3);
+                                    ctx.beginPath(); ctx.moveTo(mAtkX - mw3, mAtkY); ctx.lineTo(mAtkX + mw3, mAtkY); ctx.stroke();
+                                    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+                                    ctx.beginPath(); ctx.arc(mAtkX, mAtkY, 4, 0, Math.PI*2); ctx.fill();
+                                }
+                                ctx.restore();
+                                drawn = true;
+                            }
+                            if (!drawn) {
+                            // 体
+                            ctx.beginPath(); ctx.moveTo(cx, this.y + 10); ctx.lineTo(cx, this.y + 40); ctx.stroke();
+                            // 足
+                            ctx.beginPath(); ctx.moveTo(cx, this.y + 40); ctx.lineTo(cx - 10, this.y + 60); ctx.stroke();
+                            ctx.beginPath(); ctx.moveTo(cx, this.y + 40); ctx.lineTo(cx + 10, this.y + 60); ctx.stroke();
+                            // 頭
+                            ctx.beginPath(); ctx.arc(cx, this.y + 10, 8, 0, Math.PI * 2); ctx.stroke();
+                            // 腕
+                            ctx.beginPath(); ctx.moveTo(cx, this.y + 20); ctx.lineTo(cx + (this.facingRight ? 15 : -15), this.y + 30); ctx.stroke();
+                            // 手持ち鏡
+                            var mirrorColor = this.mirrorCooldown > 0 ? '#555' : '#81ecec';
+                            var mirrorGlowColor = this.mirrorCooldown > 0 ? '#333' : 'rgba(255,255,255,0.6)';
+                            ctx.strokeStyle = mirrorColor;
+                            ctx.lineWidth = 2;
+                            var hx = cx + (this.facingRight ? 15 : -15);
+                            var hy = this.y + 30;
+                            if (this.actionState === 'ATTACK' && this.currentAttack) {
+                                var p = this.stateTimer / this.currentAttack.frames;
+                                if (this.currentAttack.type === 'mirror_spin') {
+                                    var angle = p * Math.PI * 2;
+                                    var r = 32;
+                                    var dx = Math.cos(angle) * r;
+                                    var dy = Math.sin(angle) * r;
+                                    ctx.beginPath(); ctx.moveTo(cx + dx - 6.5, this.y + 30 + dy); ctx.lineTo(cx + dx + 6.5, this.y + 30 + dy - 13); ctx.stroke();
+                                } else if (this.currentAttack.type === 'mirror_throw_up') {
+                                    // 上A: 頭上に鏡を投げて回転
+                                    var throwH = 45;
+                                    var throwAng = p * Math.PI * 4;
+                                    var mirX = cx;
+                                    var mirY = this.y - 10 - throwH * Math.sin(p * Math.PI);
+                                    ctx.beginPath(); ctx.moveTo(cx, this.y + 20); ctx.lineTo(mirX, mirY + 15); ctx.stroke();
+                                    ctx.strokeStyle = mirrorColor; ctx.lineWidth = 2.6;
+                                    var mw = 19.5 * Math.cos(throwAng);
+                                    ctx.beginPath(); ctx.moveTo(mirX - mw, mirY); ctx.lineTo(mirX + mw, mirY); ctx.stroke();
+                                    // 鏡の光
+                                    ctx.fillStyle = mirrorGlowColor;
+                                    ctx.beginPath(); ctx.arc(mirX, mirY, 5.2, 0, Math.PI*2); ctx.fill();
+                                } else if (this.currentAttack.type === 'mirror_throw') {
+                                    // 横A: 前方に鏡を投げて回転
+                                    var throwDist = 45;
+                                    var throwAng2 = p * Math.PI * 4;
+                                    var mirX2 = cx + (this.facingRight ? throwDist : -throwDist);
+                                    var mirY2 = this.y + 20 - 10 * Math.sin(p * Math.PI);
+                                    ctx.beginPath(); ctx.moveTo(cx, this.y + 20); ctx.lineTo(mirX2 - (this.facingRight ? 15 : -15), mirY2); ctx.stroke();
+                                    ctx.strokeStyle = mirrorColor; ctx.lineWidth = 2.6;
+                                    var mh2 = 19.5 * Math.cos(throwAng2);
+                                    ctx.beginPath(); ctx.moveTo(mirX2, mirY2 - mh2); ctx.lineTo(mirX2, mirY2 + mh2); ctx.stroke();
+                                    ctx.fillStyle = mirrorGlowColor;
+                                    ctx.beginPath(); ctx.arc(mirX2, mirY2, 5.2, 0, Math.PI*2); ctx.fill();
+                                } else if (this.currentAttackType === 'SIDE' || this.currentAttackType === 'AIR_SIDE') {
+                                    // 横A: 鏡振り下ろし
+                                    var swStart = 45; var swEnd = 135;
+                                    if (!this.facingRight) { swStart = -45; swEnd = -135; }
+                                    var swAng = (swStart + (swEnd - swStart) * p) * Math.PI / 180;
+                                    ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(hx + Math.cos(swAng) * 25, hy + Math.sin(swAng) * 25); ctx.stroke();
+                                } else if (this.currentAttackType === 'NEUTRAL') {
+                                    // 地上NA: 前方鏡突き
+                                    var ext2 = p < 0.5 ? p * 39 : (1-p) * 39;
+                                    ctx.beginPath(); ctx.moveTo(hx, hy);
+                                    ctx.lineTo(hx + (this.facingRight ? 20 + ext2 : -20 - ext2), hy - 3); ctx.stroke();
+                                } else if (this.currentAttackType === 'LEDGE_ATK') {
+                                    // 崖攻撃
+                                    ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(hx + (this.facingRight ? 22 : -22), hy - 8); ctx.stroke();
+                                } else {
+                                    ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(hx + (this.facingRight ? 20 : -20), hy - 5); ctx.stroke();
+                                }
+                            } else if (this.actionState === 'CHARGE') {
+                                var jx = (Math.random() - 0.5) * 3;
+                                var jy = (Math.random() - 0.5) * 3;
+                                ctx.save();
+                                ctx.strokeStyle = mirrorColor;
+                                ctx.lineWidth = 2.6;
+                                var mirLen2 = 26;
+                                ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(hx + (this.facingRight ? 6 : -6) + jx, hy - mirLen2 + jy); ctx.stroke();
+                                ctx.fillStyle = mirrorGlowColor;
+                                ctx.beginPath(); ctx.arc(hx + (this.facingRight ? 6 : -6) + jx, hy - mirLen2 + jy, 5.2, 0, Math.PI * 2); ctx.fill();
+                                if (this.chargePower > 1.2) { ctx.shadowBlur = 10; ctx.shadowColor = '#81ecec'; ctx.strokeStyle = '#fff'; ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(hx + (this.facingRight ? 8 : -8), hy - 28); ctx.stroke(); }
+                                ctx.restore();
+                            } else {
+                                // 手持ち鏡（アイドル時、1.3倍サイズ）
+                                ctx.save();
+                                ctx.strokeStyle = mirrorColor;
+                                ctx.lineWidth = 2.6;
+                                var mirLen = 26;
+                                ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(hx + (this.facingRight ? 6 : -6), hy - mirLen); ctx.stroke();
+                                ctx.fillStyle = mirrorGlowColor;
+                                ctx.beginPath(); ctx.arc(hx + (this.facingRight ? 6 : -6), hy - mirLen, 5.2, 0, Math.PI * 2); ctx.fill();
+                                ctx.restore();
+                            }
+                            // シールド
+                            if (this.actionState === 'SHIELD') { ctx.save(); ctx.fillStyle = 'rgba(116, 185, 255, ' + (this.shieldHP / 150) + ')'; ctx.strokeStyle = '#0984e3'; ctx.beginPath(); ctx.arc(cx, this.y + 30, 45, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.restore(); }
+                            ctx.restore();
+                            drawn = true;
+                            } // !drawn 閉じ
+                        }
+                        if (this.charId !== 'spear' && this.charId !== 'hammer' && this.charId !== 'mirror') {
                                 // GENERIC BODY DRAW (SWORD/MAGE when not special)
                                 ctx.beginPath(); ctx.moveTo(cx, this.y+10); ctx.lineTo(cx, this.y+40); ctx.moveTo(cx, this.y+40); ctx.lineTo(cx-10, this.y+60); ctx.moveTo(cx, this.y+40); ctx.lineTo(cx+10, this.y+60); ctx.moveTo(cx, this.y+20); ctx.lineTo(cx+(this.facingRight?15:-15), this.y+30); ctx.stroke(); ctx.beginPath(); ctx.arc(cx, this.y+10, 10, 0, Math.PI*2); ctx.stroke(); 
                                 if (this.actionState === 'SHIELD') { ctx.save(); ctx.fillStyle = `rgba(116, 185, 255, ${this.shieldHP/150})`; ctx.strokeStyle = "#0984e3"; ctx.beginPath(); ctx.arc(cx, this.y + this.h/2, 45, 0, Math.PI*2); ctx.fill(); ctx.stroke(); ctx.restore(); } 
@@ -1812,7 +2393,8 @@ function reportError(e) {
             bindChar('card-mage', 'mage');
             bindChar('card-brawler', 'brawler');
             bindChar('card-spear', 'spear');
-            bindChar('card-hammer', 'hammer'); // NEW
+            bindChar('card-hammer', 'hammer');
+            bindChar('card-mirror', 'mirror');
 
             // FIXED: Branching logic for CSS button
             bindBtn('btn-css-ready', function() { 
