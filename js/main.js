@@ -910,7 +910,7 @@ function reportError(e) {
                 if (data.dmg) vic.percent += data.dmg * p * 0.5;
                 var atkScale = (data.scale !== undefined) ? data.scale : 0.1;
                 var kbMult = window.SMA.CHAR_DATA[vic.charId].kbMult || 1.0;
-                var kbValue = data.kb * 3.5;
+                var kbValue = data.kb * 2.0;
                 var kb = (kbValue * p + (Math.pow(vic.percent, 1.2) * atkScale * p)) * kbMult;
                 var r = data.angle * (Math.PI / 180);
                 // 鏡像の向きで吹っ飛ばし方向を決定
