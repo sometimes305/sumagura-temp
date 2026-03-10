@@ -733,13 +733,13 @@ function reportError(e) {
                                     ctx.beginPath(); ctx.arc(mirX, mirY, 4, 0, Math.PI*2); ctx.fill();
                                 } else if (atkType === 'mirror_throw') {
                                     // 横A: 前方に鏡を投げて回転（鏡像）
-                                    var throwDist = 35;
+                                    var throwDist = 50;
                                     var throwAng2 = p * Math.PI * 4;
                                     var mirX2 = cx + (fr ? throwDist : -throwDist);
-                                    var mirY2 = cY + 20 - 10 * Math.sin(p * Math.PI);
+                                    var mirY2 = cY + 30 - 10 * Math.sin(p * Math.PI);
                                     ctx.beginPath(); ctx.moveTo(cx, cY + 20); ctx.lineTo(mirX2 - (fr ? 15 : -15), mirY2); ctx.stroke();
-                                    ctx.strokeStyle = '#81ecec'; ctx.lineWidth = 2;
-                                    var mh2 = 15 * Math.cos(throwAng2);
+                                    ctx.strokeStyle = '#81ecec'; ctx.lineWidth = 2.6;
+                                    var mh2 = 28 * Math.cos(throwAng2);
                                     ctx.beginPath(); ctx.moveTo(mirX2, mirY2 - mh2); ctx.lineTo(mirX2, mirY2 + mh2); ctx.stroke();
                                     ctx.fillStyle = 'rgba(255,255,255,0.4)';
                                     ctx.beginPath(); ctx.arc(mirX2, mirY2, 4, 0, Math.PI*2); ctx.fill();
@@ -1327,9 +1327,9 @@ function reportError(e) {
                 // 横A: 前方に鏡を投げて回転（体の内側にも判定あり）
                 if (this.stateTimer >= 4 && this.stateTimer <= 18) {
                     this.hitbox.active = true;
-                    this.hitbox.w = 70; this.hitbox.h = 45;
-                    this.hitbox.x = this.x + (this.facingRight ? -5 : -5 - 70) + this.w/2;
-                    this.hitbox.y = this.y + 3;
+                    this.hitbox.w = 77; this.hitbox.h = 60;
+                    this.hitbox.x = this.x + (this.facingRight ? -5 : -5 - 77) + this.w/2;
+                    this.hitbox.y = this.y;
                 } else { this.hitbox.active = false; }
                 if (this.stateTimer >= atk.frames) { this.actionState = 'LAG'; this.stateTimer = atk.lag; this.chargePower = 1.0; this.hitbox.active = false; this.currentAttack = null; }
                 return;
@@ -2134,13 +2134,13 @@ function reportError(e) {
                                     ctx.beginPath(); ctx.arc(mirX, mirY, 5.2, 0, Math.PI*2); ctx.fill();
                                 } else if (this.currentAttack.type === 'mirror_throw') {
                                     // 横A: 前方に鏡を投げて回転
-                                    var throwDist = 45;
+                                    var throwDist = 50;
                                     var throwAng2 = p * Math.PI * 4;
                                     var mirX2 = cx + (this.facingRight ? throwDist : -throwDist);
-                                    var mirY2 = this.y + 20 - 10 * Math.sin(p * Math.PI);
+                                    var mirY2 = this.y + 30 - 10 * Math.sin(p * Math.PI);
                                     ctx.beginPath(); ctx.moveTo(cx, this.y + 20); ctx.lineTo(mirX2 - (this.facingRight ? 15 : -15), mirY2); ctx.stroke();
                                     ctx.strokeStyle = mirrorColor; ctx.lineWidth = 2.6;
-                                    var mh2 = 19.5 * Math.cos(throwAng2);
+                                    var mh2 = 28 * Math.cos(throwAng2);
                                     ctx.beginPath(); ctx.moveTo(mirX2, mirY2 - mh2); ctx.lineTo(mirX2, mirY2 + mh2); ctx.stroke();
                                     ctx.fillStyle = mirrorGlowColor;
                                     ctx.beginPath(); ctx.arc(mirX2, mirY2, 5.2, 0, Math.PI*2); ctx.fill();
