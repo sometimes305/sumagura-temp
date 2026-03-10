@@ -1128,11 +1128,31 @@ function reportError(e) {
             switch(this.actionState) {
                 case 'LAG': this.stateTimer--; if(this.stateTimer <= 0) this.actionState = 'IDLE'; this.vx *= S.FRICTION; this.applyPhysics(); break;
                 case 'ATTACK': if (!this.isGrounded) { var moveSpd = S.SPEED * 0.5; if(this.charId==='mage') moveSpd *= 0.9; if(this.charId==='brawler') moveSpd *= 1.4; if(this.charId==='spear') moveSpd *= 0.9; if(this.charId==='hammer') moveSpd *= 0.7; if(this.charId==='mirror') moveSpd *= 1.1; if (inputKeys.left) this.vx -= moveSpd; if (inputKeys.right) this.vx += moveSpd; if (this.vx > 5) this.vx = 5; if (this.vx < -5) this.vx = -5; } if (this.currentAttack && (this.currentAttack.type === 'meteor' || this.currentAttack.type === 'beam' || this.currentAttack.type === 'dive' || this.currentAttack.type === 'axe' || this.currentAttack.type === 'stall_fall' || this.currentAttack.type === 'up_rush' || this.currentAttack.type === 'ground_shock')) { this.handleAttackFrame(); this.applyPhysics(); } else if (this.currentAttack && (this.currentAttack.type === 'slide' || this.currentAttack.type === 'lunge' || this.currentAttack.type === 'spin_hammer' || this.currentAttack.type === 'hammer_spin_air' || this.currentAttack.type === 'tornado')) { this.handleAttackFrame(); this.vx *= 0.95; this.vy += S.GRAVITY; this.checkPlatforms(inputKeys); this.x += this.vx; this.y += this.vy; if (this.y > 2000) this.checkBounds(); } else { this.handleAttackFrame(); this.applyPhysics(); } break;
-                case 'CHARGE': this.faceOpponent(opponent); this.vx *= 0.6; this.chargePower += 0.02; if (this.chargePower > 1.7) this.chargePower = 1.7; this.applyPhysics(); break;
+                case 'CHARGE': 
+                    if (inputKeys.left) this.facingRight = false;
+                    if (inputKeys.right) this.facingRight = true;
+                    this.vx *= 0.6; this.chargePower += 0.02; if (this.chargePower > 1.7) this.chargePower = 1.7; this.applyPhysics(); break;
                 case 'SHIELD': this.shieldHP -= 0.6; if (inputKeys.left || inputKeys.right || inputKeys.down) { if (this.performDodge(inputKeys)) return; } if (this.shieldHP <= 0) { this.shieldHP = 0; this.enterState('STUN', 120); } else if (!inputKeys.shield) { this.actionState = 'IDLE'; } this.vx *= 0.5; this.applyPhysics(); break;
                 case 'GRABBING': this.handleGrabbing(inputKeys); this.vx = 0; this.applyPhysics(); break;
                 case 'THROWING': this.stateTimer--; if (this.stateTimer <= 0) this.actionState = 'IDLE'; this.vx *= 0.5; this.applyPhysics(); break;
-                case 'IDLE': this.faceOpponent(opponent); if(this.shieldHP < 100) this.shieldHP += 0.2; if (inputKeys.shield) { if (this.dodgeCooldown <= 0) { if (!this.isGrounded) { this.performDodge(inputKeys); } else { this.actionState = 'SHIELD'; } } } else { var moveSpd = S.SPEED; if(this.charId==='mage') moveSpd *= 0.9; if(this.charId==='brawler') moveSpd *= 1.4; if(this.charId==='spear') moveSpd *= 0.9; if(this.charId==='hammer') moveSpd *= 0.8; if(this.charId==='mirror') moveSpd *= 1.15; if (inputKeys.left) this.vx -= moveSpd; if (inputKeys.right) this.vx += moveSpd; } if (this.vx > 7) this.vx = 7; if (this.vx < -7) this.vx = -7; this.applyPhysics(); break;
+                case 'IDLE': 
+                    if(this.shieldHP < 100) this.shieldHP += 0.2; 
+                    if (inputKeys.shield) { 
+                        if (this.dodgeCooldown <= 0) { 
+                            if (!this.isGrounded) { this.performDodge(inputKeys); } 
+                            else { this.actionState = 'SHIELD'; } 
+                        } 
+                    } else { 
+                        var moveSpd = S.SPEED; 
+                        if(this.charId==='mage') moveSpd *= 0.9; 
+                        if(this.charId==='brawler') moveSpd *= 1.4; 
+                        if(this.charId==='spear') moveSpd *= 0.9; 
+                        if(this.charId==='hammer') moveSpd *= 0.8; 
+                        if(this.charId==='mirror') moveSpd *= 1.15; 
+                        if (inputKeys.left) { this.vx -= moveSpd; this.facingRight = false; } 
+                        if (inputKeys.right) { this.vx += moveSpd; this.facingRight = true; } 
+                    } 
+                    if (this.vx > 7) this.vx = 7; if (this.vx < -7) this.vx = -7; this.applyPhysics(); break;
             }
 
             // 鏡キャラ: 鏡タイマー更新と鏡像座標計算
