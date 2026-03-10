@@ -811,8 +811,8 @@ function reportError(e) {
                     var atkScale = (data.scale !== undefined) ? data.scale : 0.1;
                     var kbMult = window.SMA.CHAR_DATA[vic.charId].kbMult || 1.0;
                     
-                    // DEFAULT KB
-                    var kbValue = data.kb;
+                    // DEFAULT KB (Mirror Clone Boost: 3.0x)
+                    var kbValue = data.kb * 3.0;
                     
                     // TORNADO FINISHER LOGIC (Dynamic KB override)
                     if ((atk.currentAttackType === 'DOWN' || atk.currentAttackType === 'AIR_DOWN') && atk.charId === 'hammer') {
@@ -906,7 +906,7 @@ function reportError(e) {
                     if (vic.shieldHP <= 0) { vic.shieldHP = 0; vic.enterState('STUN', 120); }
                     return;
                 }
-                // ダメージ0.5倍、吹っ飛ばし1.5倍
+                // ダメージ0.5倍、吹っ飛ばし3.0倍（強化）
                 if (data.dmg) vic.percent += data.dmg * p * 0.5;
                 var atkScale = (data.scale !== undefined) ? data.scale : 0.1;
                 var kbMult = window.SMA.CHAR_DATA[vic.charId].kbMult || 1.0;
