@@ -1840,11 +1840,7 @@ function reportError(e) {
                                 ctx.beginPath(); ctx.moveTo(cx, this.y+40); ctx.lineTo(cx-10, this.y+60); ctx.stroke(); 
                                 ctx.beginPath(); ctx.moveTo(cx, this.y+40); ctx.lineTo(cx+10, this.y+60); ctx.stroke(); 
                                 ctx.beginPath(); ctx.arc(cx, this.y+10, 8, 0, Math.PI*2); ctx.stroke(); 
-                                                    if (this.actionState === 'GRABBING' || this.actionState === 'THROWING') {
-                        ctx.beginPath(); ctx.moveTo(cx, this.y+25); ctx.lineTo(cx+(this.facingRight?40:-40), this.y+25); ctx.stroke();
-                    } else {
-                        ctx.beginPath(); ctx.moveTo(cx, this.y+20); ctx.lineTo(cx+(this.facingRight?15:-15), this.y+30); ctx.stroke();
-                    }
+                                                    ctx.beginPath(); ctx.moveTo(cx, this.y+20); ctx.lineTo(cx+(this.facingRight?15:-15), this.y+30); ctx.stroke();
                             }
                             // CHARGE MOTION FOR SPEAR
                             if (this.actionState === 'CHARGE') { 
@@ -2246,7 +2242,14 @@ function reportError(e) {
                         }
                         if (this.charId !== 'spear' && this.charId !== 'hammer' && this.charId !== 'mirror') {
                                 // GENERIC BODY DRAW (SWORD/MAGE when not special)
-                                ctx.beginPath(); ctx.moveTo(cx, this.y+10); ctx.lineTo(cx, this.y+40); ctx.moveTo(cx, this.y+40); ctx.lineTo(cx-10, this.y+60); ctx.moveTo(cx, this.y+40); ctx.lineTo(cx+10, this.y+60); ctx.moveTo(cx, this.y+20); ctx.lineTo(cx+(this.facingRight?15:-15), this.y+30); ctx.stroke(); ctx.beginPath(); ctx.arc(cx, this.y+10, 10, 0, Math.PI*2); ctx.stroke(); 
+                                // GRABBING中は腕を前に伸ばして引き寄せモーション、THROWINGも同様
+                                if (this.actionState === 'GRABBING' || this.actionState === 'THROWING') {
+                                    var pullProgress = this.actionState === 'GRABBING' ? Math.max(0, (120 - this.stateTimer) / 30) : 1.0;
+                                    var armLen = Math.round(40 - pullProgress * 15); // 引き寄せるほど腕が縮む
+                                    ctx.beginPath(); ctx.moveTo(cx, this.y+10); ctx.lineTo(cx, this.y+40); ctx.moveTo(cx, this.y+40); ctx.lineTo(cx-10, this.y+60); ctx.moveTo(cx, this.y+40); ctx.lineTo(cx+10, this.y+60); ctx.moveTo(cx, this.y+20); ctx.lineTo(cx+(this.facingRight?armLen:-armLen), this.y+25); ctx.stroke(); ctx.beginPath(); ctx.arc(cx, this.y+10, 10, 0, Math.PI*2); ctx.stroke();
+                                } else {
+                                    ctx.beginPath(); ctx.moveTo(cx, this.y+10); ctx.lineTo(cx, this.y+40); ctx.moveTo(cx, this.y+40); ctx.lineTo(cx-10, this.y+60); ctx.moveTo(cx, this.y+40); ctx.lineTo(cx+10, this.y+60); ctx.moveTo(cx, this.y+20); ctx.lineTo(cx+(this.facingRight?15:-15), this.y+30); ctx.stroke(); ctx.beginPath(); ctx.arc(cx, this.y+10, 10, 0, Math.PI*2); ctx.stroke(); 
+                                }
                                 if (this.actionState === 'SHIELD') { ctx.save(); ctx.fillStyle = `rgba(116, 185, 255, ${this.shieldHP/150})`; ctx.strokeStyle = "#0984e3"; ctx.beginPath(); ctx.arc(cx, this.y + this.h/2, 45, 0, Math.PI*2); ctx.fill(); ctx.stroke(); ctx.restore(); } 
                                 if (this.actionState === 'ATTACK' && this.currentAttack && this.currentAttack.type !== 'beam') { 
                                     var atk = this.currentAttack; var progress = this.stateTimer / atk.frames; var angleDeg = 0; 
