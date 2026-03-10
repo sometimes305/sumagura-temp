@@ -11,8 +11,8 @@ function reportError(e) {
 
         // 1. GLOBAL NAMESPACE
         window.SMA = {};
-        window.SMA.ID_PREFIX = "sumagura_v412_"; 
-        window.SMA.VERSION = "v412";
+        window.SMA.ID_PREFIX = "sumagura_v422_"; 
+        window.SMA.VERSION = "v422";
         window.SMA.GRAVITY = 0.40; window.SMA.MAX_FALL_SPEED = 9.0;
         window.SMA.FRICTION = 0.82; window.SMA.KB_FRICTION = 0.95;
         window.SMA.SPEED = 1.1; window.SMA.JUMP_FORCE = -10.0;
@@ -910,8 +910,8 @@ function reportError(e) {
                 if (data.dmg) vic.percent += data.dmg * p * 0.5;
                 var atkScale = (data.scale !== undefined) ? data.scale : 0.1;
                 var kbMult = window.SMA.CHAR_DATA[vic.charId].kbMult || 1.0;
-                var kbValue = data.kb * 2.0;
-                var kb = (kbValue * p + (Math.pow(vic.percent, 1.2) * atkScale * p * 0.5)) * kbMult;
+                var kbValue = data.kb * 4.0;
+                var kb = (kbValue * p + (Math.pow(vic.percent, 1.2) * atkScale * p * 0.75)) * kbMult;
                 var r = data.angle * (Math.PI / 180);
                 // 鏡像の向きで吹っ飛ばし方向を決定
                 var cloneFR = atk.mirrorClone.facingRight;
