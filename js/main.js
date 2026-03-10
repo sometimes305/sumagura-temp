@@ -1324,11 +1324,11 @@ function reportError(e) {
                 return;
             }
             if (atk.type === 'mirror_throw') {
-                // 横A: 前方に鏡を投げて回転（体の内側にも判定あり）
+                // 横A: 前方に鏡を投げて回転（判定強化: 幅85, 高さ70）
                 if (this.stateTimer >= 4 && this.stateTimer <= 18) {
                     this.hitbox.active = true;
-                    this.hitbox.w = 77; this.hitbox.h = 60;
-                    this.hitbox.x = this.x + (this.facingRight ? -5 : -5 - 77) + this.w/2;
+                    this.hitbox.w = 85; this.hitbox.h = 70;
+                    this.hitbox.x = this.x + (this.facingRight ? -5 : -5 - 85) + this.w/2;
                     this.hitbox.y = this.y;
                 } else { this.hitbox.active = false; }
                 if (this.stateTimer >= atk.frames) { this.actionState = 'LAG'; this.stateTimer = atk.lag; this.chargePower = 1.0; this.hitbox.active = false; this.currentAttack = null; }
