@@ -1323,11 +1323,13 @@ function reportError(e) {
                 return;
             }
             if (atk.type === 'mirror_slash') {
-                var range = atk.range || 50;
+                var p = this.chargePower || 1.0;
+                var szMult = (p - 1.0) / 0.7 * 0.2 + 1.0; 
+                var range = (atk.range || 50) * szMult;
                 if (this.stateTimer >= 3 && this.stateTimer <= 8) {
-                    this.hitbox.active = true; this.hitbox.w = range; this.hitbox.h = 25;
+                    this.hitbox.active = true; this.hitbox.w = range; this.hitbox.h = 25 * szMult;
                     this.hitbox.x = this.x + (this.facingRight ? 15 : -15 - range) + this.w/2;
-                    this.hitbox.y = this.y + 20;
+                    this.hitbox.y = this.y + 20 - (this.hitbox.h - 25)/2;
                 } else { this.hitbox.active = false; }
                 if (this.stateTimer >= atk.frames) { this.actionState = 'LAG'; this.stateTimer = atk.lag; this.chargePower = 1.0; this.hitbox.active = false; this.currentAttack = null; }
                 return;
@@ -1345,19 +1347,25 @@ function reportError(e) {
             }
             if (atk.type === 'mirror_throw') {
                 // 横A: 前方に鏡を投げて回転（判定強化: 幅85, 高さ70）
+                var p = this.chargePower || 1.0;
+                var szMult = (p - 1.0) / 0.7 * 0.2 + 1.0;
+                var curW = 85 * szMult; var curH = 70 * szMult;
                 if (this.stateTimer >= 4 && this.stateTimer <= 18) {
                     this.hitbox.active = true;
-                    this.hitbox.w = 85; this.hitbox.h = 70;
-                    this.hitbox.x = this.x + (this.facingRight ? -5 : -5 - 85) + this.w/2;
-                    this.hitbox.y = this.y;
+                    this.hitbox.w = curW; this.hitbox.h = curH;
+                    this.hitbox.x = this.x + (this.facingRight ? -5 : -5 - curW) + this.w/2;
+                    this.hitbox.y = this.y - (curH - 70)/2;
                 } else { this.hitbox.active = false; }
                 if (this.stateTimer >= atk.frames) { this.actionState = 'LAG'; this.stateTimer = atk.lag; this.chargePower = 1.0; this.hitbox.active = false; this.currentAttack = null; }
                 return;
             }
             if (atk.type === 'mirror_spin') {
+                var p = this.chargePower || 1.0;
+                var szMult = (p - 1.0) / 0.7 * 0.2 + 1.0;
+                var curSz = 80 * szMult;
                 if (this.stateTimer >= 4 && this.stateTimer <= 20) {
-                    this.hitbox.active = true; this.hitbox.w = 80; this.hitbox.h = 80;
-                    this.hitbox.x = this.x + this.w/2 - 40; this.hitbox.y = this.y + this.h/2 - 40;
+                    this.hitbox.active = true; this.hitbox.w = curSz; this.hitbox.h = curSz;
+                    this.hitbox.x = this.x + this.w/2 - curSz/2; this.hitbox.y = this.y + this.h/2 - curSz/2;
                 } else { this.hitbox.active = false; }
                 if (this.stateTimer >= atk.frames) { this.actionState = 'LAG'; this.stateTimer = atk.lag; this.chargePower = 1.0; this.hitbox.active = false; this.currentAttack = null; }
                 return;
