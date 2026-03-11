@@ -2655,7 +2655,7 @@ function reportError(e) {
                                         var r = 40;
                                         mirX = cx + Math.cos(spinAngle) * r;
                                         mirY = this.y + 25 + Math.sin(spinAngle) * r;
-                                        mirAngle = spinAngle + Math.PI/2;
+                                        mirAngle = 0; // 鏡の向きは一定
                                     } else if (this.currentAttack.type === 'mirror_throw_up' || this.currentAttackType === 'UP' || this.currentAttackType === 'AIR_UP') {
                                         // 上A: 上方へ飛び出す
                                         mirScale = 1.5;
