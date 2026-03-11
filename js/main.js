@@ -11,8 +11,8 @@ function reportError(e) {
 
         // 1. GLOBAL NAMESPACE
         window.SMA = {};
-        window.SMA.ID_PREFIX = "sumagura_v428_"; 
-        window.SMA.VERSION = "v428";
+        window.SMA.ID_PREFIX = "sumagura_v429_"; 
+        window.SMA.VERSION = "v429";
         window.SMA.GRAVITY = 0.40; window.SMA.MAX_FALL_SPEED = 9.0;
         window.SMA.FRICTION = 0.82; window.SMA.KB_FRICTION = 0.95;
         window.SMA.SPEED = 1.1; window.SMA.JUMP_FORCE = -10.0;
@@ -1594,7 +1594,21 @@ function reportError(e) {
                 } // mirror存在チェック
             }
             if (this.isGrounded) { this.hasAirDodged = false; this.hasUpSpecial = false; }
+            var preGrounded = this.isGrounded;
             this.checkPlatforms(inputKeys); this.checkLedgeGrab(); this.checkSolids(); this.checkBounds();
+            
+            // 空中N着地硬直 (sword, brawler, hammer, mirror)
+            if (!preGrounded && this.isGrounded) {
+                if (this.actionState === 'ATTACK' && this.currentAttackType === 'AIR_NEUTRAL') {
+                    if (this.charId === 'sword' || this.charId === 'brawler' || this.charId === 'hammer' || this.charId === 'mirror') {
+                        this.actionState = 'LAG';
+                        this.stateTimer = 3; // 3F landing lag
+                        this.currentAttack = null;
+                        this.hitbox.active = false;
+                        this.rotation = 0;
+                    }
+                }
+            }
         };
         window.SMA.Fighter.prototype.serialize = function() { return { x: this.x, y: this.y, vx: this.vx, vy: this.vy, state: this.actionState, timer: this.stateTimer, atkType: this.currentAttackType, grounded: this.isGrounded, pct: this.percent, st: this.stocks, face: this.facingRight, chg: this.chargePower, sh: this.shieldHP, inv: this.invincible, grInv: this.grabInvincible, mirror: this.mirror, mirrorClone: this.mirrorClone, mirrorCooldown: this.mirrorCooldown, mirrorPlaceRange: this.mirrorPlaceRange, hitboxActive: this.hitbox.active, hitboxX: this.hitbox.x, hitboxY: this.hitbox.y, hitboxW: this.hitbox.w, hitboxH: this.hitbox.h }; };
         window.SMA.Fighter.prototype.deserialize = function(data) { var S=window.SMA; if(!data) return; this.x = data.x; this.y = data.y; this.vx = data.vx; this.vy = data.vy; this.actionState = data.state; this.stateTimer = data.timer; this.isGrounded = data.grounded; this.currentAttackType = data.atkType; if (this.currentAttackType) { var set = S.CHAR_DATA[this.charId]; if(set.attacks[this.currentAttackType]) this.currentAttack = set.attacks[this.currentAttackType]; else if(set.throws[this.currentAttackType]) this.currentAttack = set.throws[this.currentAttackType]; } else this.currentAttack = null; this.percent = data.pct; this.stocks = data.st; this.facingRight = data.face; this.chargePower = data.chg; this.shieldHP = data.sh; this.invincible = data.inv; this.grabInvincible = data.grInv || 0; this.mirror = data.mirror || null; this.mirrorClone = data.mirrorClone || null; this.mirrorCooldown = data.mirrorCooldown || 0; this.mirrorPlaceRange = data.mirrorPlaceRange || 0; if (data.hitboxActive !== undefined) { this.hitbox.active = data.hitboxActive; this.hitbox.x = data.hitboxX; this.hitbox.y = data.hitboxY; this.hitbox.w = data.hitboxW; this.hitbox.h = data.hitboxH; } };
