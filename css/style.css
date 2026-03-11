@@ -51,9 +51,9 @@ body { margin: 0; padding: 0; padding-bottom: env(safe-area-inset-bottom); backg
         .hidden { display: none !important; }
         h1 { margin: 20px 0; font-size: 48px; color: #ffeaa7; text-align: center; text-shadow: 0 0 10px orange; font-family: 'Arial Black', sans-serif; letter-spacing: 5px; flex-shrink: 0; }
         
-        /* Buttons are ORANGE in v412 */
-        .menu-btn { background: #ff9800; border: 2px solid #ffb74d; padding: 12px 0; width: 280px; margin: 8px 0; color: white; font-size: 18px; border-radius: 10px; font-weight: bold; cursor: pointer; transition: 0.1s; text-align: center; flex-shrink: 0; z-index: 210; position:relative; }
-        .menu-btn:active, .menu-btn.pressed { transform: scale(0.95); background: #f57c00; box-shadow: inset 0 2px 5px rgba(0,0,0,0.2); }
+        /* Buttons are PINK */
+        .menu-btn { background: #fd79a8; border: 2px solid #fab1a0; padding: 12px 0; width: 280px; margin: 8px 0; color: white; font-size: 18px; border-radius: 10px; font-weight: bold; cursor: pointer; transition: 0.1s; text-align: center; flex-shrink: 0; z-index: 210; position:relative; }
+        .menu-btn:active, .menu-btn.pressed { transform: scale(0.95); background: #e84393; box-shadow: inset 0 2px 5px rgba(0,0,0,0.2); }
         .menu-btn.primary { background: #d63031; border-color: #ff7675; color: white; }
         .menu-btn.disabled { opacity: 0.5; pointer-events: none; filter: grayscale(1); cursor: default; }
         .menu-btn.sound-off { background: #636e72; border-color: #b2bec3; color: #b2bec3; }

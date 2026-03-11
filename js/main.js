@@ -2606,8 +2606,8 @@ function reportError(e) {
                                 }
 
                                 // 浮遊鏡の描画設定
-                                var mirrorColor = this.mirrorCooldown > 0 ? '#555' : '#81ecec';
-                                var mirrorGlowColor = this.mirrorCooldown > 0 ? '#333' : 'rgba(255,255,255,0.6)';
+                                var mirrorColor = this.mirrorCooldown > 0 ? '#000' : '#81ecec';
+                                var mirrorGlowColor = this.mirrorCooldown > 0 ? '#000' : 'rgba(255,255,255,0.6)';
                                 ctx.strokeStyle = mirrorColor;
                                 ctx.lineWidth = 2.6;
 
