@@ -2606,8 +2606,9 @@ function reportError(e) {
                                 }
 
                                 // 浮遊鏡の描画設定
-                                var mirrorColor = this.mirrorCooldown > 0 ? '#000' : '#81ecec';
-                                var mirrorGlowColor = this.mirrorCooldown > 0 ? '#000' : 'rgba(255,255,255,0.6)';
+                                var cdColor = window.SMA.selectedStage === 'battlefield' ? '#555' : '#000';
+                                var mirrorColor = this.mirrorCooldown > 0 ? cdColor : '#81ecec';
+                                var mirrorGlowColor = this.mirrorCooldown > 0 ? cdColor : 'rgba(255,255,255,0.6)';
                                 ctx.strokeStyle = mirrorColor;
                                 ctx.lineWidth = 2.6;
 
