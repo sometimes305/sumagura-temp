@@ -11,8 +11,8 @@ function reportError(e) {
 
         // 1. GLOBAL NAMESPACE
         window.SMA = {};
-        window.SMA.ID_PREFIX = "sumagura_v425_"; 
-        window.SMA.VERSION = "v425";
+        window.SMA.ID_PREFIX = "sumagura_v426_"; 
+        window.SMA.VERSION = "v426";
         window.SMA.GRAVITY = 0.40; window.SMA.MAX_FALL_SPEED = 9.0;
         window.SMA.FRICTION = 0.82; window.SMA.KB_FRICTION = 0.95;
         window.SMA.SPEED = 1.1; window.SMA.JUMP_FORCE = -10.0;
@@ -248,6 +248,7 @@ function reportError(e) {
         // --- STAGE SELECT LOGIC ---
         window.SMA.selectStage = function(id) { 
             if(window.SMA.myRole === 'spec') return; 
+            if(window.SMA.amIReady) return; // 準備完了中は変更不可
             window.SMA.myStageId = id; 
             var cards = document.querySelectorAll('.stage-card'); 
             cards.forEach(function(c) { c.classList.remove('selected'); }); 
@@ -306,15 +307,23 @@ function reportError(e) {
             var n3 = getStageName(window.SMA.p3Stage);
             var n4 = getStageName(window.SMA.p4Stage);
             
-            // SSS Masking for Spectators
-            if (window.SMA.myRole === 'spec') {
-                if(!window.SMA.p1StageReady) n1 = "選択中...";
-                if(!window.SMA.p2StageReady) n2 = "選択中...";
-                if(!window.SMA.p3StageReady) n3 = "選択中...";
-                if(!window.SMA.p4StageReady) n4 = "選択中...";
-                document.getElementById('btn-sss-ready').innerText = "観戦中";
-                document.getElementById('btn-sss-ready').classList.add('disabled');
-                document.querySelectorAll('.stage-card').forEach(function(c){c.classList.remove('selected');});
+            // SSS Masking for Others (自分以外の選択を隠す)
+            if (window.SMA.isOnline) {
+                if (window.SMA.myRole === 'spec') {
+                    if(!window.SMA.p1StageReady) n1 = "選択中...";
+                    if(!window.SMA.p2StageReady) n2 = "選択中...";
+                    if(!window.SMA.p3StageReady) n3 = "選択中...";
+                    if(!window.SMA.p4StageReady) n4 = "選択中...";
+                    document.getElementById('btn-sss-ready').innerText = "観戦中";
+                    document.getElementById('btn-sss-ready').classList.add('disabled');
+                    document.querySelectorAll('.stage-card').forEach(function(c){c.classList.remove('selected');});
+                } else {
+                    // 参加プレイヤーのマスキング
+                    if (window.SMA.myRole !== 'p1' && window.SMA.myRole !== 'host') { n1 = window.SMA.p1StageReady ? "相手" : "選択中..."; }
+                    if (window.SMA.myRole !== 'p2') { n2 = window.SMA.p2StageReady ? "相手" : "選択中..."; }
+                    if (window.SMA.myRole !== 'p3') { n3 = window.SMA.p3StageReady ? "相手" : "選択中..."; }
+                    if (window.SMA.myRole !== 'p4') { n4 = window.SMA.p4StageReady ? "相手" : "選択中..."; }
+                }
             }
 
             if(p1Box) { p1Box.innerHTML = n1 + (window.SMA.p1StageReady ? ' <span class="check-icon" style="display:inline">✅</span>' : ''); if(window.SMA.p1StageReady) p1Box.classList.add('ready'); else p1Box.classList.remove('ready'); }
@@ -325,6 +334,7 @@ function reportError(e) {
 
          window.SMA.selectChar = function(id) { 
             if(window.SMA.myRole === 'spec') return; 
+            if(window.SMA.amIReady) return; // 準備完了中は変更不可
             window.SMA.myCharId = id; var cards = document.querySelectorAll('.char-card'); cards.forEach(function(c) { c.classList.remove('selected'); }); if(id==='sword') document.getElementById('card-sword').classList.add('selected'); else if(id==='mage') document.getElementById('card-mage').classList.add('selected'); else if(id==='brawler') document.getElementById('card-brawler').classList.add('selected'); else if(id==='spear') document.getElementById('card-spear').classList.add('selected'); else if(id==='hammer') document.getElementById('card-hammer').classList.add('selected'); else if(id==='mirror') document.getElementById('card-mirror').classList.add('selected');
             if(window.SMA.isOnline && window.SMA.isHost) { window.SMA.p1CharId = id; window.SMA.updateCSSUI(); window.SMA.sendCharUpdate(); }
             else if(window.SMA.isOnline && !window.SMA.isHost) {
@@ -442,22 +452,26 @@ function reportError(e) {
             if(p3Status) p3Status.style.display = p3c ? '' : 'none';
             if(p4Status) p4Status.style.display = p4c ? '' : 'none';
             
-            // SPECTATOR MASKING
-            if (window.SMA.myRole === 'spec') {
-                if(!window.SMA.p1IsReady) n1 = "選択中..."; 
-                if(!window.SMA.p2IsReady) n2 = "選択中...";
-                if(!window.SMA.p3IsReady) n3 = "選択中...";
-                if(!window.SMA.p4IsReady) n4 = "選択中...";
-                document.getElementById('btn-css-ready').innerText = "観戦中";
-                document.getElementById('btn-css-ready').classList.add('disabled');
-                var cards = document.querySelectorAll('.char-card'); 
-                cards.forEach(function(c) { c.classList.remove('selected'); }); 
+            // SPECTATOR & OTHERS MASKING (自分以外の選択を隠す)
+            if (window.SMA.isOnline) {
+                if (window.SMA.myRole === 'spec') {
+                    if(!window.SMA.p1IsReady) n1 = "選択中..."; 
+                    if(!window.SMA.p2IsReady) n2 = "選択中...";
+                    if(!window.SMA.p3IsReady) n3 = "選択中...";
+                    if(!window.SMA.p4IsReady) n4 = "選択中...";
+                    document.getElementById('btn-css-ready').innerText = "観戦中";
+                    document.getElementById('btn-css-ready').classList.add('disabled');
+                    var cards = document.querySelectorAll('.char-card'); 
+                    cards.forEach(function(c) { c.classList.remove('selected'); }); 
+                } else {
+                    // 参加プレイヤーのマスキング
+                    if (window.SMA.myRole !== 'p1' && window.SMA.myRole !== 'host') { n1 = window.SMA.p1IsReady ? "相手" : "選択中..."; }
+                    if (window.SMA.myRole !== 'p2') { n2 = window.SMA.p2IsReady ? "相手" : "選択中..."; }
+                    if (window.SMA.myRole !== 'p3') { n3 = window.SMA.p3IsReady ? "相手" : "選択中..."; }
+                    if (window.SMA.myRole !== 'p4') { n4 = window.SMA.p4IsReady ? "相手" : "選択中..."; }
+                }
             }
-
-            if (window.SMA.isOnline) { 
-                if (window.SMA.isHost) { n2 = getCharName(window.SMA.p2CharId); } 
-                else if(window.SMA.myRole!=='spec') { n1 = "相手"; } 
-            }
+            
             p1Box.innerHTML = n1 + (window.SMA.p1IsReady ? ' <span class="check-icon" style="display:inline">✅</span>' : ''); 
             p2Box.innerHTML = n2 + (window.SMA.p2IsReady ? ' <span class="check-icon" style="display:inline">✅</span>' : ''); 
             if(p3Box) p3Box.innerHTML = n3 + (window.SMA.p3IsReady ? ' <span class="check-icon" style="display:inline">✅</span>' : '');
