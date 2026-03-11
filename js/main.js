@@ -11,8 +11,8 @@ function reportError(e) {
 
         // 1. GLOBAL NAMESPACE
         window.SMA = {};
-        window.SMA.ID_PREFIX = "sumagura_v423_"; 
-        window.SMA.VERSION = "v423";
+        window.SMA.ID_PREFIX = "sumagura_v424_"; 
+        window.SMA.VERSION = "v424";
         window.SMA.GRAVITY = 0.40; window.SMA.MAX_FALL_SPEED = 9.0;
         window.SMA.FRICTION = 0.82; window.SMA.KB_FRICTION = 0.95;
         window.SMA.SPEED = 1.1; window.SMA.JUMP_FORCE = -10.0;
@@ -34,13 +34,20 @@ function reportError(e) {
         window.SMA.remoteKeys = { left: false, right: false, up: false, down: false, shield: false };
         window.SMA.remoteLastInputTime = 0; // Anti-freeze
         window.SMA.remoteEvents = []; window.SMA.syncEvents = [];
-        window.SMA.myCharId = 'sword'; window.SMA.p1CharId = 'sword'; window.SMA.p2CharId = 'sword';
-        window.SMA.amIReady = false; window.SMA.p1IsReady = false; window.SMA.p2IsReady = false;
+        window.SMA.myCharId = 'sword'; window.SMA.p1CharId = 'sword'; window.SMA.p2CharId = 'sword'; window.SMA.p3CharId = 'sword'; window.SMA.p4CharId = 'sword';
+        window.SMA.amIReady = false; window.SMA.p1IsReady = false; window.SMA.p2IsReady = false; window.SMA.p3IsReady = false; window.SMA.p4IsReady = false;
+        window.SMA.PLAYER_COLORS = ['#ff7675', '#74b9ff', '#fdcb6e', '#00b894'];
+        window.SMA.PLAYER_ROLES = ['p1', 'p2', 'p3', 'p4'];
+        window.SMA.players = []; // Fighter配列（ゲーム中に使用）
+        window.SMA.playerCount = 2; // 実際の参加プレイヤー数
+        window.SMA.remoteKeysMap = { p2: {}, p3: {}, p4: {} };
+        window.SMA.remoteEventsMap = { p2: [], p3: [], p4: [] };
+        window.SMA.remoteLastInputTimeMap = { p2: 0, p3: 0, p4: 0 };
         
         // Stage Vars
         window.SMA.myStageId = 'battlefield';
-        window.SMA.p1Stage = 'battlefield'; window.SMA.p2Stage = 'battlefield';
-        window.SMA.p1StageReady = false; window.SMA.p2StageReady = false;
+        window.SMA.p1Stage = 'battlefield'; window.SMA.p2Stage = 'battlefield'; window.SMA.p3Stage = 'battlefield'; window.SMA.p4Stage = 'battlefield';
+        window.SMA.p1StageReady = false; window.SMA.p2StageReady = false; window.SMA.p3StageReady = false; window.SMA.p4StageReady = false;
         window.SMA.selectedStage = 'battlefield';
 
         window.SMA.audioCtx = null; window.SMA.soundEnabled = true;
@@ -249,11 +256,17 @@ function reportError(e) {
             
             if(window.SMA.isOnline) { 
                 if(window.SMA.isHost) { window.SMA.p1Stage = id; window.SMA.updateSSSUI(); window.SMA.sendStageUpdate(); } 
-                else { window.SMA.p2Stage = id; window.SMA.updateSSSUI(); window.SMA.sendStageUpdate(); } 
+                else { 
+                    // 自分のロールに応じてセット
+                    if(window.SMA.myRole === 'p2') window.SMA.p2Stage = id;
+                    else if(window.SMA.myRole === 'p3') window.SMA.p3Stage = id;
+                    else if(window.SMA.myRole === 'p4') window.SMA.p4Stage = id;
+                    window.SMA.updateSSSUI(); window.SMA.sendStageUpdate(); 
+                } 
             } 
         };
 
-        window.SMA.sendStageUpdate = function() { if(window.SMA.isHost) { window.SMA.broadcast({type:'stage_update', role:'p1', stageId:window.SMA.p1Stage}); } else { if(window.SMA.netConn) window.SMA.netConn.send({type:'stage_update', role:'p2', stageId:window.SMA.p2Stage}); } };
+        window.SMA.sendStageUpdate = function() { if(window.SMA.isHost) { window.SMA.broadcast({type:'stage_update', role:'p1', stageId:window.SMA.p1Stage}); } else { if(window.SMA.netConn) window.SMA.netConn.send({type:'stage_update', role:window.SMA.myRole, stageId:window.SMA.myStageId}); } };
         
         window.SMA.toggleStageReady = function() { 
             if(window.SMA.myRole === 'spec') return; 
@@ -265,9 +278,17 @@ function reportError(e) {
             } 
         };
         
-        window.SMA.sendStageReady = function() { if(window.SMA.isHost) { window.SMA.broadcast({type:'stage_ready', role:'p1', ready:window.SMA.p1StageReady}); } else { if(window.SMA.netConn) window.SMA.netConn.send({type:'stage_ready', role:'p2', ready:window.SMA.amIReady}); } };
+        window.SMA.sendStageReady = function() { if(window.SMA.isHost) { window.SMA.broadcast({type:'stage_ready', role:'p1', ready:window.SMA.p1StageReady}); } else { if(window.SMA.netConn) window.SMA.netConn.send({type:'stage_ready', role:window.SMA.myRole, ready:window.SMA.amIReady}); } };
         
-        window.SMA.checkStageAllReady = function() { if(window.SMA.p1StageReady && window.SMA.p2StageReady) { document.getElementById('btn-sss-start').classList.remove('hidden'); } else { document.getElementById('btn-sss-start').classList.add('hidden'); } };
+        window.SMA.checkStageAllReady = function() {
+            var allReady = window.SMA.p1StageReady && window.SMA.p2StageReady;
+            // 3P/4Pがいる場合はその人たちもチェック
+            var p3 = window.SMA.connections.find(function(x){return x.role==='p3';});
+            var p4 = window.SMA.connections.find(function(x){return x.role==='p4';});
+            if(p3) allReady = allReady && window.SMA.p3StageReady;
+            if(p4) allReady = allReady && window.SMA.p4StageReady;
+            if(allReady) { document.getElementById('btn-sss-start').classList.remove('hidden'); } else { document.getElementById('btn-sss-start').classList.add('hidden'); }
+        };
         
         window.SMA.hostGoToCSS = function() {
             window.SMA.broadcast({type:'goto_css'}); 
@@ -277,28 +298,42 @@ function reportError(e) {
         window.SMA.updateSSSUI = function() {
             var p1Box = document.getElementById('sss-p1-box'); 
             var p2Box = document.getElementById('sss-p2-box'); 
+            var p3Box = document.getElementById('sss-p3-box');
+            var p4Box = document.getElementById('sss-p4-box');
             var getStageName = function(id) { return id==='battlefield'?'戦場':'終点'; };
             var n1 = getStageName(window.SMA.p1Stage); 
             var n2 = getStageName(window.SMA.p2Stage);
+            var n3 = getStageName(window.SMA.p3Stage);
+            var n4 = getStageName(window.SMA.p4Stage);
             
             // SSS Masking for Spectators
             if (window.SMA.myRole === 'spec') {
                 if(!window.SMA.p1StageReady) n1 = "選択中...";
                 if(!window.SMA.p2StageReady) n2 = "選択中...";
+                if(!window.SMA.p3StageReady) n3 = "選択中...";
+                if(!window.SMA.p4StageReady) n4 = "選択中...";
                 document.getElementById('btn-sss-ready').innerText = "観戦中";
                 document.getElementById('btn-sss-ready').classList.add('disabled');
                 document.querySelectorAll('.stage-card').forEach(function(c){c.classList.remove('selected');});
             }
 
-            p1Box.innerHTML = n1 + (window.SMA.p1StageReady ? ' <span class="check-icon" style="display:inline">✅</span>' : ''); 
-            p2Box.innerHTML = n2 + (window.SMA.p2StageReady ? ' <span class="check-icon" style="display:inline">✅</span>' : ''); 
-            if(window.SMA.p1StageReady) p1Box.classList.add('ready'); else p1Box.classList.remove('ready'); 
-            if(window.SMA.p2StageReady) p2Box.classList.add('ready'); else p2Box.classList.remove('ready'); 
+            if(p1Box) { p1Box.innerHTML = n1 + (window.SMA.p1StageReady ? ' <span class="check-icon" style="display:inline">✅</span>' : ''); if(window.SMA.p1StageReady) p1Box.classList.add('ready'); else p1Box.classList.remove('ready'); }
+            if(p2Box) { p2Box.innerHTML = n2 + (window.SMA.p2StageReady ? ' <span class="check-icon" style="display:inline">✅</span>' : ''); if(window.SMA.p2StageReady) p2Box.classList.add('ready'); else p2Box.classList.remove('ready'); }
+            if(p3Box) { p3Box.innerHTML = n3 + (window.SMA.p3StageReady ? ' <span class="check-icon" style="display:inline">✅</span>' : ''); if(window.SMA.p3StageReady) p3Box.classList.add('ready'); else p3Box.classList.remove('ready'); }
+            if(p4Box) { p4Box.innerHTML = n4 + (window.SMA.p4StageReady ? ' <span class="check-icon" style="display:inline">✅</span>' : ''); if(window.SMA.p4StageReady) p4Box.classList.add('ready'); else p4Box.classList.remove('ready'); }
         };
 
          window.SMA.selectChar = function(id) { 
             if(window.SMA.myRole === 'spec') return; 
-            window.SMA.myCharId = id; var cards = document.querySelectorAll('.char-card'); cards.forEach(function(c) { c.classList.remove('selected'); }); if(id==='sword') document.getElementById('card-sword').classList.add('selected'); else if(id==='mage') document.getElementById('card-mage').classList.add('selected'); else if(id==='brawler') document.getElementById('card-brawler').classList.add('selected'); else if(id==='spear') document.getElementById('card-spear').classList.add('selected'); else if(id==='hammer') document.getElementById('card-hammer').classList.add('selected'); else if(id==='mirror') document.getElementById('card-mirror').classList.add('selected'); if(window.SMA.isOnline && window.SMA.isHost) { window.SMA.p1CharId = id; window.SMA.updateCSSUI(); window.SMA.sendCharUpdate(); } else if(window.SMA.isOnline && !window.SMA.isHost) { window.SMA.p2CharId = id; window.SMA.updateCSSUI(); window.SMA.sendCharUpdate(); } 
+            window.SMA.myCharId = id; var cards = document.querySelectorAll('.char-card'); cards.forEach(function(c) { c.classList.remove('selected'); }); if(id==='sword') document.getElementById('card-sword').classList.add('selected'); else if(id==='mage') document.getElementById('card-mage').classList.add('selected'); else if(id==='brawler') document.getElementById('card-brawler').classList.add('selected'); else if(id==='spear') document.getElementById('card-spear').classList.add('selected'); else if(id==='hammer') document.getElementById('card-hammer').classList.add('selected'); else if(id==='mirror') document.getElementById('card-mirror').classList.add('selected');
+            if(window.SMA.isOnline && window.SMA.isHost) { window.SMA.p1CharId = id; window.SMA.updateCSSUI(); window.SMA.sendCharUpdate(); }
+            else if(window.SMA.isOnline && !window.SMA.isHost) {
+                // 自分のロールに応じてセット
+                if(window.SMA.myRole === 'p2') window.SMA.p2CharId = id;
+                else if(window.SMA.myRole === 'p3') window.SMA.p3CharId = id;
+                else if(window.SMA.myRole === 'p4') window.SMA.p4CharId = id;
+                window.SMA.updateCSSUI(); window.SMA.sendCharUpdate();
+            } 
         };
         window.SMA.startSolo = function() { 
             // ACTUAL GAME START LOGIC
@@ -321,7 +356,14 @@ function reportError(e) {
             document.getElementById('create-room-screen').classList.add('hidden'); 
             document.getElementById('join-room-screen').classList.add('hidden'); 
             document.getElementById('stage-select-screen').classList.remove('hidden');
-            window.SMA.amIReady = false; window.SMA.p1StageReady = false; window.SMA.p2StageReady = false;
+            window.SMA.amIReady = false; window.SMA.p1StageReady = false; window.SMA.p2StageReady = false; window.SMA.p3StageReady = false; window.SMA.p4StageReady = false;
+            // 3P/4Pステータス表示制御
+            var p3c = window.SMA.lobbyState && window.SMA.lobbyState.p3;
+            var p4c = window.SMA.lobbyState && window.SMA.lobbyState.p4;
+            var sss3 = document.getElementById('sss-p3-status');
+            var sss4 = document.getElementById('sss-p4-status');
+            if(sss3) sss3.style.display = p3c ? '' : 'none';
+            if(sss4) sss4.style.display = p4c ? '' : 'none';
             window.SMA.updateSSSUI();
         };
         
@@ -329,30 +371,55 @@ function reportError(e) {
             document.getElementById('stage-select-screen').classList.add('hidden'); 
             document.getElementById('char-select-screen').classList.remove('hidden'); 
             document.getElementById('player-status-bar').classList.remove('hidden'); 
-            window.SMA.amIReady = false; window.SMA.p1IsReady = false; window.SMA.p2IsReady = false; 
+            window.SMA.amIReady = false; window.SMA.p1IsReady = false; window.SMA.p2IsReady = false; window.SMA.p3IsReady = false; window.SMA.p4IsReady = false;
             document.getElementById('btn-css-ready').innerText = "準備完了！";
             document.getElementById('btn-css-ready').classList.remove('hidden'); 
             document.getElementById('btn-css-start').classList.add('hidden'); 
+            // 3P/4Pステータス表示制御
+            var p3c = window.SMA.lobbyState && window.SMA.lobbyState.p3;
+            var p4c = window.SMA.lobbyState && window.SMA.lobbyState.p4;
+            var css3 = document.getElementById('css-p3-status');
+            var css4 = document.getElementById('css-p4-status');
+            if(css3) css3.style.display = p3c ? '' : 'none';
+            if(css4) css4.style.display = p4c ? '' : 'none';
             window.SMA.updateCSSUI(); 
         };
         window.SMA.toggleReady = function() { 
             if(window.SMA.myRole === 'spec') return; 
             window.SMA.amIReady = !window.SMA.amIReady; if(window.SMA.isHost) { window.SMA.p1IsReady = window.SMA.amIReady; window.SMA.updateCSSUI(); window.SMA.sendReadyUpdate(); window.SMA.checkAllReady(); } else { window.SMA.sendReadyUpdate(); } 
         };
-        window.SMA.sendCharUpdate = function() { if(window.SMA.isHost) { window.SMA.broadcast({type:'char_update', role:'p1', charId:window.SMA.p1CharId}); } else { if(window.SMA.netConn) window.SMA.netConn.send({type:'char_update', role:'p2', charId:window.SMA.p2CharId}); } };
-        window.SMA.sendReadyUpdate = function() { if(window.SMA.isHost) { window.SMA.broadcast({type:'player_ready', role:'p1', ready:window.SMA.p1IsReady}); } else { if(window.SMA.netConn) window.SMA.netConn.send({type:'player_ready', role:'p2', ready:window.SMA.amIReady}); } };
-        window.SMA.checkAllReady = function() { if(window.SMA.p1IsReady && window.SMA.p2IsReady) { document.getElementById('btn-css-start').classList.remove('hidden'); } else { document.getElementById('btn-css-start').classList.add('hidden'); } };
+        window.SMA.sendCharUpdate = function() { if(window.SMA.isHost) { window.SMA.broadcast({type:'char_update', role:'p1', charId:window.SMA.p1CharId}); } else { if(window.SMA.netConn) window.SMA.netConn.send({type:'char_update', role:window.SMA.myRole, charId:window.SMA.myCharId}); } };
+        window.SMA.sendReadyUpdate = function() { if(window.SMA.isHost) { window.SMA.broadcast({type:'player_ready', role:'p1', ready:window.SMA.p1IsReady}); } else { if(window.SMA.netConn) window.SMA.netConn.send({type:'player_ready', role:window.SMA.myRole, ready:window.SMA.amIReady}); } };
+        window.SMA.checkAllReady = function() {
+            var allReady = window.SMA.p1IsReady && window.SMA.p2IsReady;
+            var p3 = window.SMA.connections.find(function(x){return x.role==='p3';});
+            var p4 = window.SMA.connections.find(function(x){return x.role==='p4';});
+            if(p3) allReady = allReady && window.SMA.p3IsReady;
+            if(p4) allReady = allReady && window.SMA.p4IsReady;
+            if(allReady) { document.getElementById('btn-css-start').classList.remove('hidden'); } else { document.getElementById('btn-css-start').classList.add('hidden'); }
+        };
         window.SMA.hostFinalStart = function() { 
             // Random Stage
-            var finalStage = (Math.random() < 0.5) ? window.SMA.p1Stage : window.SMA.p2Stage;
-            window.SMA.broadcast({type:'start_match', p1Char:window.SMA.p1CharId, p2Char:window.SMA.p2CharId, stage:finalStage}); 
+            var stages = [window.SMA.p1Stage, window.SMA.p2Stage];
+            var p3c = window.SMA.connections.find(function(x){return x.role==='p3';});
+            var p4c = window.SMA.connections.find(function(x){return x.role==='p4';});
+            if(p3c) stages.push(window.SMA.p3Stage);
+            if(p4c) stages.push(window.SMA.p4Stage);
+            var finalStage = stages[Math.floor(Math.random() * stages.length)];
+            // プレイヤー数を計算
+            window.SMA.playerCount = 2;
+            if(p3c) window.SMA.playerCount++;
+            if(p4c) window.SMA.playerCount++;
+            window.SMA.broadcast({type:'start_match', p1Char:window.SMA.p1CharId, p2Char:window.SMA.p2CharId, p3Char:window.SMA.p3CharId, p4Char:window.SMA.p4CharId, stage:finalStage, playerCount:window.SMA.playerCount}); 
             window.SMA.selectedStage = finalStage;
             window.SMA.startGameMulti(); 
         };
         window.SMA.startGameMulti = function() { document.getElementById('char-select-screen').classList.add('hidden'); document.getElementById('controller-area').style.display = 'block'; document.getElementById('hud-layer').style.display = 'flex'; window.SMA.bootGame(); };
         window.SMA.updateCSSUI = function() { 
             var p1Box = document.getElementById('css-p1-box'); 
-            var p2Box = document.getElementById('css-p2-box'); 
+            var p2Box = document.getElementById('css-p2-box');
+            var p3Box = document.getElementById('css-p3-box');
+            var p4Box = document.getElementById('css-p4-box');
             var getCharName = function(id) { 
                 if(id==='sword') return '剣士'; 
                 if(id==='mage') return 'メイジ'; 
@@ -363,39 +430,67 @@ function reportError(e) {
                 return '???'; 
             }; 
             var n1 = getCharName(window.SMA.p1CharId); 
-            var n2 = getCharName(window.SMA.p2CharId); 
+            var n2 = getCharName(window.SMA.p2CharId);
+            var n3 = getCharName(window.SMA.p3CharId);
+            var n4 = getCharName(window.SMA.p4CharId);
+            
+            // 3P/4P表示制御
+            var p3c = window.SMA.lobbyState && window.SMA.lobbyState.p3;
+            var p4c = window.SMA.lobbyState && window.SMA.lobbyState.p4;
+            var p3Status = document.getElementById('css-p3-status');
+            var p4Status = document.getElementById('css-p4-status');
+            if(p3Status) p3Status.style.display = p3c ? '' : 'none';
+            if(p4Status) p4Status.style.display = p4c ? '' : 'none';
             
             // SPECTATOR MASKING
             if (window.SMA.myRole === 'spec') {
                 if(!window.SMA.p1IsReady) n1 = "選択中..."; 
                 if(!window.SMA.p2IsReady) n2 = "選択中...";
+                if(!window.SMA.p3IsReady) n3 = "選択中...";
+                if(!window.SMA.p4IsReady) n4 = "選択中...";
                 document.getElementById('btn-css-ready').innerText = "観戦中";
                 document.getElementById('btn-css-ready').classList.add('disabled');
                 var cards = document.querySelectorAll('.char-card'); 
                 cards.forEach(function(c) { c.classList.remove('selected'); }); 
             }
 
-            if (window.SMA.isOnline) { if (window.SMA.isHost) { n2 = "相手"; } else if(window.SMA.myRole!=='spec') { n1 = "相手"; } }
+            if (window.SMA.isOnline) { 
+                if (window.SMA.isHost) { n2 = getCharName(window.SMA.p2CharId); } 
+                else if(window.SMA.myRole!=='spec') { n1 = "相手"; } 
+            }
             p1Box.innerHTML = n1 + (window.SMA.p1IsReady ? ' <span class="check-icon" style="display:inline">✅</span>' : ''); 
             p2Box.innerHTML = n2 + (window.SMA.p2IsReady ? ' <span class="check-icon" style="display:inline">✅</span>' : ''); 
+            if(p3Box) p3Box.innerHTML = n3 + (window.SMA.p3IsReady ? ' <span class="check-icon" style="display:inline">✅</span>' : '');
+            if(p4Box) p4Box.innerHTML = n4 + (window.SMA.p4IsReady ? ' <span class="check-icon" style="display:inline">✅</span>' : '');
             if(window.SMA.p1IsReady) p1Box.classList.add('ready'); else p1Box.classList.remove('ready'); 
-            if(window.SMA.p2IsReady) p2Box.classList.add('ready'); else p2Box.classList.remove('ready'); 
+            if(window.SMA.p2IsReady) p2Box.classList.add('ready'); else p2Box.classList.remove('ready');
+            if(p3Box) { if(window.SMA.p3IsReady) p3Box.classList.add('ready'); else p3Box.classList.remove('ready'); }
+            if(p4Box) { if(window.SMA.p4IsReady) p4Box.classList.add('ready'); else p4Box.classList.remove('ready'); }
         };
         window.SMA.broadcastLobby = function() { 
-            // CLEAN UP CLOSED SPECTATORS
-            window.SMA.connections = window.SMA.connections.filter(function(x){ return x.conn.open || x.role==='p2'; }); // Keep P2 for reconnect, clean others
+            // 切断済みの接続をクリーンアップ（プレイヤーは再接続用に保持）
+            window.SMA.connections = window.SMA.connections.filter(function(x){ return x.conn.open || x.role==='p2' || x.role==='p3' || x.role==='p4'; });
             
-            const p2 = window.SMA.connections.find(function(x){return x.role==='p2';}); 
-            const specs = window.SMA.connections.filter(function(x){return x.role==='spec';}).map(function(x){return x.name;}); 
-            document.getElementById('slot-p2').innerText = p2 ? "2P: "+p2.name : "2P: 待機中..."; 
+            var p2 = window.SMA.connections.find(function(x){return x.role==='p2';}); 
+            var p3 = window.SMA.connections.find(function(x){return x.role==='p3';});
+            var p4 = window.SMA.connections.find(function(x){return x.role==='p4';});
+            var specs = window.SMA.connections.filter(function(x){return x.role==='spec';}).map(function(x){return x.name;}); 
+            
+            window.SMA.lobbyState = { p1: window.SMA.localPlayerName, p2: p2?p2.name:null, p3: p3?p3.name:null, p4: p4?p4.name:null };
+
+            document.getElementById('slot-p2').innerText = p2 ? "2P: "+p2.name : "2P: 待機中...";
+            document.getElementById('slot-p3').innerText = p3 ? "3P: "+p3.name : "3P: 待機中...";
+            document.getElementById('slot-p4').innerText = p4 ? "4P: "+p4.name : "4P: 待機中...";
             document.getElementById('spec-list').innerText = specs.join(', ') || "なし"; 
+            // 2人以上いればステージ選択へ進める
             if(p2) document.getElementById('btn-goto-sss').classList.remove('disabled'); else document.getElementById('btn-goto-sss').classList.add('disabled'); 
-            window.SMA.connections.forEach(function(c) { if(c.conn.open) c.conn.send({type:'lobby', p1:window.SMA.localPlayerName, p2:p2?p2.name:null, specs:specs, ver:window.SMA.VERSION}); }); 
+            window.SMA.connections.forEach(function(c) { if(c.conn.open) c.conn.send({type:'lobby', p1:window.SMA.localPlayerName, p2:p2?p2.name:null, p3:p3?p3.name:null, p4:p4?p4.name:null, specs:specs, ver:window.SMA.VERSION}); }); 
         };
         window.SMA.broadcast = function(msg) { window.SMA.connections.forEach(function(c) { if(c.conn.open) c.conn.send(msg); }); };
         window.SMA.handleClient = function(d) { 
             if(d.ver && d.ver !== window.SMA.VERSION) { document.getElementById('overlay-msg').innerText = "VERSION MISMATCH\nPLEASE RELOAD"; return; }
             if(d.type==='lobby') { 
+                window.SMA.lobbyState = { p1: d.p1, p2: d.p2, p3: d.p3, p4: d.p4 };
                 document.getElementById('join-status').innerText = "ロビー: 1P "+d.p1; 
                 if (!window.SMA.hasJoined) {
                     window.SMA.hasJoined = true;
@@ -403,104 +498,199 @@ function reportError(e) {
                 }
                 if(d.ver && d.ver !== window.SMA.VERSION) document.getElementById('join-status').innerText += " (Ver不一致)"; 
             }
+            if(d.type==='assign_role') { window.SMA.myRole = d.role; }
             if(d.type==='goto_sss') window.SMA.showSSSMulti();
             if(d.type==='goto_css') window.SMA.showCSSMulti(); 
-            if(d.type==='stage_update') { if(d.role==='p1') window.SMA.p1Stage = d.stageId; if(d.role==='p2') window.SMA.p2Stage = d.stageId; window.SMA.updateSSSUI(); if(window.SMA.isHost) window.SMA.broadcast(d); }
-            if(d.type==='stage_ready') { if(d.role==='p1') window.SMA.p1StageReady = d.ready; if(d.role==='p2') window.SMA.p2StageReady = d.ready; window.SMA.updateSSSUI(); if(window.SMA.isHost) { window.SMA.broadcast(d); window.SMA.checkStageAllReady(); } }
-            if(d.type==='char_update') { if(d.role==='p1') window.SMA.p1CharId = d.charId; if(d.role==='p2') window.SMA.p2CharId = d.charId; window.SMA.updateCSSUI(); if(window.SMA.isHost) window.SMA.broadcast(d); } if(d.type==='player_ready') { if(d.role==='p1') window.SMA.p1IsReady = d.ready; if(d.role==='p2') window.SMA.p2IsReady = d.ready; window.SMA.updateCSSUI(); if(window.SMA.isHost) { window.SMA.broadcast(d); window.SMA.checkAllReady(); } } 
-            if(d.type==='start_match') { window.SMA.p1CharId = d.p1Char; window.SMA.p2CharId = d.p2Char; window.SMA.selectedStage = d.stage; window.SMA.startGameMulti(); } 
+            if(d.type==='stage_update') { 
+                if(d.role==='p1') window.SMA.p1Stage = d.stageId; 
+                if(d.role==='p2') window.SMA.p2Stage = d.stageId; 
+                if(d.role==='p3') window.SMA.p3Stage = d.stageId; 
+                if(d.role==='p4') window.SMA.p4Stage = d.stageId; 
+                window.SMA.updateSSSUI(); if(window.SMA.isHost) window.SMA.broadcast(d); 
+            }
+            if(d.type==='stage_ready') { 
+                if(d.role==='p1') window.SMA.p1StageReady = d.ready; 
+                if(d.role==='p2') window.SMA.p2StageReady = d.ready; 
+                if(d.role==='p3') window.SMA.p3StageReady = d.ready; 
+                if(d.role==='p4') window.SMA.p4StageReady = d.ready; 
+                window.SMA.updateSSSUI(); if(window.SMA.isHost) { window.SMA.broadcast(d); window.SMA.checkStageAllReady(); } 
+            }
+            if(d.type==='char_update') { 
+                if(d.role==='p1') window.SMA.p1CharId = d.charId; 
+                if(d.role==='p2') window.SMA.p2CharId = d.charId; 
+                if(d.role==='p3') window.SMA.p3CharId = d.charId; 
+                if(d.role==='p4') window.SMA.p4CharId = d.charId; 
+                window.SMA.updateCSSUI(); if(window.SMA.isHost) window.SMA.broadcast(d); 
+            } 
+            if(d.type==='player_ready') { 
+                if(d.role==='p1') window.SMA.p1IsReady = d.ready; 
+                if(d.role==='p2') window.SMA.p2IsReady = d.ready; 
+                if(d.role==='p3') window.SMA.p3IsReady = d.ready; 
+                if(d.role==='p4') window.SMA.p4IsReady = d.ready; 
+                window.SMA.updateCSSUI(); if(window.SMA.isHost) { window.SMA.broadcast(d); window.SMA.checkAllReady(); } 
+            } 
+            if(d.type==='start_match') { 
+                window.SMA.p1CharId = d.p1Char; window.SMA.p2CharId = d.p2Char; 
+                window.SMA.p3CharId = d.p3Char; window.SMA.p4CharId = d.p4Char;
+                window.SMA.selectedStage = d.stage; window.SMA.playerCount = d.playerCount || 2;
+                window.SMA.startGameMulti(); 
+            } 
             if(d.type==='sync') { if(!window.SMA.gameRunning) { window.SMA.selectedStage=d.stg||'battlefield'; window.SMA.bootGame(); } window.SMA.applySync(d); } };
         window.SMA.handleConn = function(c) { c.on('data', function(d) { 
             if(d.ver && d.ver !== window.SMA.VERSION) { if(window.SMA.isHost) c.send({type:'error', msg:'VERSION MISMATCH'}); document.getElementById('overlay-msg').innerText = "VERSION MISMATCH\nP2 has diff ver"; return; }
             if(d.type==='handshake') { 
-                var p2Entry = null;
-                // V408 FIX: Only search for existing if it's a PLAYER (role==='join')
+                // プレイヤーロールの検索（再接続チェック含む）
+                var existingEntry = null;
+                var assignedRole = null;
+                
                 if (d.role === 'join') {
-                    p2Entry = window.SMA.connections.find(function(x){ return x.role === 'p2'; });
+                    // まず既存のプレイヤーを検索（再接続判定）
+                    var roles = ['p2', 'p3', 'p4'];
+                    for (var ri = 0; ri < roles.length; ri++) {
+                        var entry = window.SMA.connections.find(function(x){ return x.role === roles[ri]; });
+                        if (entry && entry.name === d.name && !entry.conn.open) {
+                            existingEntry = entry;
+                            assignedRole = roles[ri];
+                            break;
+                        }
+                    }
                 }
                 
                 var isLocked = window.SMA.gameRunning || window.SMA.isInCSS; 
                 
-                // Allow Spec always. Reject Player if locked and not reconnect.
+                // ロック中はスペクテイターのみ許可（再接続は除外）
                 if (isLocked && d.role !== 'spec') {
-                    var isReconnect = false;
-                    if (p2Entry && !p2Entry.conn.open) { isReconnect = true; }
-                    if (!isReconnect) {
+                    if (!existingEntry) {
                         c.send({type:'error', msg:'MATCH_IN_PROGRESS'}); 
                         setTimeout(function(){ c.close(); }, 500);
                         return;
                     }
                 }
                 
-                // Lobby Full Logic (Players only)
-                if (!isLocked && d.role === 'join' && p2Entry && p2Entry.conn.open) {
-                     c.send({type:'error', msg:'ROOM_FULL'});
-                     setTimeout(function(){ c.close(); }, 500);
-                     return;
-                }
-                
-                // Reconnect only applies if we found p2Entry above (so role is 'join')
-                if (p2Entry) {
-                    p2Entry.conn = c;
-                    p2Entry.name = d.name;
-                    window.SMA.showNotification("2Pが再接続しました", 2000);
-                    // Standard Reconnect Sync
+                // 再接続処理
+                if (existingEntry) {
+                    existingEntry.conn = c;
+                    existingEntry.name = d.name;
+                    c.send({type:'assign_role', role: assignedRole});
+                    window.SMA.showNotification(assignedRole.toUpperCase() + "が再接続しました", 2000);
                     if (window.SMA.gameRunning) {
-                        var pkt = { type:'sync', stg:window.SMA.selectedStage, gState:window.SMA.gameState, cd:window.SMA.countdownTimer, p1:window.SMA.pOne.serialize(), p2:window.SMA.pTwo.serialize(), events:[], projs:[], win:null };
-                        c.send({type:'sync', data:JSON.stringify(pkt)});
+                        // ゲーム中の再接続同期は既存のsyncで行われる
                     }
-                } else {
-                    const r = (d.role==='join') ? 'p2' : 'spec'; 
-                    window.SMA.connections.push({conn:c, role:r, name:d.name}); 
-                    window.SMA.broadcastLobby(); 
-                    if(r === 'p2') window.SMA.showNotification("2Pが入室しました！", 2000);
+                } else if (d.role === 'join') {
+                    // 新規プレイヤーのロール割り当て（p2→p3→p4の順）
+                    var p2 = window.SMA.connections.find(function(x){ return x.role === 'p2'; });
+                    var p3 = window.SMA.connections.find(function(x){ return x.role === 'p3'; });
+                    var p4 = window.SMA.connections.find(function(x){ return x.role === 'p4'; });
                     
-                    // V407 LATE JOIN SYNC FOR SPECTATORS
-                    if (r === 'spec') {
-                        if (window.SMA.gameRunning) {
-                            var pkt = { type:'sync', stg:window.SMA.selectedStage, gState:window.SMA.gameState, cd:window.SMA.countdownTimer, p1:window.SMA.pOne.serialize(), p2:window.SMA.pTwo.serialize(), events:[], projs:[], win:null };
-                            c.send({type:'sync', data:JSON.stringify(pkt)});
-                        } else if (!document.getElementById('char-select-screen').classList.contains('hidden')) {
-                            c.send({type:'goto_css'});
-                            c.send({type:'char_update', role:'p1', charId:window.SMA.p1CharId});
-                            c.send({type:'char_update', role:'p2', charId:window.SMA.p2CharId});
-                            c.send({type:'player_ready', role:'p1', ready:window.SMA.p1IsReady});
-                            c.send({type:'player_ready', role:'p2', ready:window.SMA.p2IsReady});
-                        } else if (!document.getElementById('stage-select-screen').classList.contains('hidden')) {
-                            c.send({type:'goto_sss'});
-                            c.send({type:'stage_update', role:'p1', stageId:window.SMA.p1Stage});
-                            c.send({type:'stage_update', role:'p2', stageId:window.SMA.p2Stage});
-                            c.send({type:'stage_ready', role:'p1', ready:window.SMA.p1StageReady});
-                            c.send({type:'stage_ready', role:'p2', ready:window.SMA.p2StageReady});
-                        }
+                    var newRole = null;
+                    if (!p2 || !p2.conn.open) newRole = 'p2';
+                    else if (!p3 || !p3.conn.open) newRole = 'p3';
+                    else if (!p4 || !p4.conn.open) newRole = 'p4';
+                    
+                    if (!newRole) {
+                        // 4人埋まっている→満室
+                        c.send({type:'error', msg:'ROOM_FULL'});
+                        setTimeout(function(){ c.close(); }, 500);
+                        return;
+                    }
+                    
+                    // 既存のdisconnected entryがある場合は上書き
+                    var existing = window.SMA.connections.find(function(x){ return x.role === newRole; });
+                    if (existing) {
+                        existing.conn = c;
+                        existing.name = d.name;
+                    } else {
+                        window.SMA.connections.push({conn:c, role:newRole, name:d.name}); 
+                    }
+                    c.send({type:'assign_role', role: newRole});
+                    window.SMA.broadcastLobby(); 
+                    window.SMA.showNotification(newRole.toUpperCase() + "が入室しました！", 2000);
+                } else {
+                    // 観戦者
+                    window.SMA.connections.push({conn:c, role:'spec', name:d.name}); 
+                    window.SMA.broadcastLobby(); 
+                    
+                    // 遅延参加の同期
+                    if (window.SMA.gameRunning) {
+                        // ゲーム中のスペクテイター同期はsyncループで行われる
+                    } else if (!document.getElementById('char-select-screen').classList.contains('hidden')) {
+                        c.send({type:'goto_css'});
+                        c.send({type:'char_update', role:'p1', charId:window.SMA.p1CharId});
+                        c.send({type:'char_update', role:'p2', charId:window.SMA.p2CharId});
+                        c.send({type:'char_update', role:'p3', charId:window.SMA.p3CharId});
+                        c.send({type:'char_update', role:'p4', charId:window.SMA.p4CharId});
+                        c.send({type:'player_ready', role:'p1', ready:window.SMA.p1IsReady});
+                        c.send({type:'player_ready', role:'p2', ready:window.SMA.p2IsReady});
+                        c.send({type:'player_ready', role:'p3', ready:window.SMA.p3IsReady});
+                        c.send({type:'player_ready', role:'p4', ready:window.SMA.p4IsReady});
+                    } else if (!document.getElementById('stage-select-screen').classList.contains('hidden')) {
+                        c.send({type:'goto_sss'});
+                        c.send({type:'stage_update', role:'p1', stageId:window.SMA.p1Stage});
+                        c.send({type:'stage_update', role:'p2', stageId:window.SMA.p2Stage});
+                        c.send({type:'stage_update', role:'p3', stageId:window.SMA.p3Stage});
+                        c.send({type:'stage_update', role:'p4', stageId:window.SMA.p4Stage});
+                        c.send({type:'stage_ready', role:'p1', ready:window.SMA.p1StageReady});
+                        c.send({type:'stage_ready', role:'p2', ready:window.SMA.p2StageReady});
+                        c.send({type:'stage_ready', role:'p3', ready:window.SMA.p3StageReady});
+                        c.send({type:'stage_ready', role:'p4', ready:window.SMA.p4StageReady});
                     }
                 }
             } 
-            if(d.type==='stage_update') { if(d.role==='p2') { window.SMA.p2Stage = d.stageId; window.SMA.updateSSSUI(); window.SMA.broadcast(d); } }
-            if(d.type==='stage_ready') { if(d.role==='p2') { window.SMA.p2StageReady = d.ready; window.SMA.updateSSSUI(); window.SMA.broadcast(d); window.SMA.checkStageAllReady(); } }
-            if(d.type==='char_update') { if(d.role==='p2') { window.SMA.p2CharId = d.charId; window.SMA.updateCSSUI(); window.SMA.broadcast(d); } } if(d.type==='player_ready') { if(d.role==='p2') { window.SMA.p2IsReady = d.ready; window.SMA.updateCSSUI(); window.SMA.broadcast(d); window.SMA.checkAllReady(); } } if(d.type==='input' && window.SMA.isHost) { 
-                const sender = window.SMA.connections.find(function(x){return x.conn===c;}); 
-                if(sender && sender.role==='p2') { 
-                    window.SMA.remoteKeys = d.keys; 
-                    window.SMA.remoteLastInputTime = Date.now(); 
-                    if(d.keys.triggerJump||d.keys.triggerStartCharge||d.keys.triggerReleaseAttack||d.keys.triggerGrab) window.SMA.remoteEvents.push(d.keys); 
+            // ステージ・キャラ・準備状態の更新（全ロール対応）
+            if(d.type==='stage_update') { 
+                if(d.role==='p2') window.SMA.p2Stage = d.stageId; 
+                if(d.role==='p3') window.SMA.p3Stage = d.stageId; 
+                if(d.role==='p4') window.SMA.p4Stage = d.stageId; 
+                window.SMA.updateSSSUI(); window.SMA.broadcast(d); 
+            }
+            if(d.type==='stage_ready') { 
+                if(d.role==='p2') window.SMA.p2StageReady = d.ready; 
+                if(d.role==='p3') window.SMA.p3StageReady = d.ready; 
+                if(d.role==='p4') window.SMA.p4StageReady = d.ready; 
+                window.SMA.updateSSSUI(); window.SMA.broadcast(d); window.SMA.checkStageAllReady(); 
+            }
+            if(d.type==='char_update') { 
+                if(d.role==='p2') window.SMA.p2CharId = d.charId; 
+                if(d.role==='p3') window.SMA.p3CharId = d.charId; 
+                if(d.role==='p4') window.SMA.p4CharId = d.charId; 
+                window.SMA.updateCSSUI(); window.SMA.broadcast(d); 
+            } 
+            if(d.type==='player_ready') { 
+                if(d.role==='p2') window.SMA.p2IsReady = d.ready; 
+                if(d.role==='p3') window.SMA.p3IsReady = d.ready; 
+                if(d.role==='p4') window.SMA.p4IsReady = d.ready; 
+                window.SMA.updateCSSUI(); window.SMA.broadcast(d); window.SMA.checkAllReady(); 
+            } 
+            if(d.type==='input' && window.SMA.isHost) { 
+                var sender = window.SMA.connections.find(function(x){return x.conn===c;}); 
+                if(sender && (sender.role==='p2' || sender.role==='p3' || sender.role==='p4')) { 
+                    var role = sender.role;
+                    window.SMA.remoteKeysMap[role] = d.keys; 
+                    window.SMA.remoteLastInputTimeMap[role] = Date.now(); 
+                    if(d.keys.triggerJump||d.keys.triggerStartCharge||d.keys.triggerReleaseAttack||d.keys.triggerGrab) {
+                        if(!window.SMA.remoteEventsMap[role]) window.SMA.remoteEventsMap[role] = [];
+                        window.SMA.remoteEventsMap[role].push(d.keys);
+                    }
+                    // 後方互換: p2の入力はremoteKeysにも入れる
+                    if(role === 'p2') {
+                        window.SMA.remoteKeys = d.keys;
+                        window.SMA.remoteLastInputTime = Date.now();
+                        if(d.keys.triggerJump||d.keys.triggerStartCharge||d.keys.triggerReleaseAttack||d.keys.triggerGrab) window.SMA.remoteEvents.push(d.keys);
+                    }
                 } 
             } }); 
             
-            // V408 FIX: Cleanup on close
+            // 切断時の処理
             c.on('close', function() { 
-                // Don't remove P2 immediately (allow reconnect)
-                // BUT remove specs immediately to update list
                 var idx = window.SMA.connections.findIndex(function(x){ return x.conn === c; });
                 if(idx !== -1) {
                     if (window.SMA.connections[idx].role === 'spec') {
                         window.SMA.connections.splice(idx, 1);
                         window.SMA.broadcastLobby();
                     } else {
-                        // P2 disconnected
-                        window.SMA.showNotification("2Pが切断されました", 2000);
-                        // Mark as closed but keep in array? PeerJS marks c.open = false.
-                        // Filter logic in broadcastLobby handles display.
+                        // プレイヤーが切断された
+                        var role = window.SMA.connections[idx].role;
+                        window.SMA.showNotification(role.toUpperCase() + "が切断されました", 2000);
                     }
                 }
             }); 
@@ -539,9 +729,55 @@ function reportError(e) {
                 for(var i=0; i<200; i++) { window.SMA.stars.push({ x: Math.random() * (window.SMA.WORLD_W+1000) - 500, y: Math.random() * (window.SMA.WORLD_H+500) - 500, s: Math.random() * 2 + 1, type: 'star' }); }
             }
 
-            window.SMA.pOne = new window.SMA.Fighter(mx+200, my-100, '#ff7675', false, window.SMA.p1CharId); window.SMA.pTwo = new window.SMA.Fighter(mx+700, my-100, '#74b9ff', true, window.SMA.p2CharId); window.SMA.projectiles = []; if(window.SMA.isHost) { document.getElementById('p1-name').innerText = window.SMA.localPlayerName; var p2Obj = window.SMA.connections.find(function(x){return x.role==='p2';}); document.getElementById('p2-name').innerText = window.SMA.isOnline && p2Obj ? p2Obj.name : "CPU"; } window.SMA.camera.x = mx + 450; window.SMA.camera.y = my - 200; window.SMA.gameLoop(); 
+            // プレイヤー初期化（4人対応）
+            var charIds = [window.SMA.p1CharId, window.SMA.p2CharId, window.SMA.p3CharId, window.SMA.p4CharId];
+            var colors = window.SMA.PLAYER_COLORS;
+            var pc = window.SMA.playerCount || 2;
+            // 初期位置を均等に分散
+            var spawnPositions = [];
+            var mainPlat = window.SMA.platforms[0];
+            for (var pi = 0; pi < pc; pi++) {
+                var spX = mainPlat.x + (mainPlat.w / (pc + 1)) * (pi + 1);
+                spawnPositions.push({x: spX, y: mainPlat.y - 100});
+            }
+            window.SMA.players = [];
+            for (var pi = 0; pi < pc; pi++) {
+                var f = new window.SMA.Fighter(spawnPositions[pi].x, spawnPositions[pi].y, colors[pi], (pi > 0), charIds[pi]);
+                f.playerIndex = pi;
+                f.playerRole = window.SMA.PLAYER_ROLES[pi];
+                window.SMA.players.push(f);
+            }
+            // 互換エイリアス
+            window.SMA.pOne = window.SMA.players[0];
+            window.SMA.pTwo = window.SMA.players[1];
+            window.SMA.projectiles = [];
+            // HUD名前設定
+            if(window.SMA.isHost) {
+                document.getElementById('p1-name').innerText = window.SMA.localPlayerName;
+                for (var pi = 1; pi < pc; pi++) {
+                    var pObj = window.SMA.connections.find(function(x){return x.role === window.SMA.PLAYER_ROLES[pi];});
+                    var hudName = document.getElementById('p' + (pi+1) + '-name');
+                    if(hudName) hudName.innerText = window.SMA.isOnline && pObj ? pObj.name : "CPU";
+                }
+            }
+            // HUD表示制御
+            for (var pi = 0; pi < 4; pi++) {
+                var hud = document.getElementById('p' + (pi+1) + '-hud');
+                if(hud) hud.style.display = (pi < pc) ? '' : 'none';
+            }
+            window.SMA.camera.x = mainPlat.x + mainPlat.w/2; window.SMA.camera.y = mainPlat.y - 200; window.SMA.gameLoop(); 
         };
-        window.SMA.updateCPU = function(cpu, target) { var inp = { left:false, right:false, up:false, down:false, shield:false }; if(cpu.actionState !== 'DEAD' && cpu.actionState !== 'RESPAWN') { var dx = target.x - cpu.x; var dist = Math.abs(dx); if(Math.abs(dx)>200) { if(dx>0) inp.right=true; else inp.left=true; } if(cpu.y > window.SMA.platforms[0].y && cpu.jumps<2 && Math.random()<0.1) cpu.triggerJump(inp); if(Math.abs(dx)<300 && Math.random()<0.05) { cpu.startCharge(); cpu.cpuTimer=20; } if(cpu.cpuTimer>0) { cpu.cpuTimer--; if(cpu.cpuTimer<=0) cpu.releaseAttack('NEUTRAL'); } } cpu.update(inp, target); };
+        window.SMA.updateCPU = function(cpu, targets) { 
+            // 最も近い敵をターゲットに
+            var target = targets[0];
+            var minDist = Infinity;
+            for (var ti = 0; ti < targets.length; ti++) {
+                if (targets[ti] === cpu || targets[ti].stocks <= 0) continue;
+                var d = Math.abs(targets[ti].x - cpu.x);
+                if (d < minDist) { minDist = d; target = targets[ti]; }
+            }
+            if (!target) target = targets[0];
+            var inp = { left:false, right:false, up:false, down:false, shield:false }; if(cpu.actionState !== 'DEAD' && cpu.actionState !== 'RESPAWN') { var dx = target.x - cpu.x; var dist = Math.abs(dx); if(Math.abs(dx)>200) { if(dx>0) inp.right=true; else inp.left=true; } if(cpu.y > window.SMA.platforms[0].y && cpu.jumps<2 && Math.random()<0.1) cpu.triggerJump(inp); if(Math.abs(dx)<300 && Math.random()<0.05) { cpu.startCharge(); cpu.cpuTimer=20; } if(cpu.cpuTimer>0) { cpu.cpuTimer--; if(cpu.cpuTimer<=0) cpu.releaseAttack('NEUTRAL'); } } cpu.update(inp, target); };
         window.SMA.gameLoop = function() { 
             if (!window.SMA.gameRunning) return; 
             try { 
@@ -550,24 +786,55 @@ function reportError(e) {
                     
                     if(window.SMA.isHost) { 
                         if (window.SMA.gameState === 'PLAYING') { 
-                            if(window.SMA.isOnline) { 
-                                // INPUT FREEZE CHECK
-                                if (window.SMA.remoteLastInputTime > 0 && (Date.now() - window.SMA.remoteLastInputTime > 1000)) {
-                                    // Freeze detected (no input for 1s). Force neutral.
-                                    window.SMA.remoteKeys = { left:false, right:false, up:false, down:false, shield:false };
-                                }
-
-                                while(window.SMA.remoteEvents.length>0) { var ev = window.SMA.remoteEvents.shift(); if(ev.triggerStartCharge) window.SMA.pTwo.startCharge(); if(ev.triggerReleaseAttack) window.SMA.pTwo.releaseAttack(ev.attackType); if(ev.triggerJump) window.SMA.pTwo.triggerJump(ev); if(ev.triggerGrab) window.SMA.pTwo.tryGrab(window.SMA.pOne); } 
-                                window.SMA.pTwo.update(window.SMA.remoteKeys, window.SMA.pOne); 
-                            } else { window.SMA.updateCPU(window.SMA.pTwo, window.SMA.pOne); } 
-                            window.SMA.pOne.update(window.SMA.myKeys, window.SMA.pTwo); 
+                            var S = window.SMA;
+                            var allPlayers = S.players;
+                            var pc = allPlayers.length;
                             
-                            // FIX: Force God Mode during spawn (Percent Reset Only, removed VX/VY freeze)
-                            [window.SMA.pOne, window.SMA.pTwo].forEach(function(p) {
-                                if (p.invincible > 120) { // First 1 second of spawn
-                                    p.percent = 0; // Force 0%
-                                    // Removed vx/vy restriction to allow movement
-                                    if(p.actionState === 'STUN') p.actionState = 'IDLE'; // Cancel hitstun
+                            // 各プレイヤーの入力処理とupdate
+                            for (var pi = 0; pi < pc; pi++) {
+                                var player = allPlayers[pi];
+                                var role = S.PLAYER_ROLES[pi];
+                                // 対戦相手を取得（最も近い敵）
+                                var nearestEnemy = null;
+                                var minEnemyDist = Infinity;
+                                for (var ej = 0; ej < pc; ej++) {
+                                    if (ej === pi || allPlayers[ej].stocks <= 0) continue;
+                                    var ed = Math.abs(allPlayers[ej].x - player.x);
+                                    if (ed < minEnemyDist) { minEnemyDist = ed; nearestEnemy = allPlayers[ej]; }
+                                }
+                                if (!nearestEnemy) nearestEnemy = allPlayers[(pi + 1) % pc];
+                                
+                                if (pi === 0) {
+                                    // 1P: ホストの入力
+                                    player.update(S.myKeys, nearestEnemy);
+                                } else if (S.isOnline) {
+                                    // オンライン: リモート入力
+                                    var rKeys = S.remoteKeysMap[role] || {};
+                                    // 入力フリーズチェック
+                                    if (S.remoteLastInputTimeMap[role] > 0 && (Date.now() - S.remoteLastInputTimeMap[role] > 1000)) {
+                                        rKeys = { left:false, right:false, up:false, down:false, shield:false };
+                                    }
+                                    // イベント処理
+                                    var events = S.remoteEventsMap[role] || [];
+                                    while(events.length > 0) { 
+                                        var ev = events.shift(); 
+                                        if(ev.triggerStartCharge) player.startCharge(); 
+                                        if(ev.triggerReleaseAttack) player.releaseAttack(ev.attackType); 
+                                        if(ev.triggerJump) player.triggerJump(ev); 
+                                        if(ev.triggerGrab) player.tryGrab(nearestEnemy); 
+                                    }
+                                    player.update(rKeys, nearestEnemy);
+                                } else {
+                                    // ソロモード: CPU
+                                    S.updateCPU(player, allPlayers);
+                                }
+                            }
+                            
+                            // スポーン中の保護
+                            allPlayers.forEach(function(p) {
+                                if (p.invincible > 120) {
+                                    p.percent = 0;
+                                    if(p.actionState === 'STUN') p.actionState = 'IDLE';
                                 }
                             });
 
@@ -577,49 +844,80 @@ function reportError(e) {
                                     p.life--; if (p.type==='spear_throw') { 
                                         if (p.life === 30) { p.dmg *= 0.5; p.kb *= 0.5; p.scale *= 0.5; }
                                         if (p.life > 30) { p.vx *= 0.9; p.vy *= 0.9; } else { 
-                                            var owner = (p.ownerRole === 'p1') ? window.SMA.pOne : window.SMA.pTwo; 
+                                            // 所有者を検索
+                                            var owner = null;
+                                            for (var oi = 0; oi < allPlayers.length; oi++) {
+                                                if (allPlayers[oi].playerRole === p.ownerRole) { owner = allPlayers[oi]; break; }
+                                            }
                                             if(owner) { var dx = owner.x + owner.w/2 - p.x; var dy = owner.y + owner.h/2 - p.y; var dist = Math.sqrt(dx*dx+dy*dy); if (dist < 30) { window.SMA.projectiles.splice(i,1); continue; } p.vx += dx * 0.05; p.vy += dy * 0.05; } 
                                         } p.angle += 0.5; 
                                     } p.x += p.vx; p.y += p.vy; 
                                 } else { p.x += p.vx; p.y += p.vy; p.life--; if (p.type === 'fire') { for(var j=0; j<window.SMA.platforms.length; j++) { var plat=window.SMA.platforms[j]; if(p.y > plat.y && p.y < plat.y+plat.h && p.x > plat.x && p.x < plat.x+plat.w) { p.type = 'fire_trap'; p.vx = 0; p.vy = 0; p.y = plat.y - 10; p.life = 60; p.w = 60; p.h = 40; window.SMA.playSound('special'); window.SMA.createParticles(p.x, p.y, 10, '#e17055'); break; } } } } if(p.life <= 0) window.SMA.projectiles.splice(i,1); 
                             } 
-                            window.SMA.checkHit(window.SMA.pOne, window.SMA.pTwo); window.SMA.checkHit(window.SMA.pTwo, window.SMA.pOne); window.SMA.checkMirrorHit(window.SMA.pOne, window.SMA.pTwo); window.SMA.checkMirrorHit(window.SMA.pTwo, window.SMA.pOne); window.SMA.checkGameSet(); 
-                            if(window.SMA.isOnline) { var pkt = { type:'sync', stg:window.SMA.selectedStage, gState:window.SMA.gameState, cd:window.SMA.countdownTimer, p1:window.SMA.pOne.serialize(), p2:window.SMA.pTwo.serialize(), events:window.SMA.syncEvents, projs:window.SMA.projectiles.map(function(p){ return {x:p.x, y:p.y, vx:p.vx, vy:p.vy, type:p.type, w:p.w, h:p.h, color:p.color, angle:p.angle||0}; }), win:(window.SMA.gameState==='GAMEOVER'?document.getElementById('result-text').innerText:null) }; window.SMA.connections.forEach(function(c) { if(c.conn.open) try { c.conn.send({type:'sync', data:JSON.stringify(pkt)}); } catch(e){} }); window.SMA.syncEvents = []; } 
+                            // ヒット判定: 全プレイヤーの組み合わせ
+                            for (var ai = 0; ai < pc; ai++) {
+                                for (var bi = ai + 1; bi < pc; bi++) {
+                                    window.SMA.checkHit(allPlayers[ai], allPlayers[bi]); 
+                                    window.SMA.checkHit(allPlayers[bi], allPlayers[ai]);
+                                    window.SMA.checkMirrorHit(allPlayers[ai], allPlayers[bi]); 
+                                    window.SMA.checkMirrorHit(allPlayers[bi], allPlayers[ai]);
+                                }
+                            }
+                            window.SMA.checkGameSet(); 
+                            // ネットワーク同期
+                            if(window.SMA.isOnline) { 
+                                var pkt = { type:'sync', stg:window.SMA.selectedStage, gState:window.SMA.gameState, cd:window.SMA.countdownTimer, playerCount:pc, events:window.SMA.syncEvents, projs:window.SMA.projectiles.map(function(p){ return {x:p.x, y:p.y, vx:p.vx, vy:p.vy, type:p.type, w:p.w, h:p.h, color:p.color, angle:p.angle||0}; }), win:(window.SMA.gameState==='GAMEOVER'?document.getElementById('result-text').innerText:null) };
+                                // 各プレイヤーの状態を追加
+                                for (var si = 0; si < pc; si++) {
+                                    pkt['p' + (si+1)] = allPlayers[si].serialize();
+                                }
+                                window.SMA.connections.forEach(function(c) { if(c.conn.open) try { c.conn.send({type:'sync', data:JSON.stringify(pkt)}); } catch(e){} }); window.SMA.syncEvents = []; 
+                            } 
                         } 
-                    } else { if(window.SMA.netConn && window.SMA.netConn.open) window.SMA.netConn.send({type:'input', keys:window.SMA.myKeys}); [window.SMA.pOne, window.SMA.pTwo].forEach(function(p) { if (p && p.actionState !== 'DEAD') { p.animScale.x += (1.0 - p.animScale.x) * 0.2; p.animScale.y += (1.0 - p.animScale.y) * 0.2; if(p.actionState !== 'LEDGE_ROLL') p.rotation = 0; } }); } 
+                    } else { 
+                        if(window.SMA.netConn && window.SMA.netConn.open) window.SMA.netConn.send({type:'input', keys:window.SMA.myKeys}); 
+                        window.SMA.players.forEach(function(p) { if (p && p.actionState !== 'DEAD') { p.animScale.x += (1.0 - p.animScale.x) * 0.2; p.animScale.y += (1.0 - p.animScale.y) * 0.2; if(p.actionState !== 'LEDGE_ROLL') p.rotation = 0; } }); 
+                    } 
                 } 
                 
                 // PARTICLES (FIX: MOVED OUTSIDE isHost)
                 for(var i=window.SMA.comets.length-1; i>=0; i--) { var c=window.SMA.comets[i]; c.x+=c.vx; c.y+=c.vy; c.l--; if(c.l<=0)window.SMA.comets.splice(i,1); } 
                 for(var i=window.SMA.particles.length-1; i>=0; i--) { var p = window.SMA.particles[i]; p.x+=p.vx; p.y+=p.vy; p.life--; if(p.life<=0) window.SMA.particles.splice(i,1); } 
                 
-                var targets = []; if(window.SMA.pOne.stocks>0) targets.push(window.SMA.pOne); if(window.SMA.pTwo.stocks>0) targets.push(window.SMA.pTwo); if(window.SMA.gameState==='GAMEOVER') { if(document.getElementById('result-text').innerText.includes(window.SMA.isHost?window.SMA.localPlayerName:"1P") || (window.SMA.isOnline && document.getElementById('result-text').innerText.includes("1P"))) targets = [window.SMA.pOne]; else targets = [window.SMA.pTwo]; } var tx = window.SMA.WORLD_W/2; var ty = window.SMA.WORLD_H/2; var tz = 1.0; if(window.SMA.gameState==='COUNTDOWN') { tz = window.SMA.SCREEN_W / 1200; } else if(targets.length>0) { var minX=Infinity, maxX=-Infinity, minY=Infinity, maxY=-Infinity; targets.forEach(function(p){ if(p.x<minX)minX=p.x; if(p.x>maxX)maxX=p.x; if(p.y<minY)minY=p.y; if(p.y>maxY)maxY=p.y; }); tx = (minX+maxX)/2; ty = (minY+maxY)/2; var zx = window.SMA.SCREEN_W / (maxX-minX+500); var zy = window.SMA.SCREEN_H / (maxY-minY+400); tz = Math.min(Math.min(zx,zy), 1.2); if(tz<0.5) tz=0.5; if(window.SMA.gameState==='GAMEOVER') tz = 2.0; } if(!isNaN(tx)) window.SMA.camera.x += (tx-window.SMA.camera.x)*0.1; if(!isNaN(ty)) window.SMA.camera.y += (ty-window.SMA.camera.y)*0.1; if(!isNaN(tz)) window.SMA.camera.zoom += (tz-window.SMA.camera.zoom)*0.05; if(isNaN(window.SMA.camera.x)) window.SMA.camera.x=0; if(window.SMA.shake>0) window.SMA.shake*=0.9; if(window.SMA.shake<0.5) window.SMA.shake=0; if(window.SMA.ctx) { window.SMA.ctx.setTransform(1, 0, 0, 1, 0, 0); 
+                // カメラ: 全生存プレイヤーを追従
+                var targets = []; 
+                window.SMA.players.forEach(function(p) { if(p.stocks > 0) targets.push(p); });
+                if(window.SMA.gameState==='GAMEOVER') { 
+                    // 勝者にフォーカス
+                    var winner = null;
+                    window.SMA.players.forEach(function(p) { if(p.stocks > 0) winner = p; });
+                    if(winner) targets = [winner];
+                }
+                var tx = window.SMA.WORLD_W/2; var ty = window.SMA.WORLD_H/2; var tz = 1.0; if(window.SMA.gameState==='COUNTDOWN') { tz = window.SMA.SCREEN_W / 1200; } else if(targets.length>0) { var minX=Infinity, maxX=-Infinity, minY=Infinity, maxY=-Infinity; targets.forEach(function(p){ if(p.x<minX)minX=p.x; if(p.x>maxX)maxX=p.x; if(p.y<minY)minY=p.y; if(p.y>maxY)maxY=p.y; }); tx = (minX+maxX)/2; ty = (minY+maxY)/2; var zx = window.SMA.SCREEN_W / (maxX-minX+500); var zy = window.SMA.SCREEN_H / (maxY-minY+400); tz = Math.min(Math.min(zx,zy), 1.2); if(tz<0.5) tz=0.5; if(window.SMA.gameState==='GAMEOVER') tz = 2.0; } if(!isNaN(tx)) window.SMA.camera.x += (tx-window.SMA.camera.x)*0.1; if(!isNaN(ty)) window.SMA.camera.y += (ty-window.SMA.camera.y)*0.1; if(!isNaN(tz)) window.SMA.camera.zoom += (tz-window.SMA.camera.zoom)*0.05; if(isNaN(window.SMA.camera.x)) window.SMA.camera.x=0; if(window.SMA.shake>0) window.SMA.shake*=0.9; if(window.SMA.shake<0.5) window.SMA.shake=0; if(window.SMA.ctx) { window.SMA.ctx.setTransform(1, 0, 0, 1, 0, 0); 
                 
                 // BACKGROUND RENDER
                 var stg = window.SMA.selectedStage;
                 if(stg === 'final') {
-                    // Sunset (Purple to Orange) - v405 Update
                     var grad = window.SMA.ctx.createLinearGradient(0, 0, 0, window.SMA.canvas.height);
-                    grad.addColorStop(0, "#2c3e50"); // Dark Blue/Purple (Top)
-                    grad.addColorStop(1, "#d35400"); // Dark Orange (Bottom)
+                    grad.addColorStop(0, "#2c3e50");
+                    grad.addColorStop(1, "#d35400");
                     window.SMA.ctx.fillStyle = grad;
                 } else {
-                    // Night
                     window.SMA.ctx.fillStyle = "#0f0f23";
                 }
                 window.SMA.ctx.fillRect(0, 0, window.SMA.canvas.width, window.SMA.canvas.height); 
                 
                 window.SMA.ctx.save(); window.SMA.ctx.translate(window.SMA.SCREEN_W/2, window.SMA.SCREEN_H/2); window.SMA.ctx.scale(window.SMA.camera.zoom, window.SMA.camera.zoom); window.SMA.ctx.translate(-window.SMA.camera.x + (Math.random()-0.5)*window.SMA.shake, -window.SMA.camera.y + (Math.random()-0.5)*window.SMA.shake); for(var i=0; i<window.SMA.stars.length; i++) { var s=window.SMA.stars[i]; 
                     if(stg === 'final') {
-                        // Cloud
                         window.SMA.ctx.fillStyle = "rgba(255, 255, 255, 0.4)"; 
                         window.SMA.ctx.beginPath(); window.SMA.ctx.ellipse(s.x, s.y, s.s, s.s/2, 0, 0, Math.PI*2); window.SMA.ctx.fill(); 
                     } else {
-                        // Star
                         window.SMA.ctx.fillStyle = "rgba(255, 255, 200, " + (0.5 + Math.random()*0.5) + ")"; 
                         window.SMA.ctx.beginPath(); window.SMA.ctx.arc(s.x, s.y, s.s, 0, Math.PI*2); window.SMA.ctx.fill(); 
                     }
-                } if(window.SMA.platforms.length>0) { var m = window.SMA.platforms[0]; window.SMA.ctx.fillStyle = "#3e2723"; window.SMA.ctx.beginPath(); window.SMA.ctx.moveTo(m.x, m.y); window.SMA.ctx.lineTo(m.x+m.w, m.y); window.SMA.ctx.lineTo(m.x+m.w/2, m.y+200); window.SMA.ctx.fill(); for(var i=0; i<window.SMA.platforms.length; i++) { var p = window.SMA.platforms[i]; window.SMA.ctx.fillStyle = "#3e2723"; window.SMA.ctx.fillRect(p.x, p.y, p.w, p.h); window.SMA.ctx.fillStyle="#a1887f"; window.SMA.ctx.fillRect(p.x,p.y,p.w,5); } } try { if(window.SMA.pOne) window.SMA.pOne.draw(window.SMA.ctx); } catch(e){} try { if(window.SMA.pTwo) window.SMA.pTwo.draw(window.SMA.ctx); } catch(e){} 
+                } if(window.SMA.platforms.length>0) { var m = window.SMA.platforms[0]; window.SMA.ctx.fillStyle = "#3e2723"; window.SMA.ctx.beginPath(); window.SMA.ctx.moveTo(m.x, m.y); window.SMA.ctx.lineTo(m.x+m.w, m.y); window.SMA.ctx.lineTo(m.x+m.w/2, m.y+200); window.SMA.ctx.fill(); for(var i=0; i<window.SMA.platforms.length; i++) { var p = window.SMA.platforms[i]; window.SMA.ctx.fillStyle = "#3e2723"; window.SMA.ctx.fillRect(p.x, p.y, p.w, p.h); window.SMA.ctx.fillStyle="#a1887f"; window.SMA.ctx.fillRect(p.x,p.y,p.w,5); } } 
+                // 全プレイヤー描画
+                window.SMA.players.forEach(function(p) { try { if(p) p.draw(window.SMA.ctx); } catch(e){} }); 
                 // 鏡オブジェクトと鏡像の描画
                 try {
                     [window.SMA.pOne, window.SMA.pTwo].forEach(function(fighter) {
@@ -842,8 +1140,11 @@ function reportError(e) {
                 // RESTORED SHOT LOGIC (With Size scaling and new DOWN logic)
                 var p = window.SMA.projectiles[i]; 
                 if(p.ownerRole && vic.stocks>0) { 
-                    var owner = (p.ownerRole === 'p1') ? window.SMA.pOne : window.SMA.pTwo;
-                    if (owner === vic) continue; 
+                    var owner = null;
+                    for (var oi = 0; oi < window.SMA.players.length; oi++) {
+                        if (window.SMA.players[oi].playerRole === p.ownerRole) { owner = window.SMA.players[oi]; break; }
+                    }
+                    if (owner === vic) continue;
                     var hit = false; 
                     if (p.type === 'fire_trap') { if (p.x+p.w/2 > vic.x && p.x-p.w/2 < vic.x+vic.w && p.y+40 > vic.y && p.y-p.h < vic.y+vic.h) hit = true; } else { if (p.x+p.w/2 > vic.x && p.x-p.w/2 < vic.x+vic.w && p.y+p.w/2 > vic.y && p.y-p.w/2 < vic.y+vic.h) hit = true; } 
                     if(hit) { 
@@ -924,11 +1225,87 @@ function reportError(e) {
                 window.SMA.playSound('hit');
             }
         };
-        window.SMA.checkGameSet = function() { if(window.SMA.pOne.stocks<=0 || window.SMA.pTwo.stocks<=0) { window.SMA.gameRunning = false; window.SMA.gameState = 'GAMEOVER'; var win = window.SMA.pOne.stocks>0 ? (window.SMA.isOnline?(window.SMA.isHost?"1P":"2P"):"1P") : (window.SMA.isOnline?(window.SMA.isHost?"2P":"1P"):"CPU"); document.getElementById('result-text').innerText = win + " WINS!"; document.getElementById('game-over-screen').classList.remove('hidden'); window.SMA.playSound('win'); window.parent.postMessage({ type: 'gameOver', winner: win }, '*'); if(window.SMA.isOnline && window.SMA.isHost) window.SMA.connections.forEach(function(c) { c.conn.send({type:'sync', gState:'GAMEOVER', win:win}); }); } };
-        window.SMA.updateHud = function() { var elP1Pct = document.getElementById('p1-percent'); var elP1Stk = document.getElementById('p1-stock'); var elP2Pct = document.getElementById('p2-percent'); var elP2Stk = document.getElementById('p2-stock'); var elOvlMsg = document.getElementById('overlay-msg'); var elTxtOvl = document.getElementById('text-overlay'); if(elP1Pct) elP1Pct.innerText = Math.floor(window.SMA.pOne.percent) + "%"; if(elP1Stk) elP1Stk.innerText = "●".repeat(Math.max(0, window.SMA.pOne.stocks)); if(elP2Pct) elP2Pct.innerText = Math.floor(window.SMA.pTwo.percent) + "%"; if(elP2Stk) elP2Stk.innerText = "●".repeat(Math.max(0, window.SMA.pTwo.stocks)); if(window.SMA.gameState==='COUNTDOWN') { var t = "3"; if(window.SMA.countdownTimer<60)t="1"; else if(window.SMA.countdownTimer<120)t="2"; if(elOvlMsg) elOvlMsg.innerText=t; if(elTxtOvl) elTxtOvl.style.opacity=1; } else if(window.SMA.gameState==='PLAYING') { if(window.SMA.countdownTimer > -30) { if(elOvlMsg) elOvlMsg.innerText="GO!"; if(elTxtOvl) elTxtOvl.style.opacity=1; } else { if(elTxtOvl) elTxtOvl.style.opacity=0; } } };
+        window.SMA.checkGameSet = function() { 
+            // 生存者カウント
+            var alive = []; 
+            window.SMA.players.forEach(function(p, i) { if(p.stocks > 0) alive.push(i); });
+            if(alive.length <= 1) { 
+                window.SMA.gameRunning = false; window.SMA.gameState = 'GAMEOVER'; 
+                var win = 'CPU';
+                if(alive.length === 1) {
+                    var idx = alive[0];
+                    if(idx === 0) win = window.SMA.isOnline ? '1P' : '1P';
+                    else {
+                        var role = window.SMA.PLAYER_ROLES[idx];
+                        var pObj = window.SMA.connections.find(function(x){return x.role === role;});
+                        win = pObj ? pObj.name : (role.toUpperCase());
+                    }
+                }
+                document.getElementById('result-text').innerText = win + ' WINS!'; 
+                document.getElementById('game-over-screen').classList.remove('hidden'); 
+                window.SMA.playSound('win'); 
+                window.parent.postMessage({ type: 'gameOver', winner: win }, '*'); 
+                if(window.SMA.isOnline && window.SMA.isHost) window.SMA.connections.forEach(function(c) { c.conn.send({type:'sync', gState:'GAMEOVER', win:win}); }); 
+            } 
+        };
+        window.SMA.updateHud = function() { 
+            var getStockIcon = function(id) {
+                if (id === 'sword') return '⚔️';
+                if (id === 'mage') return '🪄';
+                if (id === 'brawler') return '👊';
+                if (id === 'spear') return '🔱';
+                if (id === 'hammer') return '🔨';
+                if (id === 'mirror') return '🪞';
+                return '👤';
+            };
+            var getDamageColor = function(pct, pIndex) {
+                if (pct >= 100) return '#c0392b'; // 濃い赤
+                if (pct >= 70)  return '#e67e22'; // オレンジ
+                if (pct >= 30)  return '#f1c40f'; // 黄色
+                // 30%未満は元のテーマカラーにする（白でも可ですが文字色としての可読性を保持）
+                return window.SMA.PLAYER_COLORS[pIndex] || '#fff';
+            };
+
+            for (var hi = 0; hi < window.SMA.players.length; hi++) {
+                var player = window.SMA.players[hi];
+                var pctEl = document.getElementById('p' + (hi+1) + '-percent');
+                var stkEl = document.getElementById('p' + (hi+1) + '-stock');
+                if(pctEl) {
+                    pctEl.innerText = Math.floor(player.percent) + '%';
+                    pctEl.style.color = getDamageColor(player.percent, hi);
+                    // 100%以上のブルブル（簡易シェイク）表現
+                    if (player.percent >= 100) {
+                        pctEl.style.transform = 'translate(' + (Math.random()*2-1) + 'px, ' + (Math.random()*2-1) + 'px)';
+                    } else {
+                        pctEl.style.transform = 'none';
+                    }
+                }
+                if(stkEl) {
+                    var icon = getStockIcon(player.charId);
+                    stkEl.innerText = icon.repeat(Math.max(0, player.stocks));
+                }
+            }
+            var elOvlMsg = document.getElementById('overlay-msg'); var elTxtOvl = document.getElementById('text-overlay'); 
+            if(window.SMA.gameState==='COUNTDOWN') { var t = '3'; if(window.SMA.countdownTimer<60)t='1'; else if(window.SMA.countdownTimer<120)t='2'; if(elOvlMsg) elOvlMsg.innerText=t; if(elTxtOvl) elTxtOvl.style.opacity=1; } 
+            else if(window.SMA.gameState==='PLAYING') { if(window.SMA.countdownTimer > -30) { if(elOvlMsg) elOvlMsg.innerText='GO!'; if(elTxtOvl) elTxtOvl.style.opacity=1; } else { if(elTxtOvl) elTxtOvl.style.opacity=0; } } 
+        };
         window.SMA.applySync = function(d) { 
             if(d.data) { try { d = JSON.parse(d.data); } catch(e){ return; } }
-            window.SMA.gameState = d.gState; window.SMA.countdownTimer = d.cd; window.SMA.pOne.deserialize(d.p1); window.SMA.pTwo.deserialize(d.p2); if(d.projs) window.SMA.projectiles = d.projs; if(d.events) { d.events.forEach(function(e) { if(e.type === 'snd') window.SMA.playSound(e.key); if(e.type === 'part') window.SMA.createParticles(e.x, e.y, e.n, e.c); if(e.type === 'comet') window.SMA.triggerComet(e.x, e.y, e.dir, e.c); }); } window.SMA.updateHud(); if(window.SMA.gameState==='GAMEOVER') { document.getElementById('result-text').innerText = d.win; document.getElementById('game-over-screen').classList.remove('hidden'); } };
+            window.SMA.gameState = d.gState; window.SMA.countdownTimer = d.cd; 
+            // 全プレイヤーの状態を反映
+            var pc = d.playerCount || 2;
+            for (var si = 0; si < pc && si < window.SMA.players.length; si++) {
+                var pData = d['p' + (si+1)];
+                if(pData) window.SMA.players[si].deserialize(pData);
+            }
+            // 後方互換: p1/p2が直接来た場合
+            if (d.p1 && window.SMA.pOne) window.SMA.pOne.deserialize(d.p1); 
+            if (d.p2 && window.SMA.pTwo) window.SMA.pTwo.deserialize(d.p2); 
+            if(d.projs) window.SMA.projectiles = d.projs; 
+            if(d.events) { d.events.forEach(function(e) { if(e.type === 'snd') window.SMA.playSound(e.key); if(e.type === 'part') window.SMA.createParticles(e.x, e.y, e.n, e.c); if(e.type === 'comet') window.SMA.triggerComet(e.x, e.y, e.dir, e.c); }); } 
+            window.SMA.updateHud(); 
+            if(window.SMA.gameState==='GAMEOVER') { document.getElementById('result-text').innerText = d.win; document.getElementById('game-over-screen').classList.remove('hidden'); } 
+        };
         
         // 5. FIGHTER CLASS
         window.SMA.Fighter = function(x, y, color, isP2, charId) {
@@ -936,6 +1313,7 @@ function reportError(e) {
             this.vx = 0; this.vy = 0; this.isGrounded = false; this.jumps = 0;
             this.percent = 0; this.stocks = 3; this.isP2 = !!isP2; this.facingRight = !isP2;
             this.role = isP2 ? 'p2' : 'p1';
+            this.playerRole = this.role; // players[]から上書きされる
             this.actionState = 'IDLE'; this.stateTimer = 0; this.respawnTimer = 0;
             this.currentAttack = null; this.currentAttackType = null;
             this.hitbox = { active: false, shape: 'box', x: 0, y: 0, w: 0, h: 0, radius: 0 };
@@ -2599,11 +2977,27 @@ function reportError(e) {
                 var el=g(id); 
                 var d=function(e){ 
                     if(window.SMA.isEditingLayout) return;
-                    try { if(e.cancelable) e.preventDefault(); } catch(err){} window.SMA.myKeys[k]=true; if(window.SMA.gameRunning) { if(window.SMA.isHost) { if(k==='jump') window.SMA.pOne.triggerJump(window.SMA.myKeys); if(k==='attack') window.SMA.pOne.startCharge(); if(k==='grab') window.SMA.pOne.tryGrab(window.SMA.pTwo); } } if(window.SMA.netConn&&window.SMA.netConn.open){ if(k==='jump')window.SMA.netConn.send({type:'input',keys:{...window.SMA.myKeys,triggerJump:true}}); if(k==='attack')window.SMA.netConn.send({type:'input',keys:{...window.SMA.myKeys,triggerStartCharge:true}}); if(k==='grab')window.SMA.netConn.send({type:'input',keys:{...window.SMA.myKeys,triggerGrab:true}}); } 
+                    try { if(e.cancelable) e.preventDefault(); } catch(err){} window.SMA.myKeys[k]=true; 
+                    if(window.SMA.gameRunning) { 
+                        if(window.SMA.isHost && window.SMA.pOne) { 
+                            if(k==='jump') window.SMA.pOne.triggerJump(window.SMA.myKeys); 
+                            if(k==='attack') window.SMA.pOne.startCharge(); 
+                            if(k==='grab') {
+                                var target = null; var minDist = Infinity;
+                                window.SMA.players.forEach(function(p) {
+                                    if(p === window.SMA.pOne || p.stocks <= 0) return;
+                                    var d = Math.abs(p.x - window.SMA.pOne.x);
+                                    if(d < minDist) { minDist = d; target = p; }
+                                });
+                                window.SMA.pOne.tryGrab(target);
+                            } 
+                        } 
+                    } 
+                    if(window.SMA.netConn&&window.SMA.netConn.open){ if(k==='jump')window.SMA.netConn.send({type:'input',keys:{...window.SMA.myKeys,triggerJump:true}}); if(k==='attack')window.SMA.netConn.send({type:'input',keys:{...window.SMA.myKeys,triggerStartCharge:true}}); if(k==='grab')window.SMA.netConn.send({type:'input',keys:{...window.SMA.myKeys,triggerGrab:true}}); } 
                 }; 
                 var u=function(e){ 
                     if(window.SMA.isEditingLayout) return;
-                    try { if(e.cancelable) e.preventDefault(); } catch(err){} window.SMA.myKeys[k]=false; var type = 'NEUTRAL'; if (window.SMA.myKeys.up) type = 'UP'; else if (window.SMA.myKeys.down) type = 'DOWN'; else if (window.SMA.myKeys.left || window.SMA.myKeys.right) type = 'SIDE'; if(window.SMA.gameRunning && window.SMA.isHost) { if(k==='attack') window.SMA.pOne.releaseAttack(type); } if(k==='attack'&&window.SMA.netConn&&window.SMA.netConn.open)window.SMA.netConn.send({type:'input',keys:{...window.SMA.myKeys,triggerReleaseAttack:true, attackType: type}}); 
+                    try { if(e.cancelable) e.preventDefault(); } catch(err){} window.SMA.myKeys[k]=false; var type = 'NEUTRAL'; if (window.SMA.myKeys.up) type = 'UP'; else if (window.SMA.myKeys.down) type = 'DOWN'; else if (window.SMA.myKeys.left || window.SMA.myKeys.right) type = 'SIDE'; if(window.SMA.gameRunning && window.SMA.isHost && window.SMA.pOne) { if(k==='attack') window.SMA.pOne.releaseAttack(type); } if(k==='attack'&&window.SMA.netConn&&window.SMA.netConn.open)window.SMA.netConn.send({type:'input',keys:{...window.SMA.myKeys,triggerReleaseAttack:true, attackType: type}}); 
                 }; 
                 try { el.addEventListener('touchstart',d, {passive:false}); } catch(e){ el.addEventListener('touchstart',d); } 
                 try { el.addEventListener('touchend',u, {passive:false}); } catch(e){ el.addEventListener('touchend',u); } 

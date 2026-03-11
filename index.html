@@ -9,7 +9,7 @@
 </head>
 <body>
     <div id="error-report"></div>
-    <div id="version-display">v423</div>
+    <div id="version-display">v424</div>
     <div id="game-container">
         <!-- New Notification Overlay -->
         <div id="notification-overlay">
@@ -29,6 +29,16 @@
                 <div id="p2-name" class="name-label" style="color:#74b9ff">2P</div>
                 <div id="p2-percent" class="percent" style="color:#74b9ff">0%</div>
                 <div id="p2-stock" class="stock">●●●</div>
+            </div>
+            <div id="p3-hud" class="hud-panel" style="display:none">
+                <div id="p3-name" class="name-label" style="color:#fdcb6e">3P</div>
+                <div id="p3-percent" class="percent" style="color:#fdcb6e">0%</div>
+                <div id="p3-stock" class="stock">●●●</div>
+            </div>
+            <div id="p4-hud" class="hud-panel" style="display:none">
+                <div id="p4-name" class="name-label" style="color:#00b894">4P</div>
+                <div id="p4-percent" class="percent" style="color:#00b894">0%</div>
+                <div id="p4-stock" class="stock">●●●</div>
             </div>
         </div>
         <div id="text-overlay"><div id="overlay-msg">LOADING...</div></div>
@@ -51,7 +61,7 @@
         </div>
 
         <div id="menu-screen" class="screen">
-            <h1>スマグラ <span id="menu-version" style="font-size:0.45em;vertical-align:middle;opacity:0.7;">v423</span></h1>
+            <h1>スマグラ <span id="menu-version" style="font-size:0.45em;vertical-align:middle;opacity:0.7;">v424</span></h1>
             <input type="text" id="username" placeholder="名前を入力" maxlength="8">
             <button id="btn-solo" class="menu-btn primary">ひとりで遊ぶ</button>
             <button id="btn-online" class="menu-btn">オンライン対戦</button>
@@ -131,6 +141,14 @@
                     <div class="p-status-label" id="sss-p2-name">2P</div>
                     <div id="sss-p2-box" class="p-status-box">選択中... <span class="check-icon">✅</span></div>
                 </div>
+                <div class="p-status" id="sss-p3-status" style="display:none">
+                    <div class="p-status-label" id="sss-p3-name">3P</div>
+                    <div id="sss-p3-box" class="p-status-box">選択中... <span class="check-icon">✅</span></div>
+                </div>
+                <div class="p-status" id="sss-p4-status" style="display:none">
+                    <div class="p-status-label" id="sss-p4-name">4P</div>
+                    <div id="sss-p4-box" class="p-status-box">選択中... <span class="check-icon">✅</span></div>
+                </div>
             </div>
             <button id="btn-sss-ready" class="menu-btn primary">決定！</button>
             <button id="btn-sss-start" class="menu-btn primary hidden">キャラ選択へ</button>
@@ -180,6 +198,14 @@
                     <div class="p-status-label" id="css-p2-name">2P</div>
                     <div id="css-p2-box" class="p-status-box">待機中... <span class="check-icon">✅</span></div>
                 </div>
+                <div class="p-status" id="css-p3-status" style="display:none">
+                    <div class="p-status-label" id="css-p3-name">3P</div>
+                    <div id="css-p3-box" class="p-status-box">待機中... <span class="check-icon">✅</span></div>
+                </div>
+                <div class="p-status" id="css-p4-status" style="display:none">
+                    <div class="p-status-label" id="css-p4-name">4P</div>
+                    <div id="css-p4-box" class="p-status-box">待機中... <span class="check-icon">✅</span></div>
+                </div>
             </div>
             <button id="btn-css-ready" class="menu-btn primary">準備完了！</button>
             <button id="btn-css-start" class="menu-btn primary hidden">対戦開始！</button>
@@ -192,6 +218,8 @@
             <div id="lobby-info">
                 <div id="slot-p1" class="player-slot">1P: あなた</div>
                 <div id="slot-p2" class="player-slot">2P: 待機中...</div>
+                <div id="slot-p3" class="player-slot">3P: 待機中...</div>
+                <div id="slot-p4" class="player-slot">4P: 待機中...</div>
                 <div style="font-size:12px; color:#aaa; margin-top:5px;">観戦者: <span id="spec-list">なし</span></div>
             </div>
             <button id="btn-goto-sss" class="menu-btn primary disabled">ステージ選択へ</button>
@@ -212,6 +240,6 @@
     </div>
 
     <!-- MAIN SCRIPT -->
-    <script src="js/main.js?v=423"></script>
+    <script src="js/main.js?v=424"></script>
 </body>
 </html>
