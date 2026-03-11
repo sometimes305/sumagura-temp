@@ -11,8 +11,8 @@ function reportError(e) {
 
         // 1. GLOBAL NAMESPACE
         window.SMA = {};
-        window.SMA.ID_PREFIX = "sumagura_v429_"; 
-        window.SMA.VERSION = "v429";
+        window.SMA.ID_PREFIX = "sumagura_v430_"; 
+        window.SMA.VERSION = "v430";
         window.SMA.GRAVITY = 0.40; window.SMA.MAX_FALL_SPEED = 9.0;
         window.SMA.FRICTION = 0.82; window.SMA.KB_FRICTION = 0.95;
         window.SMA.SPEED = 1.1; window.SMA.JUMP_FORCE = -10.0;
@@ -1600,9 +1600,15 @@ function reportError(e) {
             // 空中N着地硬直 (sword, brawler, hammer, mirror)
             if (!preGrounded && this.isGrounded) {
                 if (this.actionState === 'ATTACK' && this.currentAttackType === 'AIR_NEUTRAL') {
-                    if (this.charId === 'sword' || this.charId === 'brawler' || this.charId === 'hammer' || this.charId === 'mirror') {
+                    if (this.charId === 'sword' || this.charId === 'brawler' || this.charId === 'mirror') {
                         this.actionState = 'LAG';
-                        this.stateTimer = 3; // 3F landing lag
+                        this.stateTimer = 5; // 5F landing lag
+                        this.currentAttack = null;
+                        this.hitbox.active = false;
+                        this.rotation = 0;
+                    } else if (this.charId === 'hammer') {
+                        this.actionState = 'LAG';
+                        this.stateTimer = 9; // 9F landing lag
                         this.currentAttack = null;
                         this.hitbox.active = false;
                         this.rotation = 0;
