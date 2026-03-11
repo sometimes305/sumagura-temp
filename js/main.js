@@ -1758,11 +1758,18 @@ function reportError(e) {
             }
             if (atk.type === 'mirror_throw_up') {
                 // 上A: 頭上に鏡を投げて回転（短射程の上方向判定）
+                var p = this.chargePower || 1.0;
+                var chargeRatio = Math.max(0, (p - 1.0) / 0.7);
                 if (this.stateTimer >= 4 && this.stateTimer <= 18) {
                     this.hitbox.active = true;
                     this.hitbox.w = 45; this.hitbox.h = 50;
                     this.hitbox.x = this.x + this.w/2 - 22;
                     this.hitbox.y = this.y - 45;
+                    
+                    // ため量に応じて身長の半分の距離を上昇
+                    var upMove = ((this.h / 2) * chargeRatio) / 15;
+                    this.y -= upMove;
+                    this.vy = 0; // 重力で落ちないように相殺
                 } else { this.hitbox.active = false; }
                 if (this.stateTimer >= atk.frames) { this.actionState = 'LAG'; this.stateTimer = atk.lag; this.chargePower = 1.0; this.hitbox.active = false; this.currentAttack = null; }
                 return;
@@ -1770,13 +1777,18 @@ function reportError(e) {
             if (atk.type === 'mirror_throw') {
                 // 横A: 前方に鏡を投げて回転（判定強化: 幅85, 高さ70）
                 var p = this.chargePower || 1.0;
-                var szMult = (p - 1.0) / 0.7 * 0.2 + 1.0;
+                var chargeRatio = Math.max(0, (p - 1.0) / 0.7);
+                var szMult = chargeRatio * 0.2 + 1.0;
                 var curW = 85 * szMult; var curH = 70 * szMult;
                 if (this.stateTimer >= 4 && this.stateTimer <= 18) {
                     this.hitbox.active = true;
                     this.hitbox.w = curW; this.hitbox.h = curH;
                     this.hitbox.x = this.x + (this.facingRight ? -5 : -5 - curW) + this.w/2;
                     this.hitbox.y = this.y - (curH - 70)/2;
+                    
+                    // ため量に応じて前方にキャラ一体分（this.w）前進
+                    var fwMove = (this.w * chargeRatio) / 15;
+                    this.x += this.facingRight ? fwMove : -fwMove;
                 } else { this.hitbox.active = false; }
                 if (this.stateTimer >= atk.frames) { this.actionState = 'LAG'; this.stateTimer = atk.lag; this.chargePower = 1.0; this.hitbox.active = false; this.currentAttack = null; }
                 return;
