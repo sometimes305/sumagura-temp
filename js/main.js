@@ -1197,7 +1197,7 @@ function reportError(e) {
                 if (data.dmg) vic.percent += data.dmg * p * 0.5;
                 var atkScale = (data.scale !== undefined) ? data.scale : 0.1;
                 var kbMult = window.SMA.CHAR_DATA[vic.charId].kbMult || 1.0;
-                var kbValue = data.kb * 4.0;
+                var kbValue = data.kb * 4.0 * 1.2;
                 var kb = (kbValue * p + (Math.pow(vic.percent, 1.2) * atkScale * p * 0.75)) * kbMult;
                 var r = data.angle * (Math.PI / 180);
                 // 鏡像の向きで吹っ飛ばし方向を決定
@@ -1441,21 +1441,21 @@ function reportError(e) {
             mirror: {
                 jumpMult: 1.1, speed: 1.035, kbMult: 1.5,
                 attacks: {
-                    NEUTRAL: { type:'mirror_slash', range: 50, dmg: 4, kb: 1.2, scale: 0.06, angle: -30, frames: 10, lag: 6, stun: 3, color: '#81ecec' },
-                    SIDE:    { type:'mirror_throw', dmg: 8, kb: 1.5, scale: 0.06, angle: -20, frames: 22, lag: 12, stun: 5, color: '#81ecec' },
-                    UP:      { type:'mirror_throw_up', dmg: 7, kb: 1.8, scale: 0.08, angle: -80, frames: 22, lag: 12, stun: 5, color: '#81ecec' },
+                    NEUTRAL: { type:'mirror_slash', range: 50, dmg: 4, kb: 1.44, scale: 0.06, angle: -30, frames: 10, lag: 6, stun: 3, color: '#81ecec' },
+                    SIDE:    { type:'mirror_throw', dmg: 8, kb: 1.8, scale: 0.06, angle: -20, frames: 22, lag: 12, stun: 5, color: '#81ecec' },
+                    UP:      { type:'mirror_throw_up', dmg: 7, kb: 2.16, scale: 0.08, angle: -80, frames: 22, lag: 12, stun: 5, color: '#81ecec' },
                     DOWN:    { type:'mirror_place', dmg: 0, kb: 0, scale: 0, angle: 0, frames: 200, lag: 12, stun: 0, color: '#dfe6e9' },
-                    AIR_NEUTRAL: { type:'mirror_spin', dmg: 8, kb: 1.6, scale: 0.08, angle: -45, frames: 24, lag: 10, stun: 5, color: '#81ecec' },
-                    AIR_SIDE: { type:'mirror_throw', dmg: 8, kb: 1.5, scale: 0.06, angle: -20, frames: 22, lag: 12, stun: 5, color: '#81ecec' },
-                    AIR_UP:   { type:'mirror_throw_up', dmg: 7, kb: 1.8, scale: 0.08, angle: -80, frames: 22, lag: 12, stun: 5, color: '#81ecec' },
+                    AIR_NEUTRAL: { type:'mirror_spin', dmg: 8, kb: 1.92, scale: 0.08, angle: -45, frames: 24, lag: 10, stun: 5, color: '#81ecec' },
+                    AIR_SIDE: { type:'mirror_throw', dmg: 8, kb: 1.8, scale: 0.06, angle: -20, frames: 22, lag: 12, stun: 5, color: '#81ecec' },
+                    AIR_UP:   { type:'mirror_throw_up', dmg: 7, kb: 2.16, scale: 0.08, angle: -80, frames: 22, lag: 12, stun: 5, color: '#81ecec' },
                     AIR_DOWN: { type:'mirror_place', dmg: 0, kb: 0, scale: 0, angle: 0, frames: 200, lag: 12, stun: 0, color: '#dfe6e9' },
-                    LEDGE_ATK: { dmg: 6, kb: 9.0, scale: 0.01, angle: -45, frames: 30, lag: 10, stun: 10 }
+                    LEDGE_ATK: { dmg: 6, kb: 10.8, scale: 0.01, angle: -45, frames: 30, lag: 10, stun: 10 }
                 },
                 throws: {
-                    THROW_FW: { dmg: 6, kb: 6.0, scale: 0.06, angle: -30 },
-                    THROW_BK: { dmg: 6, kb: 6.0, scale: 0.06, angle: -150 },
-                    THROW_UP: { dmg: 6, kb: 6.0, scale: 0.06, angle: -90 },
-                    THROW_DN: { dmg: 6, kb: 7.0, scale: 0.06, angle: 45 }
+                    THROW_FW: { dmg: 6, kb: 7.2, scale: 0.06, angle: -30 },
+                    THROW_BK: { dmg: 6, kb: 7.2, scale: 0.06, angle: -150 },
+                    THROW_UP: { dmg: 6, kb: 7.2, scale: 0.06, angle: -90 },
+                    THROW_DN: { dmg: 6, kb: 8.4, scale: 0.06, angle: 45 }
                 }
             }
         };
