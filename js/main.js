@@ -1659,25 +1659,30 @@ function reportError(e) {
             // *** 鏡キャラ攻撃処理 ***
             if (atk.type === 'mirror_place') {
                 if (this.stateTimer === 1) {
-                    if (this.mirror) {
-                        // 入れ替わり: 本体と鏡像の位置を交換
+                    if (this.mirror && !this.mirror.swapped) {
+                        // 入れ替わり: 本体と鏡像の位置を交換（1回のみ）
                         var oldX = this.x; var oldY = this.y;
                         if (this.mirrorClone) {
                             this.x = this.mirrorClone.x; this.y = this.mirrorClone.y;
                             this.facingRight = !this.facingRight;
                         }
-                        // 鏡を維持するため、mirror = null にしない。
-                        // 位置交換後は18フレームの硬直（LAG）があるため、連続連打はある程度制限されるが、鏡は残り続ける。
+                        this.mirror.swapped = true; // 交換済みフラグを立てる
                         S.createParticles(oldX + this.w/2, oldY + this.h/2, 15, '#81ecec');
                         S.createParticles(this.x + this.w/2, this.y + this.h/2, 15, '#81ecec');
                         S.playSound('magic');
                         this.actionState = 'LAG'; this.stateTimer = 18;
                         this.currentAttack = null; this.chargePower = 1.0; return;
                     } else {
-                        // クールタイム中は設置不可 → すぐLAGに移行
-                        if (this.mirrorCooldown > 0) {
+                        // 鏡が無い、または既に入れ替わり済みの場合は新しい鏡を設置する
+                        if (this.mirrorCooldown > 0 && !this.mirror) {
+                            // クールタイム中は設置不可
                             this.actionState = 'LAG'; this.stateTimer = 8;
                             this.currentAttack = null; this.chargePower = 1.0; return;
+                        }
+                        // 古い鏡がある場合は消去（上書き準備）
+                        if (this.mirror) {
+                            this.mirror = null;
+                            this.mirrorClone = null;
                         }
                         // 鏡設置開始: ちょん押し=60px（横A間合い程度）
                         this.mirrorPlaceRange = 60;
@@ -1703,7 +1708,7 @@ function reportError(e) {
                                 placeY = plat.y; break;
                             }
                         }
-                        this.mirror = { x: placeX, y: placeY, timer: 480 };
+                        this.mirror = { x: placeX, y: placeY, timer: 480, swapped: false };
                         this.mirrorClone = {
                             x: 2 * placeX - (this.x + this.w/2) - this.w/2,
                             y: this.y,
@@ -1727,7 +1732,7 @@ function reportError(e) {
                                 placeY = plat.y; break;
                             }
                         }
-                        this.mirror = { x: placeX, y: placeY, timer: 480 };
+                        this.mirror = { x: placeX, y: placeY, timer: 480, swapped: false };
                         this.mirrorClone = {
                             x: 2 * placeX - (this.x + this.w/2) - this.w/2,
                             y: this.y,
