@@ -1197,8 +1197,8 @@ function reportError(e) {
                 if (data.dmg) vic.percent += data.dmg * p * 0.5;
                 var atkScale = (data.scale !== undefined) ? data.scale : 0.1;
                 var kbMult = window.SMA.CHAR_DATA[vic.charId].kbMult || 1.0;
-                var kbValue = data.kb * 4.0 * 1.2;
-                var kb = (kbValue * p + (Math.pow(vic.percent, 1.2) * atkScale * p * 0.75)) * kbMult;
+                // バースト力を本体の 70% に調整（kbValue を削除し計算式に 0.7 を適用）
+                var kb = (data.kb * p + (Math.pow(vic.percent, 1.2) * atkScale * p * 0.5)) * kbMult * 0.7;
                 var r = data.angle * (Math.PI / 180);
                 // 鏡像の向きで吹っ飛ばし方向を決定
                 var cloneFR = atk.mirrorClone.facingRight;
