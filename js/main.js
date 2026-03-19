@@ -101,7 +101,7 @@ function reportError(e) {
 
             // RoomSDK Bridge Response handling
             var responseId = data.actionId || data.actionld;
-            if (data.type === 'gravityroomresponse' && responseId) {
+            if ((data.type === 'gravityroomresponse' || data.type === 'gravity_room_response') && responseId) {
                 var req2 = window.SMA.gravityRoomRequests[responseId];
                 if (req2) {
                     req2.resolve(data.result);
@@ -110,7 +110,7 @@ function reportError(e) {
             }
 
             // RoomSDK Bridge Event handling
-            if (data.type === 'gravityroomevent') {
+            if (data.type === 'gravityroomevent' || data.type === 'gravity_room_event') {
                 var payload = data.payload || {};
                 if (payload.type === 'aitoolsgamejoinroom') {
                     console.log("Joined: ", payload);
