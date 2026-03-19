@@ -78,7 +78,7 @@ function reportError(e) {
             return new Promise(function(resolve, reject) {
                 var reqId = action + "_" + Date.now() + "_" + Math.floor(Math.random()*1000);
                 window.SMA.gravityRoomRequests[reqId] = { resolve: resolve, reject: reject };
-                var msg = { action: action, actionId: reqId };
+                var msg = { action: action, actionId: reqId, actionld: reqId }; // ローダー側の記載ブレ(OCR誤字等)に対応
                 if (params) Object.assign(msg, params);
                 window.parent.postMessage(msg, "*");
             });
@@ -100,11 +100,12 @@ function reportError(e) {
             }
 
             // RoomSDK Bridge Response handling
-            if (data.type === 'gravityroomresponse' && data.actionId) {
-                var req2 = window.SMA.gravityRoomRequests[data.actionId];
+            var responseId = data.actionId || data.actionld;
+            if (data.type === 'gravityroomresponse' && responseId) {
+                var req2 = window.SMA.gravityRoomRequests[responseId];
                 if (req2) {
                     req2.resolve(data.result);
-                    delete window.SMA.gravityRoomRequests[data.actionId];
+                    delete window.SMA.gravityRoomRequests[responseId];
                 }
             }
 
@@ -375,7 +376,8 @@ function reportError(e) {
             document.getElementById('slot-p1').innerText = "1P: "+window.SMA.localPlayerName;
 
             try {
-                var res = await window.SMA.callGravityRoomSDK('create_room', { maxplayers: 2, permission: 0 }); // Note: Local AI param is maxplayers and permission
+                // maxplayers(AI元のコード)とmax_players(ユーザーのコード例)両方を送る安全策
+                var res = await window.SMA.callGravityRoomSDK('create_room', { max_players: 2, maxplayers: 2, permission: 0 }); 
                 var roomData = res.data || res;
                 window.SMA.gravityRoomId = (roomData && (roomData.room_id || roomData.roomId)) || "0000";
                 document.getElementById('room-id-display').innerText = window.SMA.gravityRoomId;
