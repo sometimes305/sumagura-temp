@@ -120,6 +120,32 @@ function reportError(e) {
 
         window.SMA.initGravity = async function() {
             if (!window.SMA.isGravity) return;
+
+            // 1. URLパラメータからの取得（ローダー経由対策）
+            try {
+                var urlParams = new URLSearchParams(window.location.search);
+                var urlName = urlParams.get('username');
+                var urlIcon = urlParams.get('portrait') || urlParams.get('avatar');
+                
+                if (urlName) {
+                    window.SMA.localPlayerName = urlName;
+                    var nameInput = document.getElementById('username');
+                    if (nameInput) { 
+                        nameInput.value = urlName;
+                        nameInput.disabled = true; 
+                    }
+                    if (urlIcon) {
+                        window.SMA.localPlayerIcon = urlIcon;
+                        var p1Icon = document.getElementById('p1-icon');
+                        if (p1Icon) { p1Icon.src = urlIcon; p1Icon.style.display = 'block'; }
+                    }
+                    if (typeof window.SMA.saveSettings === 'function') window.SMA.saveSettings();
+                    console.log("Gravity User Loaded from URL:", urlName);
+                    return; // URLから取得できた場合はSDK呼び出しをスキップ
+                }
+            } catch(e) {}
+
+            // 2. SDKからの取得（直接埋め込み等のフォールバック）
             try {
                 var user = await window.SMA.callGravitySDK("AgentSDK.user.getMyUserInfo");
                 if (user && user.name) {
@@ -136,7 +162,7 @@ function reportError(e) {
                         nameInput.disabled = true; 
                     }
                     if (typeof window.SMA.saveSettings === 'function') window.SMA.saveSettings();
-                    console.log("Gravity User Loaded:", user.name);
+                    console.log("Gravity User Loaded via SDK:", user.name);
                 }
             } catch (e) {
                 console.warn("Gravity SDK Error:", e);
