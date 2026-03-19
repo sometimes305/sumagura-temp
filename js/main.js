@@ -26,6 +26,8 @@ function reportError(e) {
         window.SMA.targetPeerId = null;
         window.SMA.gameState = 'COUNTDOWN'; window.SMA.countdownTimer = 180;
         window.SMA.localPlayerName = "Player";
+        window.SMA.isGravity = (window.self !== window.top); // iframe内（Gravity環境）か判定
+        window.SMA.gravityUserInfo = null;
         window.SMA.animationFrameId = null;
         window.SMA.shake = 0; window.SMA.freezeFrame = 0; window.SMA.hitStop = 0; window.SMA.comets = []; window.SMA.stars = [];
         window.SMA.pOne = null; window.SMA.pTwo = null; window.SMA.platforms = []; window.SMA.camera = { x: 0, y: 0, zoom: 1.0 }; window.SMA.particles = [];
@@ -53,8 +55,89 @@ function reportError(e) {
         window.SMA.audioCtx = null; window.SMA.soundEnabled = true;
         window.SMA.canvas = null; window.SMA.ctx = null;
         window.SMA.isEditingLayout = false;
-        window.SMA.isExpectedClose = false; 
         window.SMA.hasJoined = false; 
+
+        // Gravity SDK Bridge Utils
+        window.SMA.gravityRequests = {}; // コールバック管理用
+        window.SMA.callGravitySDK = function(action, params) {
+            if (!window.SMA.isGravity) return Promise.reject("Not in Gravity environment");
+            return new Promise(function(resolve, reject) {
+                var reqId = "req_" + Date.now() + "_" + Math.floor(Math.random()*1000);
+                window.SMA.gravityRequests[reqId] = { resolve: resolve, reject: reject };
+                window.parent.postMessage({
+                    type: "API",
+                    action: action,
+                    requestId: reqId,
+                    params: params || {}
+                }, "*");
+            });
+        };
+
+        // Message Listener for Gravity App / Platform
+        window.addEventListener('message', function(event) {
+            var data = event.data;
+            if (!data || typeof data !== 'object') return;
+
+            // API Callback handling
+            if (data.type === "API_CALLBACK" && data.requestId) {
+                var req = window.SMA.gravityRequests[data.requestId];
+                if (req) {
+                    if (data.error) req.reject(data.error);
+                    else req.resolve(data.payload);
+                    delete window.SMA.gravityRequests[data.requestId];
+                }
+            }
+
+            // Room message (Multiplayer)
+            if (data.type === "ROOM_MESSAGE" || data.action === "AgentSDK.room.onMessage") {
+                var payload = data.payload || data;
+                if (payload.message && typeof payload.message === 'string') {
+                    try {
+                        var parsed = JSON.parse(payload.message);
+                        // Host-side input handling for Gravity
+                        if (parsed.type === 'input' && window.SMA.isHost) {
+                            // Gravity環境ではとりあえず単一のリモートプレイヤー(p2)として扱うか、
+                            // payload.from (UID) があればそれを使ってマッピングする
+                            var role = parsed.role || 'p2'; 
+                            window.SMA.remoteKeysMap[role] = parsed.keys;
+                            window.SMA.remoteLastInputTimeMap[role] = Date.now();
+                            if (parsed.keys.triggerJump||parsed.keys.triggerStartCharge||parsed.keys.triggerReleaseAttack||parsed.keys.triggerGrab) {
+                                if(!window.SMA.remoteEventsMap[role]) window.SMA.remoteEventsMap[role] = [];
+                                window.SMA.remoteEventsMap[role].push(parsed.keys);
+                            }
+                            if (role === 'p2') {
+                                window.SMA.remoteKeys = parsed.keys;
+                                window.SMA.remoteLastInputTime = Date.now();
+                                if(parsed.keys.triggerJump) window.SMA.remoteEvents.push(parsed.keys);
+                            }
+                        } else {
+                            window.SMA.handleClient(parsed);
+                        }
+                    } catch(e) {}
+                }
+            }
+        });
+
+        window.SMA.initGravity = async function() {
+            if (!window.SMA.isGravity) return;
+            try {
+                var user = await window.SMA.callGravitySDK("AgentSDK.user.getMyUserInfo");
+                if (user && user.name) {
+                    window.SMA.gravityUserInfo = user;
+                    window.SMA.localPlayerName = user.name;
+                    if (user.portrait) {
+                        window.SMA.localPlayerIcon = user.portrait;
+                        var p1Icon = document.getElementById('p1-icon');
+                        if (p1Icon) { p1Icon.src = user.portrait; p1Icon.style.display = 'block'; }
+                    }
+                    var nameInput = document.getElementById('username');
+                    if (nameInput) nameInput.value = user.name;
+                    console.log("Gravity User Loaded:", user.name);
+                }
+            } catch (e) {
+                console.warn("Gravity SDK Error:", e);
+            }
+        };
 
         // 2. VISUAL EFFECTS & AUDIO
         window.SMA.showNotification = function(text, duration) {
@@ -209,7 +292,7 @@ function reportError(e) {
 
         window.SMA.setupClientConn = function(conn, role) {
             conn.on('open', function() { 
-                conn.send({type:'handshake', role:role, name:window.SMA.localPlayerName, ver:window.SMA.VERSION}); 
+                conn.send({type:'handshake', role:role, name:window.SMA.localPlayerName, icon:window.SMA.localPlayerIcon, ver:window.SMA.VERSION}); 
             }); 
             conn.on('data', function(d) { 
                 if(d.type === 'error' && d.msg === 'MATCH_IN_PROGRESS') {
@@ -356,6 +439,11 @@ function reportError(e) {
             window.SMA.initCanvas(); 
             try { window.SMA.bootGame(); } catch(e) { reportError("Init Error: " + e); } 
         };
+
+        // AUTO-INIT FOR GRAVITY
+        if (window.SMA.isGravity) {
+            window.SMA.initGravity();
+        }
         window.SMA.hostGoToSSS = function() { 
             window.SMA.isInCSS = true; 
             if(!window.SMA.connections.find(function(x){return x.role==='p2';})) return; 
@@ -481,6 +569,7 @@ function reportError(e) {
             if(p3Box) { if(window.SMA.p3IsReady) p3Box.classList.add('ready'); else p3Box.classList.remove('ready'); }
             if(p4Box) { if(window.SMA.p4IsReady) p4Box.classList.add('ready'); else p4Box.classList.remove('ready'); }
         };
+        
         window.SMA.broadcastLobby = function() { 
             // 切断済みの接続をクリーンアップ（プレイヤーは再接続用に保持）
             window.SMA.connections = window.SMA.connections.filter(function(x){ return x.conn.open || x.role==='p2' || x.role==='p3' || x.role==='p4'; });
@@ -490,7 +579,12 @@ function reportError(e) {
             var p4 = window.SMA.connections.find(function(x){return x.role==='p4';});
             var specs = window.SMA.connections.filter(function(x){return x.role==='spec';}).map(function(x){return x.name;}); 
             
-            window.SMA.lobbyState = { p1: window.SMA.localPlayerName, p2: p2?p2.name:null, p3: p3?p3.name:null, p4: p4?p4.name:null };
+            window.SMA.lobbyState = { 
+                p1: window.SMA.localPlayerName, p1Icon: window.SMA.localPlayerIcon,
+                p2: p2?p2.name:null, p2Icon: p2?p2.icon:null,
+                p3: p3?p3.name:null, p3Icon: p3?p3.icon:null,
+                p4: p4?p4.name:null, p4Icon: p4?p4.icon:null 
+            };
 
             document.getElementById('slot-p2').innerText = p2 ? "2P: "+p2.name : "2P: 待機中...";
             document.getElementById('slot-p3').innerText = p3 ? "3P: "+p3.name : "3P: 待機中...";
@@ -498,13 +592,46 @@ function reportError(e) {
             document.getElementById('spec-list').innerText = specs.join(', ') || "なし"; 
             // 2人以上いればステージ選択へ進める
             if(p2) document.getElementById('btn-goto-sss').classList.remove('disabled'); else document.getElementById('btn-goto-sss').classList.add('disabled'); 
-            window.SMA.connections.forEach(function(c) { if(c.conn.open) c.conn.send({type:'lobby', p1:window.SMA.localPlayerName, p2:p2?p2.name:null, p3:p3?p3.name:null, p4:p4?p4.name:null, specs:specs, ver:window.SMA.VERSION}); }); 
+            window.SMA.connections.forEach(function(c) { 
+                if(c.conn.open) c.conn.send({
+                    type:'lobby', 
+                    p1:window.SMA.localPlayerName, p1Icon:window.SMA.localPlayerIcon,
+                    p2:p2?p2.name:null, p2Icon:p2?p2.icon:null,
+                    p3:p3?p3.name:null, p3Icon:p3?p3.icon:null,
+                    p4:p4?p4.name:null, p4Icon:p4?p4.icon:null,
+                    specs:specs, ver:window.SMA.VERSION
+                }); 
+            }); 
         };
-        window.SMA.broadcast = function(msg) { window.SMA.connections.forEach(function(c) { if(c.conn.open) c.conn.send(msg); }); };
-        window.SMA.handleClient = function(d) { 
+        window.SMA.broadcast = function(msg) { 
+            // PeerJS経由のブロードキャスト
+            window.SMA.connections.forEach(function(c) { if(c.conn.open) c.conn.send(msg); }); 
+            // Gravity経由のブロードキャスト
+            if (window.SMA.isGravity) {
+                var jsonMsg = (typeof msg === 'string') ? msg : JSON.stringify(msg);
+                window.parent.postMessage({
+                    type: "API",
+                    action: "AgentSDK.room.sendMessage",
+                    params: { message: jsonMsg }
+                }, "*");
+            }
+        };
+        window.SMA.handleClient = async function(d) { 
+            if (typeof Blob !== 'undefined' && d instanceof Blob) {
+                try { 
+                    if (typeof d.text === 'function') { d = await d.text(); }
+                    else { d = await new Promise(function(resolve, reject) { var reader = new FileReader(); reader.onload = function() { resolve(reader.result); }; reader.onerror = reject; reader.readAsText(d); }); }
+                } catch(e) {}
+            }
+            if (typeof d === 'string') { try { d = JSON.parse(d); } catch(e){ return; } }
             if(d.ver && d.ver !== window.SMA.VERSION) { document.getElementById('overlay-msg').innerText = "VERSION MISMATCH\nPLEASE RELOAD"; return; }
             if(d.type==='lobby') { 
-                window.SMA.lobbyState = { p1: d.p1, p2: d.p2, p3: d.p3, p4: d.p4 };
+                window.SMA.lobbyState = { 
+                    p1: d.p1, p1Icon: d.p1Icon,
+                    p2: d.p2, p2Icon: d.p2Icon,
+                    p3: d.p3, p3Icon: d.p3Icon,
+                    p4: d.p4, p4Icon: d.p4Icon
+                };
                 document.getElementById('join-status').innerText = "ロビー: 1P "+d.p1; 
                 if (!window.SMA.hasJoined) {
                     window.SMA.hasJoined = true;
@@ -614,7 +741,7 @@ function reportError(e) {
                         existing.conn = c;
                         existing.name = d.name;
                     } else {
-                        window.SMA.connections.push({conn:c, role:newRole, name:d.name}); 
+                        window.SMA.connections.push({conn:c, role:newRole, name:d.name, icon:d.icon}); 
                     }
                     c.send({type:'assign_role', role: newRole});
                     window.SMA.broadcastLobby(); 
@@ -885,11 +1012,28 @@ function reportError(e) {
                                 for (var si = 0; si < pc; si++) {
                                     pkt['p' + (si+1)] = allPlayers[si].serialize();
                                 }
-                                window.SMA.connections.forEach(function(c) { if(c.conn.open) try { c.conn.send({type:'sync', data:JSON.stringify(pkt)}); } catch(e){} }); window.SMA.syncEvents = []; 
+                                window.SMA.connections.forEach(function(c) { if(c.conn.open) try { c.conn.send({type:'sync', data:JSON.stringify(pkt)}); } catch(e){} }); 
+                                // Gravity同期 (JSON形式で送信)
+                                if (window.SMA.isGravity) {
+                                    window.parent.postMessage({
+                                        type: "API",
+                                        action: "AgentSDK.room.sendMessage",
+                                        params: { message: JSON.stringify(pkt) }
+                                    }, "*");
+                                }
+                                window.SMA.syncEvents = []; 
                             } 
                         } 
                     } else { 
                         if(window.SMA.netConn && window.SMA.netConn.open) window.SMA.netConn.send({type:'input', keys:window.SMA.myKeys}); 
+                        // Gravity入力送信
+                        if (window.SMA.isGravity && !window.SMA.isHost) {
+                            window.parent.postMessage({
+                                type: "API",
+                                action: "AgentSDK.room.sendMessage",
+                                params: { message: JSON.stringify({ type: 'input', keys: window.SMA.myKeys }) }
+                            }, "*");
+                        }
                         window.SMA.players.forEach(function(p) { if (p && p.actionState !== 'DEAD') { p.animScale.x += (1.0 - p.animScale.x) * 0.2; p.animScale.y += (1.0 - p.animScale.y) * 0.2; if(p.actionState !== 'LEDGE_ROLL') p.rotation = 0; } }); 
                     } 
                 } 
@@ -1256,6 +1400,8 @@ function reportError(e) {
                 var player = window.SMA.players[hi];
                 var pctEl = document.getElementById('p' + (hi+1) + '-percent');
                 var stkEl = document.getElementById('p' + (hi+1) + '-stock');
+                var iconEl = document.getElementById('p' + (hi+1) + '-icon');
+                
                 if(pctEl) {
                     pctEl.innerText = Math.floor(player.percent) + '%';
                     pctEl.style.color = getDamageColor(player.percent, hi);
@@ -1269,6 +1415,17 @@ function reportError(e) {
                 if(stkEl) {
                     var icon = getStockIcon(player.charId);
                     stkEl.innerText = icon.repeat(Math.max(0, player.stocks));
+                }
+                
+                // アイコン反映
+                if (iconEl && window.SMA.lobbyState) {
+                    var iconUrl = window.SMA.lobbyState['p' + (hi+1) + 'Icon'];
+                    if (iconUrl) {
+                        if (iconEl.src !== iconUrl) iconEl.src = iconUrl;
+                        iconEl.style.display = 'block';
+                    } else {
+                        iconEl.style.display = 'none';
+                    }
                 }
             }
             var elOvlMsg = document.getElementById('overlay-msg'); var elTxtOvl = document.getElementById('text-overlay'); 
