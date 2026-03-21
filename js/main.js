@@ -388,7 +388,8 @@ function reportError(e) {
 
             try {
                 // Keep create_room as action, but update params while retaining legacy params for safety
-                var res = await window.SMA.callGravityRoomSDK('create_room', { room_type: 'aitools_game_room', max_players: 2, maxplayers: 2, room_permission: 1, permission: 0 }); 
+                // Set room_permission: 0 (Public) instead of 1 (Private)
+                var res = await window.SMA.callGravityRoomSDK('create_room', { room_type: 'aitools_game_room', max_players: 2, maxplayers: 2, room_permission: 0, permission: 0 }); 
                 var roomData = res.data || res;
                 window.SMA.gravityRoomId = (roomData && (roomData.room_id || roomData.roomId)) || "0000";
                 document.getElementById('room-id-display').innerText = window.SMA.gravityRoomId;
@@ -902,14 +903,20 @@ function reportError(e) {
         };
         window.SMA.broadcast = function(msg) { 
             // PeerJS経由のブロードキャスト
-            window.SMA.connections.forEach(function(c) { if(c.conn.open) c.conn.send(msg); }); 
+            window.SMA.connections.forEach(function(c) { if(c.conn.open && c.conn.send && !window.SMA.isGravity) c.conn.send(msg); }); 
             // Gravity経由のブロードキャスト
             if (window.SMA.isGravity) {
                 var jsonMsg = (typeof msg === 'string') ? msg : JSON.stringify(msg);
-                window.top.postMessage({
-                    type: "API",
+                // The wrapper listens on window.parent inside its message event.
+                // It expects 'AgentSDK.room.sendMessage' or 'sendMessage' action.
+                window.parent.postMessage({
                     action: "AgentSDK.room.sendMessage",
-                    params: { message: jsonMsg }
+                    message: jsonMsg
+                }, "*");
+                // Fallback for loaders that expect send_message
+                window.parent.postMessage({
+                    action: "send_message",
+                    message: jsonMsg
                 }, "*");
             }
         };
