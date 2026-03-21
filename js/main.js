@@ -450,18 +450,20 @@ function reportError(e) {
                 rooms.forEach(function(room) {
                     var card = document.createElement('div');
                     card.className = 'room-card';
+                    var roomId = String(room.room_id || room.roomId || '');
+                    var playerCount = room.current_players || room.player_count || room.online_users || 0;
+                    var maxPlayers = room.max_players || 2;
                     card.innerHTML = `
                         <div>
-                            <div class="room-title">Room ID: ${room.room_id || room.roomId || 'Unknown'}</div>
-                            <div class="room-host">Host: ${room.host_name || room.hostname || 'Unknown'}</div>
+                            <div class="room-title">部屋ID: ${roomId.slice(-5)}</div>
+                            <div class="room-host">${playerCount}/${maxPlayers}人</div>
                         </div>
-                        <div class="room-count">${room.current_players || 0}/${room.max_players || 4}</div>
+                        <div class="room-count">入室</div>
                     `;
                     card.onclick = function() {
-                        var rid = room.room_id || room.roomId;
-                        if(rid) {
+                        if(roomId) {
                             document.getElementById('room-list-screen').classList.add('hidden');
-                            window.SMA.showGravityJoinRoom(rid);
+                            window.SMA.showGravityJoinRoom(roomId);
                         }
                     };
                     container.appendChild(card);
@@ -538,26 +540,34 @@ function reportError(e) {
             }
             // =========================================================
 
-            // Revert to join_room action
+            // join_roomで入室
+            console.log("[SMA] Attempting join_room with room_id:", rid);
             window.SMA.callGravityRoomSDK('join_room', { room_id: rid })
                 .then(function(res) {
+                    console.log("[SMA] join_room success:", JSON.stringify(res));
                     window.SMA.gravityRoomId = rid;
                     window.SMA.setJoinLoading(false);
                     
-                    // Transition to unified lobby screen
+                    // ロビー画面へ遷移
                     document.getElementById('join-room-screen').classList.add('hidden');
                     document.getElementById('create-room-screen').classList.remove('hidden');
                     document.getElementById('room-id-display').innerText = rid.slice(-5);
                     
-                    // Guest UI adjustments
+                    // ゲストのロビー表示調整
                     var sssBtn = document.getElementById('btn-goto-sss');
                     if(sssBtn) sssBtn.style.display = 'none';
                     var cancelBtn = document.getElementById('btn-create-cancel');
                     if(cancelBtn) cancelBtn.innerText = "退出する";
                     var header = document.querySelector('#create-room-screen h2');
-                    if (header) header.innerText = "ロビー";
+                    if (header) header.innerText = "ロビー（ゲスト）";
                     var copyBtn = document.getElementById('btn-copy-room-id');
                     if(copyBtn) copyBtn.style.display = 'block';
+
+                    // ゲスト自身を2Pとして表示
+                    var nameP2 = document.getElementById('lobby-name-p2');
+                    if(nameP2) nameP2.innerText = window.SMA.localPlayerName;
+                    var nameP1 = document.getElementById('lobby-name-p1');
+                    if(nameP1) nameP1.innerText = "ホスト";
 
                     // Mock netConn for Gravity guest
                     window.SMA.netConn = {
@@ -569,10 +579,12 @@ function reportError(e) {
                     };
                     window.SMA.showNotification("部屋に入室しました", 2000);
                     // Handshake trigger
+                    console.log("[SMA] Broadcasting handshake from guest");
                     window.SMA.broadcast({type:'handshake', role:'join', name:window.SMA.localPlayerName, icon:window.SMA.localPlayerIcon, ver:window.SMA.VERSION});
                 })
                 .catch(function(e) {
-                    window.SMA.showNotification("入室エラー", 2000);
+                    console.error("[SMA] join_room failed:", e);
+                    window.SMA.showNotification("入室エラー: " + e, 3000);
                     window.SMA.setJoinLoading(false);
                 });
         };
