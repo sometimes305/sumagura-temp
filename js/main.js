@@ -134,7 +134,7 @@ function reportError(e) {
 
                         // Route Handshake directly for Host
                         if (parsed.type === 'handshake' && window.SMA.isHost) {
-                            var mockConn = { open: true, send: function(){} };
+                            var mockConn = { open: true, send: function(msg){ window.SMA.broadcast(msg); } };
                             var existingEntry = null;
                             var assignedRole = null;
                             if (parsed.role === 'join') {
@@ -451,8 +451,9 @@ function reportError(e) {
                     var card = document.createElement('div');
                     card.className = 'room-card';
                     var roomId = String(room.room_id || room.roomId || '');
-                    var playerCount = room.current_players || room.player_count || room.online_users || 0;
-                    var maxPlayers = room.max_players || 2;
+                    console.log("[SMA] Room object keys:", Object.keys(room).join(','), JSON.stringify(room));
+                    var playerCount = room.current_players || room.player_count || room.online_users || room.cur_user_count || room.user_count || 0;
+                    var maxPlayers = room.max_players || room.max_user_count || 2;
                     card.innerHTML = `
                         <div>
                             <div class="room-title">部屋ID: ${roomId.slice(-5)}</div>
@@ -794,7 +795,8 @@ function reportError(e) {
         window.SMA.hostGoToSSS = function() { 
             window.SMA.isInCSS = true; 
             if(!window.SMA.connections.find(function(x){return x.role==='p2';})) return; 
-            window.SMA.connections.forEach(function(c) { c.conn.send({type:'goto_sss'}); }); 
+            // Gravity経由で全ゲストに送信
+            window.SMA.broadcast({type:'goto_sss'});
             window.SMA.showSSSMulti(); 
         };
         window.SMA.showSSSMulti = function() { 
