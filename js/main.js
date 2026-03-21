@@ -385,6 +385,62 @@ function reportError(e) {
             } catch(e) { reportError("Gravity Room Create Error: "+e); }
         };
 
+        window.SMA.showRoomList = function() {
+            window.SMA.saveSettings();
+            document.getElementById('menu-screen').classList.add('hidden');
+            document.getElementById('online-menu-screen').classList.add('hidden');
+            document.getElementById('room-list-screen').classList.remove('hidden');
+            window.SMA.fetchRoomList();
+        };
+
+        window.SMA.fetchRoomList = async function() {
+            var container = document.getElementById('room-list-container');
+            container.innerHTML = '<div class="room-list-loading">読み込み中...</div>';
+            
+            if (!window.SMA.isGravity) {
+                container.innerHTML = '<div class="room-list-empty">ブラウザ版ではルーム一覧を取得できません。(Gravity専用)</div>';
+                return;
+            }
+
+            try {
+                var res = await window.SMA.callGravityRoomSDK('get_room_list', { skip: 0, limit: 20 });
+                var rooms = res.data || res.rooms || res.list || [];
+                if (!Array.isArray(rooms)) {
+                    if (res && Array.isArray(res)) rooms = res;
+                    else rooms = [];
+                }
+                
+                if (rooms.length === 0) {
+                    container.innerHTML = '<div class="room-list-empty">現在公開中のルームはありません。</div>';
+                    return;
+                }
+
+                container.innerHTML = '';
+                rooms.forEach(function(room) {
+                    var card = document.createElement('div');
+                    card.className = 'room-card';
+                    card.innerHTML = `
+                        <div>
+                            <div class="room-title">Room ID: ${room.room_id || room.roomId || 'Unknown'}</div>
+                            <div class="room-host">Host: ${room.host_name || room.hostname || 'Unknown'}</div>
+                        </div>
+                        <div class="room-count">${room.current_players || 0}/${room.max_players || 4}</div>
+                    `;
+                    card.onclick = function() {
+                        var rid = room.room_id || room.roomId;
+                        if(rid) {
+                            document.getElementById('room-list-screen').classList.add('hidden');
+                            window.SMA.showGravityJoinRoom(rid);
+                        }
+                    };
+                    container.appendChild(card);
+                });
+            } catch(e) {
+                console.error("Room list fetch error:", e);
+                container.innerHTML = '<div class="room-list-empty">ルーム情報の取得に失敗しました。</div>';
+            }
+        };
+
         window.SMA.showJoinRoom = function() { window.SMA.saveSettings(); document.getElementById('menu-screen').classList.add('hidden'); document.getElementById('online-menu-screen').classList.add('hidden'); document.getElementById('join-room-screen').classList.remove('hidden'); };
 
         window.SMA.showGravityJoinRoom = function(roomIdParam) {
@@ -766,10 +822,35 @@ function reportError(e) {
                 p4: p4?p4.name:null, p4Icon: p4?p4.icon:null 
             };
 
-            document.getElementById('slot-p2').innerText = p2 ? "2P: "+p2.name : "2P: 待機中...";
-            document.getElementById('slot-p3').innerText = p3 ? "3P: "+p3.name : "3P: 待機中...";
-            document.getElementById('slot-p4').innerText = p4 ? "4P: "+p4.name : "4P: 待機中...";
-            document.getElementById('spec-list').innerText = specs.join(', ') || "なし"; 
+            var updateSlot = function(id, pName, pIcon) {
+                var nameEl = document.getElementById('lobby-name-p' + id);
+                var iconEl = document.getElementById('lobby-icon-p' + id);
+                var cardEl = document.getElementById('slot-p' + id);
+                if (cardEl) {
+                    if (pName) {
+                        cardEl.classList.remove('waiting');
+                        if (nameEl) nameEl.innerText = pName;
+                        if (iconEl) {
+                            if (pIcon) { iconEl.src = pIcon; iconEl.style.display = 'inline-block'; }
+                            else { iconEl.src = ''; iconEl.style.display = 'none'; }
+                        }
+                    } else {
+                        cardEl.classList.add('waiting');
+                        if (nameEl) nameEl.innerText = "待機中...";
+                        if (iconEl) { iconEl.src = ''; iconEl.style.display = 'none'; }
+                    }
+                }
+            };
+            
+            updateSlot(2, p2 ? p2.name : null, p2 ? p2.icon : null);
+            updateSlot(3, p3 ? p3.name : null, p3 ? p3.icon : null);
+            updateSlot(4, p4 ? p4.name : null, p4 ? p4.icon : null);
+
+            var specListEl = document.getElementById('spec-list');
+            var specCountEl = document.getElementById('spec-count');
+            if(specListEl) specListEl.innerText = specs.join(', ') || "なし"; 
+            if(specCountEl) specCountEl.innerText = specs.length;
+
             // 2人以上いればステージ選択へ進める
             if(p2) document.getElementById('btn-goto-sss').classList.remove('disabled'); else document.getElementById('btn-goto-sss').classList.add('disabled'); 
             window.SMA.connections.forEach(function(c) { 
@@ -812,6 +893,36 @@ function reportError(e) {
                     p3: d.p3, p3Icon: d.p3Icon,
                     p4: d.p4, p4Icon: d.p4Icon
                 };
+                
+                var updateSlot = function(id, pName, pIcon) {
+                    var nameEl = document.getElementById('lobby-name-p' + id);
+                    var iconEl = document.getElementById('lobby-icon-p' + id);
+                    var cardEl = document.getElementById('slot-p' + id);
+                    if (cardEl) {
+                        if (pName) {
+                            cardEl.classList.remove('waiting');
+                            if (nameEl) nameEl.innerText = pName;
+                            if (iconEl) {
+                                if (pIcon) { iconEl.src = pIcon; iconEl.style.display = 'inline-block'; }
+                                else { iconEl.src = ''; iconEl.style.display = 'none'; }
+                            }
+                        } else {
+                            cardEl.classList.add('waiting');
+                            if (nameEl) nameEl.innerText = "待機中...";
+                            if (iconEl) { iconEl.src = ''; iconEl.style.display = 'none'; }
+                        }
+                    }
+                };
+                updateSlot(1, d.p1, d.p1Icon);
+                updateSlot(2, d.p2, d.p2Icon);
+                updateSlot(3, d.p3, d.p3Icon);
+                updateSlot(4, d.p4, d.p4Icon);
+
+                var specListEl = document.getElementById('spec-list');
+                var specCountEl = document.getElementById('spec-count');
+                if(specListEl) specListEl.innerText = (d.specs && d.specs.length > 0) ? d.specs.join(', ') : "なし"; 
+                if(specCountEl) specCountEl.innerText = (d.specs && d.specs.length) || 0;
+
                 document.getElementById('join-status').innerText = "ロビー: 1P "+d.p1; 
                 if (!window.SMA.hasJoined) {
                     window.SMA.hasJoined = true;
@@ -3227,6 +3338,9 @@ function reportError(e) {
                 }
             });
             bindBtn('btn-online-back', function() { document.getElementById('online-menu-screen').classList.add('hidden'); document.getElementById('menu-screen').classList.remove('hidden'); });
+            bindBtn('btn-room-list', function() { window.SMA.startAudioContext(); window.SMA.showRoomList(); });
+            bindBtn('btn-room-list-back', function() { document.getElementById('room-list-screen').classList.add('hidden'); document.getElementById('online-menu-screen').classList.remove('hidden'); });
+            bindBtn('btn-refresh-rooms', function() { window.SMA.startAudioContext(); window.SMA.fetchRoomList(); });
             bindBtn('btn-create', function() { window.SMA.startAudioContext(); if(window.SMA.isGravity) window.SMA.showGravityCreateRoom(); else window.SMA.showCreateRoom(); });
             bindBtn('btn-join', function() { window.SMA.startAudioContext(); window.SMA.showJoinRoom(); });
             bindBtn('btn-join-action', function() { if(window.SMA.isGravity) window.SMA.showGravityJoinRoom(); else window.SMA.joinRoom('join'); });

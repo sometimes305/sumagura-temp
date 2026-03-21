@@ -77,7 +77,8 @@
         <div id="online-menu-screen" class="screen hidden">
             <h2>オンライン対戦</h2>
             <button id="btn-create" class="menu-btn">部屋を作る</button>
-            <button id="btn-join" class="menu-btn">部屋を探す</button>
+            <button id="btn-join" class="menu-btn">部屋を探す(ID入力)</button>
+            <button id="btn-room-list" class="menu-btn primary">公開ルーム一覧</button>
             <button id="btn-online-back" class="menu-btn">戻る</button>
         </div>
 
@@ -219,16 +220,50 @@
         <div id="create-room-screen" class="screen hidden">
             <h2>部屋番号</h2>
             <div id="room-id-display">----</div>
-            <div id="lobby-info">
-                <div id="slot-p1" class="player-slot">1P: あなた</div>
-                <div id="slot-p2" class="player-slot">2P: 待機中...</div>
-                <div id="slot-p3" class="player-slot">3P: 待機中...</div>
-                <div id="slot-p4" class="player-slot">4P: 待機中...</div>
-                <div style="font-size:12px; color:#aaa; margin-top:5px;">観戦者: <span id="spec-list">なし</span></div>
+            <div id="lobby-info" class="lobby-cards-container">
+                <div id="slot-p1" class="lobby-card p1-card">
+                    <img id="lobby-icon-p1" class="player-avatar" src="" style="display:none;">
+                    <div class="player-info">
+                        <span class="player-role">1P</span>
+                        <span id="lobby-name-p1" class="player-name">あなた</span>
+                    </div>
+                </div>
+                <div id="slot-p2" class="lobby-card p2-card waiting">
+                    <img id="lobby-icon-p2" class="player-avatar" src="" style="display:none;">
+                    <div class="player-info">
+                        <span class="player-role">2P</span>
+                        <span id="lobby-name-p2" class="player-name">待機中...</span>
+                    </div>
+                </div>
+                <div id="slot-p3" class="lobby-card p3-card waiting" style="display:none">
+                    <img id="lobby-icon-p3" class="player-avatar" src="" style="display:none;">
+                    <div class="player-info">
+                        <span class="player-role">3P</span>
+                        <span id="lobby-name-p3" class="player-name">待機中...</span>
+                    </div>
+                </div>
+                <div id="slot-p4" class="lobby-card p4-card waiting" style="display:none">
+                    <img id="lobby-icon-p4" class="player-avatar" src="" style="display:none;">
+                    <div class="player-info">
+                        <span class="player-role">4P</span>
+                        <span id="lobby-name-p4" class="player-name">待機中...</span>
+                    </div>
+                </div>
             </div>
+            <div class="spec-info-container">観戦者: <span id="spec-list">なし</span></div>
             <button id="btn-goto-sss" class="menu-btn primary disabled">ステージ選択へ</button>
             <button id="btn-create-cancel" class="menu-btn">キャンセル</button>
         </div>
+
+        <div id="room-list-screen" class="screen hidden">
+            <h2>公開ルーム一覧</h2>
+            <div id="room-list-container" class="room-list-container">
+                <div class="room-list-loading">読み込み中...</div>
+            </div>
+            <button id="btn-refresh-rooms" class="menu-btn primary">更新</button>
+            <button id="btn-room-list-back" class="menu-btn">戻る</button>
+        </div>
+
         <div id="join-room-screen" class="screen hidden">
             <h2>部屋番号を入力</h2>
             <input type="number" id="join-input" placeholder="0000" maxlength="4">
