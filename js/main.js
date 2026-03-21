@@ -376,11 +376,19 @@ function reportError(e) {
             document.getElementById('online-menu-screen').classList.add('hidden'); 
             document.getElementById('create-room-screen').classList.remove('hidden'); 
             document.getElementById('room-id-display').innerText = "生成中..."; 
-            document.getElementById('slot-p1').innerText = "1P: "+window.SMA.localPlayerName;
+            
+            // Fix: properly update the new lobby-card UI without destroying it
+            var nameEl = document.getElementById('lobby-name-p1');
+            var iconEl = document.getElementById('lobby-icon-p1');
+            if(nameEl) nameEl.innerText = window.SMA.localPlayerName;
+            if(iconEl && window.SMA.localPlayerIcon) {
+                iconEl.src = window.SMA.localPlayerIcon;
+                iconEl.style.display = 'inline-block';
+            }
 
             try {
-                // ref: max_players, room_permission (1: public, 2: private)
-                var res = await window.SMA.callGravityRoomSDK('create', { room_type: 'aitools_game_room', max_players: 2, room_permission: 1 }); 
+                // Keep create_room as action, but update params
+                var res = await window.SMA.callGravityRoomSDK('create_room', { room_type: 'aitools_game_room', max_players: 2, room_permission: 1 }); 
                 var roomData = res.data || res;
                 window.SMA.gravityRoomId = (roomData && (roomData.room_id || roomData.roomId)) || "0000";
                 document.getElementById('room-id-display').innerText = window.SMA.gravityRoomId;
@@ -460,8 +468,8 @@ function reportError(e) {
             window.SMA.isHost = false; window.SMA.isOnline = true; 
             window.SMA.setJoinLoading(true);
 
-            // Update to join with room_id according to SDK reference
-            window.SMA.callGravityRoomSDK('join', { room_id: rid })
+            // Revert to join_room action
+            window.SMA.callGravityRoomSDK('join_room', { room_id: rid })
                 .then(function(res) {
                     window.SMA.gravityRoomId = rid;
                     window.SMA.setJoinLoading(false);
