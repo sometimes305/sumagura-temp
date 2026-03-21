@@ -76,6 +76,14 @@
 
         <div id="online-menu-screen" class="screen hidden">
             <h2>オンライン対戦</h2>
+            <div style="margin-bottom: 20px;">
+                <label for="room-capacity" style="color:white; font-size:1.2rem;">最大人数: </label>
+                <select id="room-capacity" class="menu-btn" style="width:auto; display:inline-block; padding: 10px;">
+                    <option value="2">2人</option>
+                    <option value="3">3人</option>
+                    <option value="4" selected>4人</option>
+                </select>
+            </div>
             <button id="btn-create" class="menu-btn">部屋を作る</button>
             <button id="btn-join" class="menu-btn">部屋を探す(ID入力)</button>
             <button id="btn-room-list" class="menu-btn primary">公開ルーム一覧</button>

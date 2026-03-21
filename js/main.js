@@ -395,8 +395,9 @@ function reportError(e) {
             }
 
             try {
+                var maxP = parseInt(document.getElementById('room-capacity').value || 4);
                 // room_permission: 0=公開, 1=非公開 (ローダー側のロジックと合わせる)
-                var createParams = { room_type: 'aitools_game_room', max_players: 2, maxplayers: 2, room_permission: 0, permission: 0 };
+                var createParams = { room_type: 'aitools_game_room', max_players: maxP, maxplayers: maxP, room_permission: 0, permission: 0 };
                 console.log("[SMA] create_room params:", JSON.stringify(createParams));
                 var res = await window.SMA.callGravityRoomSDK('create_room', createParams); 
                 console.log("[SMA] create_room success response:", JSON.stringify(res));
@@ -453,10 +454,21 @@ function reportError(e) {
                     var roomId = String(room.room_id || room.roomId || '');
                     console.log("[SMA] Room object keys:", Object.keys(room).join(','), JSON.stringify(room));
                     var playerCount = room.current_players || room.player_count || room.online_users || room.cur_user_count || room.user_count || 0;
-                    var maxPlayers = room.max_players || room.max_user_count || 2;
+                    var maxPlayers = room.max_players || room.max_user_count || 4;
+                    
+                    var timeStr = "";
+                    var ts = room.create_time || room.created_at || room.createTime || room.createdAt;
+                    if (ts) {
+                        var d = typeof ts === 'string' && ts.includes('T') ? new Date(ts) : new Date(ts);
+                        if (d.getFullYear() < 2000) d = new Date(ts * 1000); 
+                        if (!isNaN(d.getTime())) {
+                            timeStr = ("0"+d.getHours()).slice(-2) + ":" + ("0"+d.getMinutes()).slice(-2) + " 作成";
+                        }
+                    }
+
                     card.innerHTML = `
                         <div>
-                            <div class="room-title">部屋ID: ${roomId.slice(-5)}</div>
+                            <div class="room-title">部屋ID: ${roomId.slice(-5)} <span style="font-size:0.8rem; color:#aaa; margin-left:10px;">${timeStr}</span></div>
                             <div class="room-host">${playerCount}/${maxPlayers}人</div>
                         </div>
                         <div class="room-count">入室</div>
@@ -861,7 +873,20 @@ function reportError(e) {
             window.SMA.selectedStage = finalStage;
             window.SMA.startGameMulti(); 
         };
-        window.SMA.startGameMulti = function() { document.getElementById('char-select-screen').classList.add('hidden'); document.getElementById('controller-area').style.display = 'block'; document.getElementById('hud-layer').style.display = 'flex'; window.SMA.bootGame(); };
+        window.SMA.startGameMulti = function() { 
+            document.getElementById('char-select-screen').classList.add('hidden'); 
+            document.getElementById('controller-area').style.display = 'block'; 
+            document.getElementById('hud-layer').style.display = 'flex'; 
+            
+            // HUD名をロビーのデータから設定
+            var s = window.SMA.lobbyState || {};
+            var el1 = document.getElementById('p1-name'); if(el1) el1.innerText = s.p1 || "1P";
+            var el2 = document.getElementById('p2-name'); if(el2) el2.innerText = s.p2 || "2P";
+            var el3 = document.getElementById('p3-name'); if(el3) el3.innerText = s.p3 || "3P";
+            var el4 = document.getElementById('p4-name'); if(el4) el4.innerText = s.p4 || "4P";
+
+            window.SMA.bootGame(); 
+        };
         window.SMA.updateCSSUI = function() { 
             var p1Box = document.getElementById('css-p1-box'); 
             var p2Box = document.getElementById('css-p2-box');
