@@ -473,6 +473,22 @@ function reportError(e) {
                 .then(function(res) {
                     window.SMA.gravityRoomId = rid;
                     window.SMA.setJoinLoading(false);
+                    
+                    // Transition to unified lobby screen
+                    document.getElementById('join-room-screen').classList.add('hidden');
+                    document.getElementById('create-room-screen').classList.remove('hidden');
+                    document.getElementById('room-id-display').innerText = rid;
+                    
+                    // Guest UI adjustments
+                    var sssBtn = document.getElementById('btn-goto-sss');
+                    if(sssBtn) sssBtn.style.display = 'none';
+                    var cancelBtn = document.getElementById('btn-create-cancel');
+                    if(cancelBtn) cancelBtn.innerText = "退出する";
+                    var header = document.querySelector('#create-room-screen h2');
+                    if (header) header.innerText = "ロビー";
+                    var copyBtn = document.getElementById('btn-copy-room-id');
+                    if(copyBtn) copyBtn.style.display = 'block';
+
                     // Mock netConn for Gravity guest
                     window.SMA.netConn = {
                         open: true,
@@ -866,15 +882,22 @@ function reportError(e) {
 
             // 2人以上いればステージ選択へ進める
             if(p2) document.getElementById('btn-goto-sss').classList.remove('disabled'); else document.getElementById('btn-goto-sss').classList.add('disabled'); 
+            
+            var lobbyMsg = {
+                type:'lobby', 
+                p1:window.SMA.localPlayerName, p1Icon:window.SMA.localPlayerIcon,
+                p2:p2?p2.name:null, p2Icon:p2?p2.icon:null,
+                p3:p3?p3.name:null, p3Icon:p3?p3.icon:null,
+                p4:p4?p4.name:null, p4Icon:p4?p4.icon:null,
+                specs:specs, ver:window.SMA.VERSION
+            };
+            
+            if (window.SMA.isGravity && window.SMA.isHost) {
+                window.SMA.broadcast(lobbyMsg);
+            }
+            
             window.SMA.connections.forEach(function(c) { 
-                if(c.conn.open) c.conn.send({
-                    type:'lobby', 
-                    p1:window.SMA.localPlayerName, p1Icon:window.SMA.localPlayerIcon,
-                    p2:p2?p2.name:null, p2Icon:p2?p2.icon:null,
-                    p3:p3?p3.name:null, p3Icon:p3?p3.icon:null,
-                    p4:p4?p4.name:null, p4Icon:p4?p4.icon:null,
-                    specs:specs, ver:window.SMA.VERSION
-                }); 
+                if(c.conn.open && !window.SMA.isGravity) c.conn.send(lobbyMsg); 
             }); 
         };
         window.SMA.broadcast = function(msg) { 
