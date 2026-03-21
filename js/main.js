@@ -112,10 +112,13 @@ function reportError(e) {
             // RoomSDK Bridge Event handling
             if (data.type === 'gravityroomevent' || data.type === 'gravity_room_event') {
                 var payload = data.payload || {};
-                if (payload.type === 'aitoolsgamejoinroom') {
+                var pType = payload.type;
+                if (pType === 'aitools_game_joinroom' || pType === 'aitoolsgamejoinroom') {
                     console.log("Joined: ", payload);
                     window.SMA.showNotification((payload.data&&payload.data.user_name?payload.data.user_name:"プレイヤー")+"が入室しました", 2000);
-                } else if (payload.type === 'aitoolsgamesendmsg') {
+                } else if (pType === 'aitools_game_exitroom' || pType === 'aitoolsgameexitroom') {
+                    console.log("Exited: ", payload);
+                } else if (pType === 'aitools_game_sendmsg' || pType === 'aitoolsgamesendmsg') {
                     try {
                         var msgData = payload.data.msg_data;
                         var parsed = (typeof msgData === 'string') ? JSON.parse(msgData) : msgData;
@@ -376,8 +379,8 @@ function reportError(e) {
             document.getElementById('slot-p1').innerText = "1P: "+window.SMA.localPlayerName;
 
             try {
-                // maxplayers(AI元のコード)とmax_players(ユーザーのコード例)両方を送る安全策
-                var res = await window.SMA.callGravityRoomSDK('create_room', { max_players: 2, maxplayers: 2, permission: 0 }); 
+                // ref: max_players, room_permission (1: public, 2: private)
+                var res = await window.SMA.callGravityRoomSDK('create', { room_type: 'aitools_game_room', max_players: 2, room_permission: 1 }); 
                 var roomData = res.data || res;
                 window.SMA.gravityRoomId = (roomData && (roomData.room_id || roomData.roomId)) || "0000";
                 document.getElementById('room-id-display').innerText = window.SMA.gravityRoomId;
@@ -403,7 +406,8 @@ function reportError(e) {
             }
 
             try {
-                var res = await window.SMA.callGravityRoomSDK('get_room_list', { skip: 0, limit: 20 });
+                // Update to getPublicRoomList params based on SDK reference
+                var res = await window.SMA.callGravityRoomSDK('getPublicRoomList', { room_type: 'aitools_game_room', page_num: 1, page_size: 20 });
                 var rooms = res.data || res.rooms || res.list || [];
                 if (!Array.isArray(rooms)) {
                     if (res && Array.isArray(res)) rooms = res;
@@ -456,7 +460,8 @@ function reportError(e) {
             window.SMA.isHost = false; window.SMA.isOnline = true; 
             window.SMA.setJoinLoading(true);
 
-            window.SMA.callGravityRoomSDK('join_room', { roomid: rid })
+            // Update to join with room_id according to SDK reference
+            window.SMA.callGravityRoomSDK('join', { room_id: rid })
                 .then(function(res) {
                     window.SMA.gravityRoomId = rid;
                     window.SMA.setJoinLoading(false);
