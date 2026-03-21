@@ -387,8 +387,8 @@ function reportError(e) {
             }
 
             try {
-                // Keep create_room as action, but update params
-                var res = await window.SMA.callGravityRoomSDK('create_room', { room_type: 'aitools_game_room', max_players: 2, room_permission: 1 }); 
+                // Keep create_room as action, but update params while retaining legacy params for safety
+                var res = await window.SMA.callGravityRoomSDK('create_room', { room_type: 'aitools_game_room', max_players: 2, maxplayers: 2, room_permission: 1, permission: 0 }); 
                 var roomData = res.data || res;
                 window.SMA.gravityRoomId = (roomData && (roomData.room_id || roomData.roomId)) || "0000";
                 document.getElementById('room-id-display').innerText = window.SMA.gravityRoomId;
