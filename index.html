@@ -269,7 +269,7 @@
 
         <div id="join-room-screen" class="screen hidden">
             <h2>部屋番号を入力</h2>
-            <input type="number" id="join-input" placeholder="0000" maxlength="4">
+            <input type="text" pattern="\d*" id="join-input" placeholder="下5桁など" maxlength="30">
             <button id="btn-join-action" class="menu-btn primary">対戦に参加</button>
             <button id="btn-spec-action" class="menu-btn">観戦する</button>
             <button id="btn-join-cancel" class="menu-btn">戻る</button>

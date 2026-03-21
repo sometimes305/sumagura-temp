@@ -456,7 +456,7 @@ function reportError(e) {
 
         window.SMA.showJoinRoom = function() { window.SMA.saveSettings(); document.getElementById('menu-screen').classList.add('hidden'); document.getElementById('online-menu-screen').classList.add('hidden'); document.getElementById('join-room-screen').classList.remove('hidden'); };
 
-        window.SMA.showGravityJoinRoom = function(roomIdParam) {
+        window.SMA.showGravityJoinRoom = async function(roomIdParam) {
             window.SMA.saveSettings(); 
             document.getElementById('menu-screen').classList.add('hidden'); 
             document.getElementById('online-menu-screen').classList.add('hidden'); 
@@ -468,6 +468,41 @@ function reportError(e) {
             window.SMA.localPlayerName = document.getElementById('username').value || "Guest"; 
             window.SMA.isHost = false; window.SMA.isOnline = true; 
             window.SMA.setJoinLoading(true);
+
+            // ================= SHORT ID SEARCH LOGIC =================
+            // If the entered ID is short, search public rooms for a match
+            if (rid.length > 0 && rid.length <= 10) {
+                window.SMA.showNotification("部屋を検索中...", 2000);
+                try {
+                    var foundFullId = null;
+                    // Scan up to 3 pages
+                    for (var p = 1; p <= 3; p++) {
+                        var resSearch = await window.SMA.callGravityRoomSDK('get_public_rooms', { room_type: 'aitools_game_room', page_num: p, page_size: 20 });
+                        var roomsData = resSearch.data || resSearch.rooms || resSearch.list || [];
+                        if (!Array.isArray(roomsData) && resSearch && Array.isArray(resSearch)) roomsData = resSearch;
+                        
+                        var matchedRoom = roomsData.find(function(r) {
+                            var idString = String(r.room_id || r.roomId || "");
+                            return idString.endsWith(rid);
+                        });
+                        if (matchedRoom) {
+                            foundFullId = matchedRoom.room_id || matchedRoom.roomId;
+                            break;
+                        }
+                        if (roomsData.length < 20) break; // no more pages
+                    }
+                    if (foundFullId) {
+                        rid = foundFullId;
+                    } else {
+                        window.SMA.setJoinLoading(false);
+                        window.SMA.showNotification("指定された番号の部屋が見つかりません", 3000);
+                        return;
+                    }
+                } catch (e) {
+                    console.error("Search Error", e);
+                }
+            }
+            // =========================================================
 
             // Revert to join_room action
             window.SMA.callGravityRoomSDK('join_room', { room_id: rid })
