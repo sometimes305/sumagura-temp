@@ -228,7 +228,7 @@ function reportError(e) {
             try {
                 var urlParams = new URLSearchParams(window.location.search);
                 var urlName = urlParams.get('username');
-                var urlIcon = urlParams.get('portrait') || urlParams.get('avatar');
+                var urlIcon = urlParams.get('portrait') || urlParams.get('avatar') || urlParams.get('icon') || urlParams.get('head_img') || urlParams.get('headimgurl');
                 var autoRoomId = urlParams.get('room_id') || urlParams.get('roomid');
                 if (autoRoomId) window.SMA.gravityAutoJoinRoom = autoRoomId;
                 
@@ -251,7 +251,7 @@ function reportError(e) {
                         if(profImg && profEmoji) { profImg.src = urlIcon; profImg.style.display = 'block'; profEmoji.style.display = 'none'; }
                     }
                     if (typeof window.SMA.saveSettings === 'function') window.SMA.saveSettings();
-                    console.log("Gravity User Loaded from URL:", urlName);
+                    console.log("[SMA] Gravity User Loaded from URL:", urlName, "icon:", urlIcon);
                     return; // URLから取得できた場合はSDK呼び出しをスキップ
                 }
             } catch(e) {}
@@ -259,18 +259,22 @@ function reportError(e) {
             // 2. SDKからの取得（直接埋め込み等のフォールバック）
             try {
                 var user = await window.SMA.callGravitySDK("AgentSDK.user.getMyUserInfo");
-                if (user && user.name) {
+                console.log("[SMA] getMyUserInfo result:", JSON.stringify(user));
+                if (user && (user.name || user.nickname || user.user_name)) {
                     window.SMA.gravityUserInfo = user;
-                    window.SMA.localPlayerName = user.name;
+                    var uName = user.name || user.nickname || user.user_name;
+                    window.SMA.localPlayerName = uName;
                     var dispName = document.getElementById('display-username');
-                    if (dispName) dispName.innerText = user.name;
-                    if (user.portrait) {
-                        window.SMA.localPlayerIcon = user.portrait;
+                    if (dispName) dispName.innerText = uName;
+                    // アイコンは複数のフィールド名を試行
+                    var uIcon = user.portrait || user.avatar || user.icon || user.head_img || user.headimgurl || user.profile_image;
+                    if (uIcon) {
+                        window.SMA.localPlayerIcon = uIcon;
                         var p1Icon = document.getElementById('p1-icon');
-                        if (p1Icon) { p1Icon.src = user.portrait; p1Icon.style.display = 'block'; }
+                        if (p1Icon) { p1Icon.src = uIcon; p1Icon.style.display = 'block'; }
                         var profImg = document.getElementById('profile-icon-img');
                         var profEmoji = document.getElementById('profile-icon-emoji');
-                        if(profImg && profEmoji) { profImg.src = user.portrait; profImg.style.display = 'block'; profEmoji.style.display = 'none'; }
+                        if(profImg && profEmoji) { profImg.src = uIcon; profImg.style.display = 'block'; profEmoji.style.display = 'none'; }
                     }
                     var nameInput = document.getElementById('username');
                     if (nameInput) { 
@@ -814,9 +818,11 @@ function reportError(e) {
             }
 
             if(window.SMA.isOnline) {
+                // ホストのroleは'host'だが、hubDataでは'p1'として扱う
+                var hubRole = (window.SMA.myRole === 'host') ? 'p1' : window.SMA.myRole;
                 var msg = {
                     type: 'hub_ready', 
-                    role: window.SMA.myRole, 
+                    role: hubRole, 
                     ready: window.SMA.amIReady,
                     stageId: window.SMA.myStageId,
                     charId: window.SMA.myCharId
