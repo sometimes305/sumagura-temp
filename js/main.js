@@ -382,7 +382,10 @@ function reportError(e) {
             hub.style.display = 'flex';
             window.SMA.showHubSelectPanel();
             window.SMA.isSolo = true; 
-            window.SMA.localPlayerName = document.getElementById('username').value || "Player"; 
+            window.SMA.localPlayerName = document.getElementById('username').value || "Player";
+            // デフォルト選択を変数に反映
+            window.SMA.myStageId = 'battlefield';
+            window.SMA.myCharId = 'sword';
         };
 
         
@@ -930,19 +933,28 @@ function reportError(e) {
 
         window.SMA.showHubSelectPanel = function() {
             var roomPanel = document.getElementById('hub-room-panel');
-            if(roomPanel) roomPanel.classList.remove('active');
+            if(roomPanel) { roomPanel.classList.remove('active'); roomPanel.style.display = 'none'; }
             var selectPanel = document.getElementById('hub-select-panel');
             if(selectPanel) { selectPanel.classList.add('active'); selectPanel.style.display = 'flex'; }
             var actionBar = document.getElementById('hub-action-bar');
             if(actionBar) actionBar.style.display = 'flex';
+            // バグ5: 「ステージ選択へ進む」ボタンを非表示にする
+            var gotoBtn = document.getElementById('btn-goto-sss');
+            if(gotoBtn) gotoBtn.style.display = 'none';
             
             window.SMA.amIReady = false;
             window.SMA.hubData = { p1:{}, p2:{}, p3:{}, p4:{} };
             window.SMA.refreshHubUI();
             
-            document.querySelectorAll('.stage-card, .char-card').forEach(c => c.classList.remove('selected'));
-            window.SMA.myStageId = null;
-            window.SMA.myCharId = null;
+            // デフォルト選択状態を変数に設定（battlefieldとswordが初期selected）
+            window.SMA.myStageId = 'battlefield';
+            window.SMA.myCharId = 'sword';
+            // 初期選択のカードにselectedクラスを付ける
+            document.querySelectorAll('.stage-card, .char-card').forEach(function(c) { c.classList.remove('selected'); });
+            var defStage = document.getElementById('stage-battlefield');
+            var defChar = document.getElementById('card-sword');
+            if(defStage) defStage.classList.add('selected');
+            if(defChar) defChar.classList.add('selected');
             var btn = document.getElementById('btn-hub-ready');
             if(btn) { btn.innerText = "準備完了！"; btn.style.background = ""; btn.style.borderColor = ""; }
         };
@@ -3365,7 +3377,16 @@ function reportError(e) {
             window.SMA.loadSettings = function() {
                 try {
                     var n = localStorage.getItem('sma_name');
-                    if(n) { document.getElementById('username').value = n; window.SMA.localPlayerName = n; }
+                    if(n) { document.getElementById('username').value = n; window.SMA.localPlayerName = n;
+                        var dn = document.getElementById('display-username'); if(dn) dn.innerText = n;
+                    }
+                    var icon = localStorage.getItem('sma_icon');
+                    if(icon) {
+                        window.SMA.localPlayerIcon = icon;
+                        var profImg = document.getElementById('profile-icon-img');
+                        var profEmoji = document.getElementById('profile-icon-emoji');
+                        if(profImg && profEmoji) { profImg.src = icon; profImg.style.display = 'block'; profEmoji.style.display = 'none'; }
+                    }
                     var s = localStorage.getItem('sma_sound');
                     if(s !== null) { 
                         window.SMA.soundEnabled = (s === 'true');
