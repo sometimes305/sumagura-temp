@@ -576,11 +576,11 @@ function reportError(e) {
                     var copyBtn = document.getElementById('btn-copy-room-id');
                     if(copyBtn) copyBtn.style.display = 'block';
 
-                    // ゲスト自身を2Pとして表示
+                    // ゲスト自身を2Pとして表示（暫定。ホストからlobbyが届けば上書きされる）
                     var nameP2 = document.getElementById('lobby-name-p2');
                     if(nameP2) nameP2.innerText = window.SMA.localPlayerName;
                     var nameP1 = document.getElementById('lobby-name-p1');
-                    if(nameP1) nameP1.innerText = "ホスト";
+                    if(nameP1) nameP1.innerText = "接続中...";
 
                     // Mock netConn for Gravity guest
                     window.SMA.netConn = {
@@ -591,9 +591,30 @@ function reportError(e) {
                         }
                     };
                     window.SMA.showNotification("部屋に入室しました", 2000);
-                    // Handshake trigger
+                    
+                    // Handshake送信（リトライ付き: assign_roleを受け取るまで繰り返す）
+                    var handshakeMsg = {type:'handshake', role:'join', name:window.SMA.localPlayerName, icon:window.SMA.localPlayerIcon, ver:window.SMA.VERSION};
                     console.log("[SMA] Broadcasting handshake from guest");
-                    window.SMA.broadcast({type:'handshake', role:'join', name:window.SMA.localPlayerName, icon:window.SMA.localPlayerIcon, ver:window.SMA.VERSION});
+                    window.SMA.broadcast(handshakeMsg);
+                    
+                    // ホストからの応答がない場合のリトライ（最大5回、2秒間隔）
+                    var retryCount = 0;
+                    window.SMA._handshakeRetry = setInterval(function() {
+                        retryCount++;
+                        if (window.SMA.myRole !== 'host' && window.SMA.lobbyState && window.SMA.lobbyState.p1) {
+                            // ロビー情報を受信済み→リトライ停止
+                            console.log("[SMA] Lobby state received, stopping handshake retry");
+                            clearInterval(window.SMA._handshakeRetry);
+                            return;
+                        }
+                        if (retryCount >= 5) {
+                            console.log("[SMA] Handshake retry limit reached");
+                            clearInterval(window.SMA._handshakeRetry);
+                            return;
+                        }
+                        console.log("[SMA] Retrying handshake (#" + retryCount + ")");
+                        window.SMA.broadcast(handshakeMsg);
+                    }, 2000);
                 })
                 .catch(function(e) {
                     console.error("[SMA] join_room failed:", e);
@@ -1033,6 +1054,7 @@ function reportError(e) {
             if (typeof d === 'string') { try { d = JSON.parse(d); } catch(e){ return; } }
             if(d.ver && d.ver !== window.SMA.VERSION) { document.getElementById('overlay-msg').innerText = "VERSION MISMATCH\nPLEASE RELOAD"; return; }
             if(d.type==='lobby') { 
+                console.log("[SMA] handleClient: received lobby update, p1=" + d.p1);
                 window.SMA.lobbyState = { 
                     p1: d.p1, p1Icon: d.p1Icon,
                     p2: d.p2, p2Icon: d.p2Icon,
@@ -1076,9 +1098,18 @@ function reportError(e) {
                 }
                 if(d.ver && d.ver !== window.SMA.VERSION) document.getElementById('join-status').innerText += " (Ver不一致)"; 
             }
-            if(d.type==='assign_role') { window.SMA.myRole = d.role; }
-            if(d.type==='goto_sss') window.SMA.showSSSMulti();
-            if(d.type==='goto_css') window.SMA.showCSSMulti(); 
+            if(d.type==='assign_role') { 
+                console.log("[SMA] handleClient: received assign_role=" + d.role);
+                window.SMA.myRole = d.role; 
+            }
+            if(d.type==='goto_sss') { 
+                console.log("[SMA] handleClient: received goto_sss");
+                window.SMA.showSSSMulti();
+            }
+            if(d.type==='goto_css') { 
+                console.log("[SMA] handleClient: received goto_css");
+                window.SMA.showCSSMulti(); 
+            }
             if(d.type==='stage_update') { 
                 if(d.role==='p1') window.SMA.p1Stage = d.stageId; 
                 if(d.role==='p2') window.SMA.p2Stage = d.stageId; 
