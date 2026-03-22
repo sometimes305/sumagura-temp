@@ -74,20 +74,33 @@
             <button id="btn-help" class="menu-btn">遊び方・ルール</button>
         </div>
 
-        <div id="online-menu-screen" class="screen hidden">
-            <h2>オンライン対戦</h2>
-            <div style="margin-bottom: 20px;">
-                <label for="room-capacity" style="color:white; font-size:1.2rem;">最大人数: </label>
-                <select id="room-capacity" class="menu-btn" style="width:auto; display:inline-block; padding: 10px;">
-                    <option value="2">2人</option>
-                    <option value="3">3人</option>
-                    <option value="4" selected>4人</option>
-                </select>
+        <div id="online-menu-screen" class="screen hidden" style="display:none; flex-direction:column; height:100%; padding:10px; box-sizing:border-box;">
+            <!-- 上部ツールバー -->
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:10px; flex-shrink:0;">
+                <!-- 左上: 部屋を作る -->
+                <div style="display:flex; flex-direction:column; gap:5px; align-items:flex-start;">
+                    <button id="btn-create" class="menu-btn" style="margin:0; padding:8px 16px; font-size:0.9rem;">部屋を作る</button>
+                    <select id="room-capacity" style="background:#2d3436; color:#fff; border:1px solid #555; border-radius:5px; padding:5px 8px; font-size:0.8rem;">
+                        <option value="2">2人部屋</option>
+                        <option value="3">3人部屋</option>
+                        <option value="4" selected>4人部屋</option>
+                    </select>
+                </div>
+                <!-- 右上: ID検索 + 戻る -->
+                <div style="display:flex; flex-direction:column; gap:5px; align-items:flex-end;">
+                    <button id="btn-join" class="menu-btn" style="margin:0; padding:8px 16px; font-size:0.9rem;">ID検索</button>
+                    <button id="btn-online-back" class="menu-btn" style="margin:0; padding:5px 12px; font-size:0.75rem; opacity:0.7;">戻る</button>
+                </div>
             </div>
-            <button id="btn-create" class="menu-btn">部屋を作る</button>
-            <button id="btn-join" class="menu-btn">部屋を探す(ID入力)</button>
-            <button id="btn-room-list" class="menu-btn primary">公開ルーム一覧</button>
-            <button id="btn-online-back" class="menu-btn">戻る</button>
+
+            <!-- 公開ルーム一覧（メイン領域） -->
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; flex-shrink:0;">
+                <h3 style="margin:0; color:#f1c40f; font-size:1rem;">公開ルーム一覧</h3>
+                <button id="btn-refresh-rooms" style="background:none; border:1px solid #555; color:#aaa; border-radius:5px; padding:4px 10px; font-size:0.75rem; cursor:pointer;">更新</button>
+            </div>
+            <div id="room-list-container" class="room-list-container" style="flex:1; overflow-y:auto; min-height:0;">
+                <div class="room-list-loading">読み込み中...</div>
+            </div>
         </div>
 
         <div id="help-screen" class="screen hidden">

@@ -381,7 +381,7 @@ function reportError(e) {
             window.SMA.localPlayerName = document.getElementById('username').value || "Host"; 
             window.SMA.isHost = true; window.SMA.isOnline = true; 
             document.getElementById('menu-screen').classList.add('hidden'); 
-            document.getElementById('online-menu-screen').classList.add('hidden'); 
+            var _oms2 = document.getElementById('online-menu-screen'); _oms2.classList.add('hidden'); _oms2.style.display = 'none';
             document.getElementById('create-room-screen').classList.remove('hidden'); 
             document.getElementById('room-id-display').innerText = "生成中..."; 
             
@@ -412,10 +412,7 @@ function reportError(e) {
         };
 
         window.SMA.showRoomList = function() {
-            window.SMA.saveSettings();
-            document.getElementById('menu-screen').classList.add('hidden');
-            document.getElementById('online-menu-screen').classList.add('hidden');
-            document.getElementById('room-list-screen').classList.remove('hidden');
+            // 統合メニュー内のルーム一覧を更新
             window.SMA.fetchRoomList();
         };
 
@@ -442,45 +439,59 @@ function reportError(e) {
                 }
                 console.log("[SMA] Parsed room list (" + rooms.length + "):", JSON.stringify(rooms));
                 
-                if (rooms.length === 0) {
-                    container.innerHTML = '<div class="room-list-empty">現在公開中のルームはありません。</div>';
-                    return;
-                }
+                    // 10分以内に作られたルームのみ表示
+                    var now = Date.now();
+                    var TEN_MIN = 10 * 60 * 1000;
+                    rooms = rooms.filter(function(room) {
+                        var ts = room.create_time || room.created_at || room.createTime || room.createdAt;
+                        if (!ts) return true; // タイムスタンプがない場合は表示
+                        var d = new Date(ts);
+                        if (d.getFullYear() < 2000) d = new Date(ts * 1000);
+                        if (isNaN(d.getTime())) return true;
+                        return (now - d.getTime()) < TEN_MIN;
+                    });
+                    console.log("[SMA] Rooms after 10-min filter: " + rooms.length);
 
-                container.innerHTML = '';
-                rooms.forEach(function(room) {
-                    var card = document.createElement('div');
-                    card.className = 'room-card';
-                    var roomId = String(room.room_id || room.roomId || '');
-                    console.log("[SMA] Room object keys:", Object.keys(room).join(','), JSON.stringify(room));
-                    var playerCount = room.current_players || room.player_count || room.online_users || room.cur_user_count || room.user_count || 0;
-                    var maxPlayers = room.max_players || room.max_user_count || 4;
-                    
-                    var timeStr = "";
-                    var ts = room.create_time || room.created_at || room.createTime || room.createdAt;
-                    if (ts) {
-                        var d = typeof ts === 'string' && ts.includes('T') ? new Date(ts) : new Date(ts);
-                        if (d.getFullYear() < 2000) d = new Date(ts * 1000); 
-                        if (!isNaN(d.getTime())) {
-                            timeStr = ("0"+d.getHours()).slice(-2) + ":" + ("0"+d.getMinutes()).slice(-2) + " 作成";
-                        }
+                    if (rooms.length === 0) {
+                        container.innerHTML = '<div class="room-list-empty">現在公開中のルームはありません。</div>';
+                        return;
                     }
 
-                    card.innerHTML = `
-                        <div>
-                            <div class="room-title">部屋ID: ${roomId.slice(-5)} <span style="font-size:0.8rem; color:#aaa; margin-left:10px;">${timeStr}</span></div>
-                            <div class="room-host">${playerCount}/${maxPlayers}人</div>
-                        </div>
-                        <div class="room-count">入室</div>
-                    `;
-                    card.onclick = function() {
-                        if(roomId) {
-                            document.getElementById('room-list-screen').classList.add('hidden');
-                            window.SMA.showGravityJoinRoom(roomId);
+                    // ルームカードを生成
+                    container.innerHTML = '';
+                    rooms.forEach(function(room) {
+                        var card = document.createElement('div');
+                        card.className = 'room-card';
+                        var roomId = String(room.room_id || room.roomId || '');
+                        var playerCount = room.current_players || room.player_count || room.online_users || room.cur_user_count || room.user_count || 0;
+                        var maxPlayers = room.max_players || room.max_user_count || 4;
+                        
+                        var timeStr = "";
+                        var ts = room.create_time || room.created_at || room.createTime || room.createdAt;
+                        if (ts) {
+                            var d = new Date(ts);
+                            if (d.getFullYear() < 2000) d = new Date(ts * 1000); 
+                            if (!isNaN(d.getTime())) {
+                                timeStr = ("0"+d.getHours()).slice(-2) + ":" + ("0"+d.getMinutes()).slice(-2) + " 作成";
+                            }
                         }
-                    };
-                    container.appendChild(card);
-                });
+
+                        card.innerHTML = '<div>' +
+                            '<div class="room-title">部屋ID: ' + roomId.slice(-5) + ' <span style="font-size:0.8rem; color:#aaa; margin-left:10px;">' + timeStr + '</span></div>' +
+                            '<div class="room-host">' + playerCount + '/' + maxPlayers + '人</div>' +
+                            '</div>' +
+                            '<div class="room-count">入室</div>';
+                        card.onclick = (function(rid) {
+                            return function() {
+                                if(rid) {
+                                    var onlineScreen = document.getElementById('online-menu-screen');
+                                    if(onlineScreen) { onlineScreen.classList.add('hidden'); onlineScreen.style.display = 'none'; }
+                                    window.SMA.showGravityJoinRoom(rid);
+                                }
+                            };
+                        })(roomId);
+                        container.appendChild(card);
+                    });
             } catch(e) {
                 console.error("Room list fetch error:", e);
                 container.innerHTML = '<div class="room-list-empty">ルーム情報の取得に失敗しました。</div>';
@@ -492,7 +503,7 @@ function reportError(e) {
         window.SMA.showGravityJoinRoom = async function(roomIdParam) {
             window.SMA.saveSettings(); 
             document.getElementById('menu-screen').classList.add('hidden'); 
-            document.getElementById('online-menu-screen').classList.add('hidden'); 
+            var _oms = document.getElementById('online-menu-screen'); _oms.classList.add('hidden'); _oms.style.display = 'none';
             document.getElementById('join-room-screen').classList.remove('hidden'); 
 
             var rid = roomIdParam || document.getElementById('join-input').value; 
