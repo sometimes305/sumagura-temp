@@ -3518,16 +3518,23 @@ function reportError(e) {
             
             bindBtn('btn-solo', window.SMA.enterSoloMode); 
             bindBtn('btn-online', function() { 
+                window.SMA.startAudioContext();
                 document.getElementById('menu-screen').classList.add('hidden'); 
-                document.getElementById('online-menu-screen').classList.remove('hidden'); 
+                var onlineScreen = document.getElementById('online-menu-screen');
+                onlineScreen.classList.remove('hidden');
+                onlineScreen.style.display = 'flex';
                 if (window.SMA.isGravity && window.SMA.gravityAutoJoinRoom) {
-                    window.SMA.startAudioContext();
                     window.SMA.showGravityJoinRoom(window.SMA.gravityAutoJoinRoom);
+                } else {
+                    window.SMA.fetchRoomList();
                 }
             });
-            bindBtn('btn-online-back', function() { document.getElementById('online-menu-screen').classList.add('hidden'); document.getElementById('menu-screen').classList.remove('hidden'); });
-            bindBtn('btn-room-list', function() { window.SMA.startAudioContext(); window.SMA.showRoomList(); });
-            bindBtn('btn-room-list-back', function() { document.getElementById('room-list-screen').classList.add('hidden'); document.getElementById('online-menu-screen').classList.remove('hidden'); });
+            bindBtn('btn-online-back', function() { 
+                var onlineScreen = document.getElementById('online-menu-screen');
+                onlineScreen.classList.add('hidden'); 
+                onlineScreen.style.display = 'none';
+                document.getElementById('menu-screen').classList.remove('hidden'); 
+            });
             bindBtn('btn-refresh-rooms', function() { window.SMA.startAudioContext(); window.SMA.fetchRoomList(); });
             
             // Add copy Room ID button logic
