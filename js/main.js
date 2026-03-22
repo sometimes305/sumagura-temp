@@ -221,8 +221,8 @@ function reportError(e) {
             }
         });
 
-        window.SMA.initGravity = async function() {
-            if (!window.SMA.isGravity) return;
+                window.SMA.initGravity = async function() {
+            if (!window.SMA.isGravity && !new URLSearchParams(window.location.search).has('username')) return;
 
             // 1. URLパラメータからの取得（ローダー経由対策）
             try {
@@ -235,14 +235,20 @@ function reportError(e) {
                 if (urlName) {
                     window.SMA.localPlayerName = urlName;
                     var nameInput = document.getElementById('username');
+                    var dispName = document.getElementById('display-username');
                     if (nameInput) { 
                         nameInput.value = urlName;
                         nameInput.disabled = true; 
                     }
+                    if (dispName) dispName.innerText = urlName;
+                    
                     if (urlIcon) {
                         window.SMA.localPlayerIcon = urlIcon;
                         var p1Icon = document.getElementById('p1-icon');
                         if (p1Icon) { p1Icon.src = urlIcon; p1Icon.style.display = 'block'; }
+                        var profImg = document.getElementById('profile-icon-img');
+                        var profEmoji = document.getElementById('profile-icon-emoji');
+                        if(profImg && profEmoji) { profImg.src = urlIcon; profImg.style.display = 'block'; profEmoji.style.display = 'none'; }
                     }
                     if (typeof window.SMA.saveSettings === 'function') window.SMA.saveSettings();
                     console.log("Gravity User Loaded from URL:", urlName);
@@ -256,10 +262,15 @@ function reportError(e) {
                 if (user && user.name) {
                     window.SMA.gravityUserInfo = user;
                     window.SMA.localPlayerName = user.name;
+                    var dispName = document.getElementById('display-username');
+                    if (dispName) dispName.innerText = user.name;
                     if (user.portrait) {
                         window.SMA.localPlayerIcon = user.portrait;
                         var p1Icon = document.getElementById('p1-icon');
                         if (p1Icon) { p1Icon.src = user.portrait; p1Icon.style.display = 'block'; }
+                        var profImg = document.getElementById('profile-icon-img');
+                        var profEmoji = document.getElementById('profile-icon-emoji');
+                        if(profImg && profEmoji) { profImg.src = user.portrait; profImg.style.display = 'block'; profEmoji.style.display = 'none'; }
                     }
                     var nameInput = document.getElementById('username');
                     if (nameInput) { 
