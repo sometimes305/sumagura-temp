@@ -339,6 +339,15 @@ function reportError(e) {
             }
         };
 
+        
+        // --- 最大人数に応じてプレイヤーカードスロットを表示 ---
+        window.SMA.showPlayerSlots = function(maxPlayers) {
+            var s3 = document.getElementById('slot-p3');
+            var s4 = document.getElementById('slot-p4');
+            if(s3) s3.style.display = (maxPlayers >= 3) ? 'flex' : 'none';
+            if(s4) s4.style.display = (maxPlayers >= 4) ? 'flex' : 'none';
+        };
+
         window.SMA.showHelp = function() { document.getElementById('menu-screen').classList.add('hidden'); document.getElementById('help-screen').classList.remove('hidden'); };
         window.SMA.hideHelp = function() { document.getElementById('help-screen').classList.add('hidden'); document.getElementById('menu-screen').classList.remove('hidden'); };
         
@@ -350,6 +359,9 @@ function reportError(e) {
             if(rp) { rp.classList.remove('active'); rp.style.display = 'none'; }
             if(sp) { sp.classList.add('active'); sp.style.display = 'flex'; }
             if(ab) { ab.style.display = 'flex'; }
+            // バグ5: ステージ選択画面に入ったら「ステージ選択へ進む」ボタンを非表示
+            var gotoBtn = document.getElementById('btn-goto-sss');
+            if(gotoBtn) gotoBtn.style.display = 'none';
         };
         window.SMA.showHubRoomPanel = function() {
             var rp = document.getElementById('hub-room-panel');
@@ -391,7 +403,13 @@ function reportError(e) {
         window.SMA.showCreateRoom = function() { 
             window.SMA.saveSettings(); 
             window.SMA.myRole='host'; 
-            if(window.SMA.netPeer) { try { window.SMA.netPeer.destroy(); } catch(e){} window.SMA.netPeer=null; } window.SMA.netConn = null; window.SMA.connections = []; window.SMA.localPlayerName = document.getElementById('username').value || "Host"; window.SMA.isHost = true; window.SMA.isOnline = true; document.getElementById('menu-screen').classList.add('hidden'); document.getElementById('online-menu-screen').classList.add('hidden'); var _hub = document.getElementById('battle-hub-screen'); _hub.classList.remove('hidden'); _hub.style.display = 'flex'; window.SMA.showHubRoomPanel(); var rid = Math.floor(1000+Math.random()*9000); document.getElementById('room-id-display').innerText = rid; document.getElementById('slot-p1').innerText = "1P: "+window.SMA.localPlayerName; try { window.SMA.netPeer = new Peer(window.SMA.ID_PREFIX+rid); window.SMA.netPeer.on('connection', function(c) { window.SMA.handleConn(c); }); window.SMA.netPeer.on('error', function(e) { 
+            if(window.SMA.netPeer) { try { window.SMA.netPeer.destroy(); } catch(e){} window.SMA.netPeer=null; } window.SMA.netConn = null; window.SMA.connections = []; window.SMA.localPlayerName = document.getElementById('username').value || "Host"; window.SMA.isHost = true; window.SMA.isOnline = true; document.getElementById('menu-screen').classList.add('hidden'); document.getElementById('online-menu-screen').classList.add('hidden'); var _hub = document.getElementById('battle-hub-screen'); _hub.classList.remove('hidden'); _hub.style.display = 'flex'; window.SMA.showHubRoomPanel(); var rid = Math.floor(1000+Math.random()*9000); document.getElementById('room-id-display').innerText = rid;
+            // P1ロビーカードを正しく更新
+            var nameEl1 = document.getElementById('lobby-name-p1');
+            if(nameEl1) nameEl1.innerText = window.SMA.localPlayerName;
+            // 最大人数に応じたカード表示
+            var maxP = parseInt(document.getElementById('room-capacity').value || 2);
+            window.SMA.showPlayerSlots(maxP); try { window.SMA.netPeer = new Peer(window.SMA.ID_PREFIX+rid); window.SMA.netPeer.on('connection', function(c) { window.SMA.handleConn(c); }); window.SMA.netPeer.on('error', function(e) { 
             if(e.type === 'peer-unavailable') { reportError("Peer Error: " + e); }
             else if(e.type === 'network' || e.message.includes('Lost connection')) {
                  window.SMA.showNotification("接続エラー。再接続を試みます...", 2000);
@@ -428,6 +446,7 @@ function reportError(e) {
 
             try {
                 var maxP = parseInt(document.getElementById('room-capacity').value || 4);
+                window.SMA.showPlayerSlots(maxP);
                 // room_permission: 0=公開, 1=非公開 (ローダー側のロジックと合わせる)
                 var createParams = { room_type: 'aitools_game_room', max_players: maxP, maxplayers: maxP, room_permission: 0, permission: 0 };
                 console.log("[SMA] create_room params:", JSON.stringify(createParams));
@@ -806,6 +825,13 @@ function reportError(e) {
                     if(window.SMA.netConn) window.SMA.netConn.send(msg);
                 }
             } else {
+                // ソロモード: READYにしてUIも更新してからゲーム開始
+                var btn2 = document.getElementById('btn-hub-ready');
+                if(btn2) {
+                    btn2.innerText = window.SMA.amIReady ? "キャンセル" : "準備完了！";
+                    btn2.style.background = window.SMA.amIReady ? "#636e72" : "";
+                    btn2.style.borderColor = window.SMA.amIReady ? "#b2bec3" : "";
+                }
                 if (window.SMA.amIReady) {
                     window.SMA.p1CharId = window.SMA.myCharId;
                     window.SMA.selectedStage = window.SMA.myStageId;
