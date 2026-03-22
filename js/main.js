@@ -331,23 +331,44 @@ function reportError(e) {
         window.SMA.showHelp = function() { document.getElementById('menu-screen').classList.add('hidden'); document.getElementById('help-screen').classList.remove('hidden'); };
         window.SMA.hideHelp = function() { document.getElementById('help-screen').classList.add('hidden'); document.getElementById('menu-screen').classList.remove('hidden'); };
         
-        // --- SOLO MODE FIX ---
+        // --- バトルハブ パネル切り替え ---
+        window.SMA.showHubSelectPanel = function() {
+            var rp = document.getElementById('hub-room-panel');
+            var sp = document.getElementById('hub-select-panel');
+            var ab = document.getElementById('hub-action-bar');
+            if(rp) { rp.classList.remove('active'); rp.style.display = 'none'; }
+            if(sp) { sp.classList.add('active'); sp.style.display = 'flex'; }
+            if(ab) { ab.style.display = 'flex'; }
+        };
+        window.SMA.showHubRoomPanel = function() {
+            var rp = document.getElementById('hub-room-panel');
+            var sp = document.getElementById('hub-select-panel');
+            var ab = document.getElementById('hub-action-bar');
+            if(sp) { sp.classList.remove('active'); sp.style.display = 'none'; }
+            if(rp) { rp.classList.add('active'); rp.style.display = 'flex'; }
+            if(ab) { ab.style.display = 'none'; }
+        };
+
+        // --- ソロモード ---
         window.SMA.enterSoloMode = function() { 
             window.SMA.saveSettings(); 
             window.SMA.myRole = 'host';
             document.getElementById('menu-screen').classList.add('hidden'); 
-            document.getElementById('stage-select-screen').classList.remove('hidden'); 
-            document.getElementById('stage-status-bar').classList.add('hidden'); // Hide status bar in solo
-            document.getElementById('btn-sss-ready').innerText = "次へ";
+            var hub = document.getElementById('battle-hub-screen');
+            hub.classList.remove('hidden');
+            hub.style.display = 'flex';
+            window.SMA.showHubSelectPanel();
             window.SMA.isSolo = true; 
             window.SMA.localPlayerName = document.getElementById('username').value || "Player"; 
         };
+
         
         window.SMA.goToCharSelectSolo = function() {
-            document.getElementById('stage-select-screen').classList.add('hidden');
-            document.getElementById('char-select-screen').classList.remove('hidden'); 
-            document.getElementById('player-status-bar').classList.add('hidden'); 
-            document.getElementById('btn-css-ready').innerText = "ゲーム開始"; 
+            document.getElementById('battle-hub-screen').classList.add('hidden');
+            document.getElementById('battle-hub-screen').classList.remove('hidden'); 
+            // player-status-bar removed 
+            // btn-css-ready removed
+ 
         };
 
         window.SMA.launchSoloGame = function() {
@@ -359,7 +380,7 @@ function reportError(e) {
         window.SMA.showCreateRoom = function() { 
             window.SMA.saveSettings(); 
             window.SMA.myRole='host'; 
-            if(window.SMA.netPeer) { try { window.SMA.netPeer.destroy(); } catch(e){} window.SMA.netPeer=null; } window.SMA.netConn = null; window.SMA.connections = []; window.SMA.localPlayerName = document.getElementById('username').value || "Host"; window.SMA.isHost = true; window.SMA.isOnline = true; document.getElementById('menu-screen').classList.add('hidden'); document.getElementById('online-menu-screen').classList.add('hidden'); document.getElementById('create-room-screen').classList.remove('hidden'); var rid = Math.floor(1000+Math.random()*9000); document.getElementById('room-id-display').innerText = rid; document.getElementById('slot-p1').innerText = "1P: "+window.SMA.localPlayerName; try { window.SMA.netPeer = new Peer(window.SMA.ID_PREFIX+rid); window.SMA.netPeer.on('connection', function(c) { window.SMA.handleConn(c); }); window.SMA.netPeer.on('error', function(e) { 
+            if(window.SMA.netPeer) { try { window.SMA.netPeer.destroy(); } catch(e){} window.SMA.netPeer=null; } window.SMA.netConn = null; window.SMA.connections = []; window.SMA.localPlayerName = document.getElementById('username').value || "Host"; window.SMA.isHost = true; window.SMA.isOnline = true; document.getElementById('menu-screen').classList.add('hidden'); document.getElementById('online-menu-screen').classList.add('hidden'); var _hub = document.getElementById('battle-hub-screen'); _hub.classList.remove('hidden'); _hub.style.display = 'flex'; window.SMA.showHubRoomPanel(); var rid = Math.floor(1000+Math.random()*9000); document.getElementById('room-id-display').innerText = rid; document.getElementById('slot-p1').innerText = "1P: "+window.SMA.localPlayerName; try { window.SMA.netPeer = new Peer(window.SMA.ID_PREFIX+rid); window.SMA.netPeer.on('connection', function(c) { window.SMA.handleConn(c); }); window.SMA.netPeer.on('error', function(e) { 
             if(e.type === 'peer-unavailable') { reportError("Peer Error: " + e); }
             else if(e.type === 'network' || e.message.includes('Lost connection')) {
                  window.SMA.showNotification("接続エラー。再接続を試みます...", 2000);
@@ -382,7 +403,7 @@ function reportError(e) {
             window.SMA.isHost = true; window.SMA.isOnline = true; 
             document.getElementById('menu-screen').classList.add('hidden'); 
             var _oms2 = document.getElementById('online-menu-screen'); _oms2.classList.add('hidden'); _oms2.style.display = 'none';
-            document.getElementById('create-room-screen').classList.remove('hidden'); 
+            var _hub2 = document.getElementById('battle-hub-screen'); _hub2.classList.remove('hidden'); _hub2.style.display = 'flex'; window.SMA.showHubRoomPanel();
             document.getElementById('room-id-display').innerText = "生成中..."; 
             
             // Fix: properly update the new lobby-card UI without destroying it
@@ -574,7 +595,7 @@ function reportError(e) {
                     
                     // ロビー画面へ遷移
                     document.getElementById('join-room-screen').classList.add('hidden');
-                    document.getElementById('create-room-screen').classList.remove('hidden');
+                    document.getElementById('battle-hub-screen').classList.remove('hidden');
                     document.getElementById('room-id-display').innerText = rid.slice(-5);
                     
                     // ゲストのロビー表示調整
@@ -582,7 +603,7 @@ function reportError(e) {
                     if(sssBtn) sssBtn.style.display = 'none';
                     var cancelBtn = document.getElementById('btn-create-cancel');
                     if(cancelBtn) cancelBtn.innerText = "退出する";
-                    var header = document.querySelector('#create-room-screen h2');
+                    var header = document.querySelector('#battle-hub-screen h2');
                     if (header) header.innerText = "ロビー（ゲスト）";
                     var copyBtn = document.getElementById('btn-copy-room-id');
                     if(copyBtn) copyBtn.style.display = 'block';
@@ -720,264 +741,206 @@ function reportError(e) {
             });
         };
 
-        // --- STAGE SELECT LOGIC ---
-        window.SMA.selectStage = function(id) { 
-            if(window.SMA.myRole === 'spec') return; 
-            if(window.SMA.amIReady) return; // 準備完了中は変更不可
-            window.SMA.myStageId = id; 
-            var cards = document.querySelectorAll('.stage-card'); 
-            cards.forEach(function(c) { c.classList.remove('selected'); }); 
-            if(id==='battlefield') document.getElementById('stage-battlefield').classList.add('selected'); 
-            else if(id==='final') document.getElementById('stage-final').classList.add('selected'); 
-            
-            if(window.SMA.isOnline) { 
-                if(window.SMA.isHost) { window.SMA.p1Stage = id; window.SMA.updateSSSUI(); window.SMA.sendStageUpdate(); } 
-                else { 
-                    // 自分のロールに応じてセット
-                    if(window.SMA.myRole === 'p2') window.SMA.p2Stage = id;
-                    else if(window.SMA.myRole === 'p3') window.SMA.p3Stage = id;
-                    else if(window.SMA.myRole === 'p4') window.SMA.p4Stage = id;
-                    window.SMA.updateSSSUI(); window.SMA.sendStageUpdate(); 
-                } 
-            } 
+        // --- BATTLE HUB LOGIC ---
+        window.SMA.myStageId = null;
+        window.SMA.myCharId = null;
+        window.SMA.amIReady = false;
+
+        window.SMA.selectStage = function(id) {
+            if(window.SMA.myRole === 'spec' || window.SMA.amIReady) return;
+            window.SMA.myStageId = id;
+            document.querySelectorAll('.stage-card').forEach(c => c.classList.remove('selected'));
+            var card = document.getElementById('stage-' + id);
+            if(card) card.classList.add('selected');
         };
 
-        window.SMA.sendStageUpdate = function() { if(window.SMA.isHost) { window.SMA.broadcast({type:'stage_update', role:'p1', stageId:window.SMA.p1Stage}); } else { if(window.SMA.netConn) window.SMA.netConn.send({type:'stage_update', role:window.SMA.myRole, stageId:window.SMA.myStageId}); } };
-        
-        window.SMA.toggleStageReady = function() { 
-            if(window.SMA.myRole === 'spec') return; 
-            window.SMA.amIReady = !window.SMA.amIReady; 
-            if(window.SMA.isHost) { 
-                window.SMA.p1StageReady = window.SMA.amIReady; window.SMA.updateSSSUI(); window.SMA.sendStageReady(); window.SMA.checkStageAllReady(); 
-            } else { 
-                window.SMA.sendStageReady(); 
-            } 
-        };
-        
-        window.SMA.sendStageReady = function() { if(window.SMA.isHost) { window.SMA.broadcast({type:'stage_ready', role:'p1', ready:window.SMA.p1StageReady}); } else { if(window.SMA.netConn) window.SMA.netConn.send({type:'stage_ready', role:window.SMA.myRole, ready:window.SMA.amIReady}); } };
-        
-        window.SMA.checkStageAllReady = function() {
-            var allReady = window.SMA.p1StageReady && window.SMA.p2StageReady;
-            // 3P/4Pがいる場合はその人たちもチェック
-            var p3 = window.SMA.connections.find(function(x){return x.role==='p3';});
-            var p4 = window.SMA.connections.find(function(x){return x.role==='p4';});
-            if(p3) allReady = allReady && window.SMA.p3StageReady;
-            if(p4) allReady = allReady && window.SMA.p4StageReady;
-            if(allReady) { document.getElementById('btn-sss-start').classList.remove('hidden'); } else { document.getElementById('btn-sss-start').classList.add('hidden'); }
-        };
-        
-        window.SMA.hostGoToCSS = function() {
-            window.SMA.broadcast({type:'goto_css'}); 
-            window.SMA.showCSSMulti();
+        window.SMA.selectChar = function(id) {
+            if(window.SMA.myRole === 'spec' || window.SMA.amIReady) return;
+            window.SMA.myCharId = id;
+            document.querySelectorAll('.char-card').forEach(c => c.classList.remove('selected'));
+            var card = document.getElementById('card-' + id);
+            if(card) card.classList.add('selected');
         };
 
-        window.SMA.updateSSSUI = function() {
-            var p1Box = document.getElementById('sss-p1-box'); 
-            var p2Box = document.getElementById('sss-p2-box'); 
-            var p3Box = document.getElementById('sss-p3-box');
-            var p4Box = document.getElementById('sss-p4-box');
-            var getStageName = function(id) { return id==='battlefield'?'戦場':'終点'; };
-            var n1 = getStageName(window.SMA.p1Stage); 
-            var n2 = getStageName(window.SMA.p2Stage);
-            var n3 = getStageName(window.SMA.p3Stage);
-            var n4 = getStageName(window.SMA.p4Stage);
+        window.SMA.toggleHubReady = function(isForceReady) {
+            if(window.SMA.myRole === 'spec') return;
             
-            // SSS Masking for Others (自分以外の選択を隠す)
-            if (window.SMA.isOnline) {
-                if (window.SMA.myRole === 'spec') {
-                    if(!window.SMA.p1StageReady) n1 = "選択中...";
-                    if(!window.SMA.p2StageReady) n2 = "選択中...";
-                    if(!window.SMA.p3StageReady) n3 = "選択中...";
-                    if(!window.SMA.p4StageReady) n4 = "選択中...";
-                    document.getElementById('btn-sss-ready').innerText = "観戦中";
-                    document.getElementById('btn-sss-ready').classList.add('disabled');
-                    document.querySelectorAll('.stage-card').forEach(function(c){c.classList.remove('selected');});
-                } else {
-                    // 参加プレイヤーのマスキング
-                    if (window.SMA.myRole !== 'p1' && window.SMA.myRole !== 'host') { n1 = window.SMA.p1StageReady ? "相手" : "選択中..."; }
-                    if (window.SMA.myRole !== 'p2') { n2 = window.SMA.p2StageReady ? "相手" : "選択中..."; }
-                    if (window.SMA.myRole !== 'p3') { n3 = window.SMA.p3StageReady ? "相手" : "選択中..."; }
-                    if (window.SMA.myRole !== 'p4') { n4 = window.SMA.p4StageReady ? "相手" : "選択中..."; }
-                }
+            var wantsReady = typeof isForceReady === 'boolean' ? isForceReady : !window.SMA.amIReady;
+            
+            if (wantsReady && (!window.SMA.myStageId || !window.SMA.myCharId)) {
+                window.SMA.showNotification("ステージとキャラクターを選んでください", 2000);
+                return;
+            }
+            window.SMA.amIReady = wantsReady;
+            
+            var btn = document.getElementById('btn-hub-ready');
+            if(btn) {
+                btn.innerText = window.SMA.amIReady ? "キャンセル" : "準備完了！";
+                btn.style.background = window.SMA.amIReady ? "#636e72" : "";
+                btn.style.borderColor = window.SMA.amIReady ? "#b2bec3" : "";
             }
 
-            if(p1Box) { p1Box.innerHTML = n1 + (window.SMA.p1StageReady ? ' <span class="check-icon" style="display:inline">✅</span>' : ''); if(window.SMA.p1StageReady) p1Box.classList.add('ready'); else p1Box.classList.remove('ready'); }
-            if(p2Box) { p2Box.innerHTML = n2 + (window.SMA.p2StageReady ? ' <span class="check-icon" style="display:inline">✅</span>' : ''); if(window.SMA.p2StageReady) p2Box.classList.add('ready'); else p2Box.classList.remove('ready'); }
-            if(p3Box) { p3Box.innerHTML = n3 + (window.SMA.p3StageReady ? ' <span class="check-icon" style="display:inline">✅</span>' : ''); if(window.SMA.p3StageReady) p3Box.classList.add('ready'); else p3Box.classList.remove('ready'); }
-            if(p4Box) { p4Box.innerHTML = n4 + (window.SMA.p4StageReady ? ' <span class="check-icon" style="display:inline">✅</span>' : ''); if(window.SMA.p4StageReady) p4Box.classList.add('ready'); else p4Box.classList.remove('ready'); }
+            if(window.SMA.isOnline) {
+                var msg = {
+                    type: 'hub_ready', 
+                    role: window.SMA.myRole, 
+                    ready: window.SMA.amIReady,
+                    stageId: window.SMA.myStageId,
+                    charId: window.SMA.myCharId
+                };
+                if(window.SMA.isHost) {
+                    window.SMA.updateHubState(msg);
+                    window.SMA.broadcast(msg);
+                } else {
+                    if(window.SMA.netConn) window.SMA.netConn.send(msg);
+                }
+            } else {
+                if (window.SMA.amIReady) {
+                    window.SMA.p1CharId = window.SMA.myCharId;
+                    window.SMA.selectedStage = window.SMA.myStageId;
+                    window.SMA.startSoloGame();
+                }
+            }
         };
 
-         window.SMA.selectChar = function(id) { 
-            if(window.SMA.myRole === 'spec') return; 
-            if(window.SMA.amIReady) return; // 準備完了中は変更不可
-            window.SMA.myCharId = id; var cards = document.querySelectorAll('.char-card'); cards.forEach(function(c) { c.classList.remove('selected'); }); if(id==='sword') document.getElementById('card-sword').classList.add('selected'); else if(id==='mage') document.getElementById('card-mage').classList.add('selected'); else if(id==='brawler') document.getElementById('card-brawler').classList.add('selected'); else if(id==='spear') document.getElementById('card-spear').classList.add('selected'); else if(id==='hammer') document.getElementById('card-hammer').classList.add('selected'); else if(id==='mirror') document.getElementById('card-mirror').classList.add('selected');
-            if(window.SMA.isOnline && window.SMA.isHost) { window.SMA.p1CharId = id; window.SMA.updateCSSUI(); window.SMA.sendCharUpdate(); }
-            else if(window.SMA.isOnline && !window.SMA.isHost) {
-                // 自分のロールに応じてセット
-                if(window.SMA.myRole === 'p2') window.SMA.p2CharId = id;
-                else if(window.SMA.myRole === 'p3') window.SMA.p3CharId = id;
-                else if(window.SMA.myRole === 'p4') window.SMA.p4CharId = id;
-                window.SMA.updateCSSUI(); window.SMA.sendCharUpdate();
-            } 
+        window.SMA.hubData = { p1:{}, p2:{}, p3:{}, p4:{} };
+
+        window.SMA.updateHubState = function(d) {
+            if(!window.SMA.hubData[d.role]) window.SMA.hubData[d.role] = {};
+            window.SMA.hubData[d.role].ready = d.ready;
+            window.SMA.hubData[d.role].stageId = d.stageId;
+            window.SMA.hubData[d.role].charId = d.charId;
+            window.SMA.refreshHubUI();
+
+            if (window.SMA.isHost) {
+                window.SMA.checkHubAllReady();
+            }
         };
-        window.SMA.startSolo = function() { 
-            // ACTUAL GAME START LOGIC
+
+        window.SMA.refreshHubUI = function() {
+            var roles = ['p1', 'p2', 'p3', 'p4'];
+            roles.forEach(function(r) {
+                var slot = document.getElementById('slot-' + r.replace('p', 'p')); 
+                if(!slot) return;
+                var data = window.SMA.hubData[r] || {};
+                var statusEl = slot.querySelector('.lobby-player-status');
+                if(!statusEl) return;
+                
+                slot.classList.remove('ready', 'active', 'selecting');
+                if(data.ready) {
+                    slot.classList.add('ready');
+                    statusEl.style.display = 'block';
+                    statusEl.style.background = '#00e676';
+                    statusEl.style.color = '#fff';
+                    statusEl.innerText = 'READY';
+                } else {
+                    var nameEl = document.getElementById('lobby-name-' + r);
+                    if (nameEl && nameEl.innerText !== "待機中...") {
+                        slot.classList.add('active', 'selecting');
+                        statusEl.style.display = 'block';
+                        statusEl.style.background = '#00d2ff';
+                        statusEl.style.color = '#000';
+                        statusEl.innerText = 'CHOOSING';
+                    } else {
+                        statusEl.style.display = 'none';
+                    }
+                }
+            });
+        };
+
+        window.SMA.checkHubAllReady = function() {
+            if(!window.SMA.isHost) return;
+            var activeRoles = ['p1'];
+            if(window.SMA.connections.find(c => c.role === 'p2')) activeRoles.push('p2');
+            if(window.SMA.connections.find(c => c.role === 'p3')) activeRoles.push('p3');
+            if(window.SMA.connections.find(c => c.role === 'p4')) activeRoles.push('p4');
+
+            var allReady = activeRoles.every(r => window.SMA.hubData[r] && window.SMA.hubData[r].ready);
+            if(allReady && activeRoles.length > 1) { 
+                window.SMA.executeHubFinalStart(activeRoles);
+            }
+        };
+
+        window.SMA.executeHubFinalStart = function(activeRoles) {
+            var stages = [];
+            activeRoles.forEach(r => {
+                var sid = window.SMA.hubData[r].stageId;
+                if(sid) stages.push(sid);
+            });
+            var finalStage = stages.length > 0 ? stages[Math.floor(Math.random() * stages.length)] : 'battlefield';
+            
+            window.SMA.selectedStage = finalStage;
+            window.SMA.playerCount = activeRoles.length;
+            
+            var startMsg = {
+                type: 'start_match',
+                stage: finalStage,
+                playerCount: window.SMA.playerCount,
+                p1Char: window.SMA.hubData['p1']?.charId || 'sword',
+                p2Char: window.SMA.hubData['p2']?.charId || 'sword',
+                p3Char: window.SMA.hubData['p3']?.charId || 'sword',
+                p4Char: window.SMA.hubData['p4']?.charId || 'sword'
+            };
+            
+            window.SMA.p1CharId = startMsg.p1Char;
+            window.SMA.p2CharId = startMsg.p2Char;
+            window.SMA.p3CharId = startMsg.p3Char;
+            window.SMA.p4CharId = startMsg.p4Char;
+
+            window.SMA.broadcast(startMsg);
+            window.SMA.startGameMulti();
+        };
+
+        window.SMA.showHubSelectPanel = function() {
+            var roomPanel = document.getElementById('hub-room-panel');
+            if(roomPanel) roomPanel.classList.remove('active');
+            var selectPanel = document.getElementById('hub-select-panel');
+            if(selectPanel) { selectPanel.classList.add('active'); selectPanel.style.display = 'flex'; }
+            var actionBar = document.getElementById('hub-action-bar');
+            if(actionBar) actionBar.style.display = 'flex';
+            
+            window.SMA.amIReady = false;
+            window.SMA.hubData = { p1:{}, p2:{}, p3:{}, p4:{} };
+            window.SMA.refreshHubUI();
+            
+            document.querySelectorAll('.stage-card, .char-card').forEach(c => c.classList.remove('selected'));
+            window.SMA.myStageId = null;
+            window.SMA.myCharId = null;
+            var btn = document.getElementById('btn-hub-ready');
+            if(btn) { btn.innerText = "準備完了！"; btn.style.background = ""; btn.style.borderColor = ""; }
+        };
+
+        window.SMA.startSoloGame = function() { 
             if(window.SMA.netPeer) { try { window.SMA.netPeer.destroy(); } catch(e){} window.SMA.netPeer=null; } 
             window.SMA.netConn = null; window.SMA.connections = []; 
             window.SMA.isHost = true; window.SMA.isOnline = false; 
-            document.getElementById('char-select-screen').classList.add('hidden'); 
+            document.getElementById('battle-hub-screen').classList.add('hidden'); 
             document.getElementById('controller-area').style.display = 'block'; 
             document.getElementById('hud-layer').style.display = 'flex'; 
             window.SMA.initCanvas(); 
-            try { window.SMA.bootGame(); } catch(e) { reportError("Init Error: " + e); } 
+            try { window.SMA.bootGame(); } catch(e) { console.error("Init Error: " + e); } 
         };
 
-        // AUTO-INIT FOR GRAVITY
-        if (window.SMA.isGravity) {
-            window.SMA.initGravity();
-        }
-        window.SMA.hostGoToSSS = function() { 
-            window.SMA.isInCSS = true; 
-            if(!window.SMA.connections.find(function(x){return x.role==='p2';})) return; 
-            // Gravity経由で全ゲストに送信
-            window.SMA.broadcast({type:'goto_sss'});
-            window.SMA.showSSSMulti(); 
-        };
-        window.SMA.showSSSMulti = function() { 
-            document.getElementById('create-room-screen').classList.add('hidden'); 
-            document.getElementById('join-room-screen').classList.add('hidden'); 
-            document.getElementById('stage-select-screen').classList.remove('hidden');
-            window.SMA.amIReady = false; window.SMA.p1StageReady = false; window.SMA.p2StageReady = false; window.SMA.p3StageReady = false; window.SMA.p4StageReady = false;
-            // 3P/4Pステータス表示制御
-            var p3c = window.SMA.lobbyState && window.SMA.lobbyState.p3;
-            var p4c = window.SMA.lobbyState && window.SMA.lobbyState.p4;
-            var sss3 = document.getElementById('sss-p3-status');
-            var sss4 = document.getElementById('sss-p4-status');
-            if(sss3) sss3.style.display = p3c ? '' : 'none';
-            if(sss4) sss4.style.display = p4c ? '' : 'none';
-            window.SMA.updateSSSUI();
-        };
-        
-        window.SMA.showCSSMulti = function() { 
-            document.getElementById('stage-select-screen').classList.add('hidden'); 
-            document.getElementById('char-select-screen').classList.remove('hidden'); 
-            document.getElementById('player-status-bar').classList.remove('hidden'); 
-            window.SMA.amIReady = false; window.SMA.p1IsReady = false; window.SMA.p2IsReady = false; window.SMA.p3IsReady = false; window.SMA.p4IsReady = false;
-            document.getElementById('btn-css-ready').innerText = "準備完了！";
-            document.getElementById('btn-css-ready').classList.remove('hidden'); 
-            document.getElementById('btn-css-start').classList.add('hidden'); 
-            // 3P/4Pステータス表示制御
-            var p3c = window.SMA.lobbyState && window.SMA.lobbyState.p3;
-            var p4c = window.SMA.lobbyState && window.SMA.lobbyState.p4;
-            var css3 = document.getElementById('css-p3-status');
-            var css4 = document.getElementById('css-p4-status');
-            if(css3) css3.style.display = p3c ? '' : 'none';
-            if(css4) css4.style.display = p4c ? '' : 'none';
-            window.SMA.updateCSSUI(); 
-        };
-        window.SMA.toggleReady = function() { 
-            if(window.SMA.myRole === 'spec') return; 
-            window.SMA.amIReady = !window.SMA.amIReady; if(window.SMA.isHost) { window.SMA.p1IsReady = window.SMA.amIReady; window.SMA.updateCSSUI(); window.SMA.sendReadyUpdate(); window.SMA.checkAllReady(); } else { window.SMA.sendReadyUpdate(); } 
-        };
-        window.SMA.sendCharUpdate = function() { if(window.SMA.isHost) { window.SMA.broadcast({type:'char_update', role:'p1', charId:window.SMA.p1CharId}); } else { if(window.SMA.netConn) window.SMA.netConn.send({type:'char_update', role:window.SMA.myRole, charId:window.SMA.myCharId}); } };
-        window.SMA.sendReadyUpdate = function() { if(window.SMA.isHost) { window.SMA.broadcast({type:'player_ready', role:'p1', ready:window.SMA.p1IsReady}); } else { if(window.SMA.netConn) window.SMA.netConn.send({type:'player_ready', role:window.SMA.myRole, ready:window.SMA.amIReady}); } };
-        window.SMA.checkAllReady = function() {
-            var allReady = window.SMA.p1IsReady && window.SMA.p2IsReady;
-            var p3 = window.SMA.connections.find(function(x){return x.role==='p3';});
-            var p4 = window.SMA.connections.find(function(x){return x.role==='p4';});
-            if(p3) allReady = allReady && window.SMA.p3IsReady;
-            if(p4) allReady = allReady && window.SMA.p4IsReady;
-            if(allReady) { document.getElementById('btn-css-start').classList.remove('hidden'); } else { document.getElementById('btn-css-start').classList.add('hidden'); }
-        };
-        window.SMA.hostFinalStart = function() { 
-            // Random Stage
-            var stages = [window.SMA.p1Stage, window.SMA.p2Stage];
-            var p3c = window.SMA.connections.find(function(x){return x.role==='p3';});
-            var p4c = window.SMA.connections.find(function(x){return x.role==='p4';});
-            if(p3c) stages.push(window.SMA.p3Stage);
-            if(p4c) stages.push(window.SMA.p4Stage);
-            var finalStage = stages[Math.floor(Math.random() * stages.length)];
-            // プレイヤー数を計算
-            window.SMA.playerCount = 2;
-            if(p3c) window.SMA.playerCount++;
-            if(p4c) window.SMA.playerCount++;
-            window.SMA.broadcast({type:'start_match', p1Char:window.SMA.p1CharId, p2Char:window.SMA.p2CharId, p3Char:window.SMA.p3CharId, p4Char:window.SMA.p4CharId, stage:finalStage, playerCount:window.SMA.playerCount}); 
-            window.SMA.selectedStage = finalStage;
-            window.SMA.startGameMulti(); 
-        };
         window.SMA.startGameMulti = function() { 
-            document.getElementById('char-select-screen').classList.add('hidden'); 
+            document.getElementById('battle-hub-screen').classList.add('hidden'); 
             document.getElementById('controller-area').style.display = 'block'; 
             document.getElementById('hud-layer').style.display = 'flex'; 
             
-            // HUD名をロビーのデータから設定
             var s = window.SMA.lobbyState || {};
             var el1 = document.getElementById('p1-name'); if(el1) el1.innerText = s.p1 || "1P";
             var el2 = document.getElementById('p2-name'); if(el2) el2.innerText = s.p2 || "2P";
             var el3 = document.getElementById('p3-name'); if(el3) el3.innerText = s.p3 || "3P";
             var el4 = document.getElementById('p4-name'); if(el4) el4.innerText = s.p4 || "4P";
 
+            var icon1 = document.getElementById('p1-icon'); if(icon1 && s.p1Icon) { icon1.src = s.p1Icon; icon1.style.display = 'block'; }
+            var icon2 = document.getElementById('p2-icon'); if(icon2 && s.p2Icon) { icon2.src = s.p2Icon; icon2.style.display = 'block'; }
+            var icon3 = document.getElementById('p3-icon'); if(icon3 && s.p3Icon) { icon3.src = s.p3Icon; icon3.style.display = 'block'; }
+            var icon4 = document.getElementById('p4-icon'); if(icon4 && s.p4Icon) { icon4.src = s.p4Icon; icon4.style.display = 'block'; }
+
             window.SMA.bootGame(); 
         };
-        window.SMA.updateCSSUI = function() { 
-            var p1Box = document.getElementById('css-p1-box'); 
-            var p2Box = document.getElementById('css-p2-box');
-            var p3Box = document.getElementById('css-p3-box');
-            var p4Box = document.getElementById('css-p4-box');
-            var getCharName = function(id) { 
-                if(id==='sword') return '剣士'; 
-                if(id==='mage') return 'メイジ'; 
-                if(id==='brawler') return '武闘家'; 
-                if(id==='spear') return '槍使い'; 
-                if(id==='hammer') return 'ハンマー使い'; 
-                if(id==='mirror') return '鏡の魔術師'; 
-                return '???'; 
-            }; 
-            var n1 = getCharName(window.SMA.p1CharId); 
-            var n2 = getCharName(window.SMA.p2CharId);
-            var n3 = getCharName(window.SMA.p3CharId);
-            var n4 = getCharName(window.SMA.p4CharId);
-            
-            // 3P/4P表示制御
-            var p3c = window.SMA.lobbyState && window.SMA.lobbyState.p3;
-            var p4c = window.SMA.lobbyState && window.SMA.lobbyState.p4;
-            var p3Status = document.getElementById('css-p3-status');
-            var p4Status = document.getElementById('css-p4-status');
-            if(p3Status) p3Status.style.display = p3c ? '' : 'none';
-            if(p4Status) p4Status.style.display = p4c ? '' : 'none';
-            
-            // SPECTATOR & OTHERS MASKING (自分以外の選択を隠す)
-            if (window.SMA.isOnline) {
-                if (window.SMA.myRole === 'spec') {
-                    if(!window.SMA.p1IsReady) n1 = "選択中..."; 
-                    if(!window.SMA.p2IsReady) n2 = "選択中...";
-                    if(!window.SMA.p3IsReady) n3 = "選択中...";
-                    if(!window.SMA.p4IsReady) n4 = "選択中...";
-                    document.getElementById('btn-css-ready').innerText = "観戦中";
-                    document.getElementById('btn-css-ready').classList.add('disabled');
-                    var cards = document.querySelectorAll('.char-card'); 
-                    cards.forEach(function(c) { c.classList.remove('selected'); }); 
-                } else {
-                    // 参加プレイヤーのマスキング
-                    if (window.SMA.myRole !== 'p1' && window.SMA.myRole !== 'host') { n1 = window.SMA.p1IsReady ? "相手" : "選択中..."; }
-                    if (window.SMA.myRole !== 'p2') { n2 = window.SMA.p2IsReady ? "相手" : "選択中..."; }
-                    if (window.SMA.myRole !== 'p3') { n3 = window.SMA.p3IsReady ? "相手" : "選択中..."; }
-                    if (window.SMA.myRole !== 'p4') { n4 = window.SMA.p4IsReady ? "相手" : "選択中..."; }
-                }
-            }
-            
-            p1Box.innerHTML = n1 + (window.SMA.p1IsReady ? ' <span class="check-icon" style="display:inline">✅</span>' : ''); 
-            p2Box.innerHTML = n2 + (window.SMA.p2IsReady ? ' <span class="check-icon" style="display:inline">✅</span>' : ''); 
-            if(p3Box) p3Box.innerHTML = n3 + (window.SMA.p3IsReady ? ' <span class="check-icon" style="display:inline">✅</span>' : '');
-            if(p4Box) p4Box.innerHTML = n4 + (window.SMA.p4IsReady ? ' <span class="check-icon" style="display:inline">✅</span>' : '');
-            if(window.SMA.p1IsReady) p1Box.classList.add('ready'); else p1Box.classList.remove('ready'); 
-            if(window.SMA.p2IsReady) p2Box.classList.add('ready'); else p2Box.classList.remove('ready');
-            if(p3Box) { if(window.SMA.p3IsReady) p3Box.classList.add('ready'); else p3Box.classList.remove('ready'); }
-            if(p4Box) { if(window.SMA.p4IsReady) p4Box.classList.add('ready'); else p4Box.classList.remove('ready'); }
-        };
-        
+
         window.SMA.broadcastLobby = function() { 
-            // 切断済みの接続をクリーンアップ（プレイヤーは再接続用に保持）
             window.SMA.connections = window.SMA.connections.filter(function(x){ return x.conn.open || x.role==='p2' || x.role==='p3' || x.role==='p4'; });
             
             var p2 = window.SMA.connections.find(function(x){return x.role==='p2';}); 
@@ -1001,13 +964,17 @@ function reportError(e) {
                         cardEl.classList.remove('waiting');
                         if (nameEl) nameEl.innerText = pName;
                         if (iconEl) {
-                            if (pIcon) { iconEl.src = pIcon; iconEl.style.display = 'inline-block'; }
-                            else { iconEl.src = ''; iconEl.style.display = 'none'; }
+                            if (pIcon) { 
+                                // Reset to avoid empty src bugs
+                                if (iconEl.tagName.toLowerCase() === 'img') { iconEl.src = pIcon; iconEl.style.display = 'inline-block'; } 
+                                else { iconEl.innerText = ''; iconEl.style.backgroundImage = 'url('+pIcon+')'; iconEl.style.backgroundSize='cover'; }
+                            }
+                            else { if (iconEl.tagName.toLowerCase() !== 'img') iconEl.innerText = '👤'; }
                         }
                     } else {
                         cardEl.classList.add('waiting');
                         if (nameEl) nameEl.innerText = "待機中...";
-                        if (iconEl) { iconEl.src = ''; iconEl.style.display = 'none'; }
+                        if (iconEl && iconEl.tagName.toLowerCase() !== 'img') { iconEl.innerText = '👤'; iconEl.style.backgroundImage = 'none'; }
                     }
                 }
             };
@@ -1021,8 +988,10 @@ function reportError(e) {
             if(specListEl) specListEl.innerText = specs.join(', ') || "なし"; 
             if(specCountEl) specCountEl.innerText = specs.length;
 
-            // 2人以上いればステージ選択へ進める
-            if(p2) document.getElementById('btn-goto-sss').classList.remove('disabled'); else document.getElementById('btn-goto-sss').classList.add('disabled'); 
+            var gotoSssBtn = document.getElementById('btn-goto-sss');
+            if(gotoSssBtn) {
+                if(p2) gotoSssBtn.classList.remove('disabled'); else gotoSssBtn.classList.add('disabled');
+            }
             
             var lobbyMsg = {
                 type:'lobby', 
@@ -1040,21 +1009,18 @@ function reportError(e) {
             window.SMA.connections.forEach(function(c) { 
                 if(c.conn.open && !window.SMA.isGravity) c.conn.send(lobbyMsg); 
             }); 
+            window.SMA.refreshHubUI();
         };
+
         window.SMA.broadcast = function(msg) { 
-            // PeerJS経由のブロードキャスト
             window.SMA.connections.forEach(function(c) { if(c.conn.open && c.conn.send && !window.SMA.isGravity) c.conn.send(msg); }); 
-            // Gravity経由のブロードキャスト
             if (window.SMA.isGravity) {
                 var jsonMsg = (typeof msg === 'string') ? msg : JSON.stringify(msg);
                 console.log("[SMA] BROADCAST sending:", msg.type || "(raw)", jsonMsg.substring(0, 200));
-                window.parent.postMessage({
-                    action: 'send_message',
-                    actionId: 'broadcast_' + Date.now(),
-                    message: jsonMsg
-                }, "*");
+                window.parent.postMessage({ action: 'send_message', actionId: 'broadcast_' + Date.now(), message: jsonMsg }, "*");
             }
         };
+
         window.SMA.handleClient = async function(d) { 
             if (typeof Blob !== 'undefined' && d instanceof Blob) {
                 try { 
@@ -1082,13 +1048,16 @@ function reportError(e) {
                             cardEl.classList.remove('waiting');
                             if (nameEl) nameEl.innerText = pName;
                             if (iconEl) {
-                                if (pIcon) { iconEl.src = pIcon; iconEl.style.display = 'inline-block'; }
-                                else { iconEl.src = ''; iconEl.style.display = 'none'; }
+                                if (pIcon) { 
+                                    if (iconEl.tagName.toLowerCase() === 'img') { iconEl.src = pIcon; iconEl.style.display = 'inline-block'; } 
+                                    else { iconEl.innerText = ''; iconEl.style.backgroundImage = 'url('+pIcon+')'; iconEl.style.backgroundSize='cover'; }
+                                }
+                                else { if (iconEl.tagName.toLowerCase() !== 'img') { iconEl.innerText = '👤'; iconEl.style.backgroundImage='none';} }
                             }
                         } else {
                             cardEl.classList.add('waiting');
                             if (nameEl) nameEl.innerText = "待機中...";
-                            if (iconEl) { iconEl.src = ''; iconEl.style.display = 'none'; }
+                            if (iconEl && iconEl.tagName.toLowerCase() !== 'img') { iconEl.innerText = '👤'; iconEl.style.backgroundImage='none'; }
                         }
                     }
                 };
@@ -1102,53 +1071,27 @@ function reportError(e) {
                 if(specListEl) specListEl.innerText = (d.specs && d.specs.length > 0) ? d.specs.join(', ') : "なし"; 
                 if(specCountEl) specCountEl.innerText = (d.specs && d.specs.length) || 0;
 
-                document.getElementById('join-status').innerText = "ロビー: 1P "+d.p1; 
+                window.SMA.refreshHubUI();
+
                 if (!window.SMA.hasJoined) {
                     window.SMA.hasJoined = true;
                     window.SMA.showNotification("入室しました！", 2000); 
                 }
-                if(d.ver && d.ver !== window.SMA.VERSION) document.getElementById('join-status').innerText += " (Ver不一致)"; 
             }
             if(d.type==='assign_role') { 
-                console.log("[SMA] handleClient: received assign_role=" + d.role);
                 window.SMA.myRole = d.role; 
             }
-            if(d.type==='goto_sss') { 
-                console.log("[SMA] handleClient: received goto_sss");
-                window.SMA.showSSSMulti();
+            if(d.type==='goto_hub_select') { 
+                console.log("[SMA] handleClient: received goto_hub_select");
+                window.SMA.showHubSelectPanel();
             }
-            if(d.type==='goto_css') { 
-                console.log("[SMA] handleClient: received goto_css");
-                window.SMA.showCSSMulti(); 
+            if(d.type==='hub_ready') { 
+                window.SMA.updateHubState(d);
+                if(window.SMA.isHost) {
+                    window.SMA.broadcast(d); 
+                    window.SMA.checkHubAllReady();
+                }
             }
-            if(d.type==='stage_update') { 
-                if(d.role==='p1') window.SMA.p1Stage = d.stageId; 
-                if(d.role==='p2') window.SMA.p2Stage = d.stageId; 
-                if(d.role==='p3') window.SMA.p3Stage = d.stageId; 
-                if(d.role==='p4') window.SMA.p4Stage = d.stageId; 
-                window.SMA.updateSSSUI(); if(window.SMA.isHost) window.SMA.broadcast(d); 
-            }
-            if(d.type==='stage_ready') { 
-                if(d.role==='p1') window.SMA.p1StageReady = d.ready; 
-                if(d.role==='p2') window.SMA.p2StageReady = d.ready; 
-                if(d.role==='p3') window.SMA.p3StageReady = d.ready; 
-                if(d.role==='p4') window.SMA.p4StageReady = d.ready; 
-                window.SMA.updateSSSUI(); if(window.SMA.isHost) { window.SMA.broadcast(d); window.SMA.checkStageAllReady(); } 
-            }
-            if(d.type==='char_update') { 
-                if(d.role==='p1') window.SMA.p1CharId = d.charId; 
-                if(d.role==='p2') window.SMA.p2CharId = d.charId; 
-                if(d.role==='p3') window.SMA.p3CharId = d.charId; 
-                if(d.role==='p4') window.SMA.p4CharId = d.charId; 
-                window.SMA.updateCSSUI(); if(window.SMA.isHost) window.SMA.broadcast(d); 
-            } 
-            if(d.type==='player_ready') { 
-                if(d.role==='p1') window.SMA.p1IsReady = d.ready; 
-                if(d.role==='p2') window.SMA.p2IsReady = d.ready; 
-                if(d.role==='p3') window.SMA.p3IsReady = d.ready; 
-                if(d.role==='p4') window.SMA.p4IsReady = d.ready; 
-                window.SMA.updateCSSUI(); if(window.SMA.isHost) { window.SMA.broadcast(d); window.SMA.checkAllReady(); } 
-            } 
             if(d.type==='start_match') { 
                 window.SMA.p1CharId = d.p1Char; window.SMA.p2CharId = d.p2Char; 
                 window.SMA.p3CharId = d.p3Char; window.SMA.p4CharId = d.p4Char;
@@ -1233,7 +1176,7 @@ function reportError(e) {
                     // 遅延参加の同期
                     if (window.SMA.gameRunning) {
                         // ゲーム中のスペクテイター同期はsyncループで行われる
-                    } else if (!document.getElementById('char-select-screen').classList.contains('hidden')) {
+                    } else if (!document.getElementById('battle-hub-screen').classList.contains('hidden')) {
                         c.send({type:'goto_css'});
                         c.send({type:'char_update', role:'p1', charId:window.SMA.p1CharId});
                         c.send({type:'char_update', role:'p2', charId:window.SMA.p2CharId});
@@ -1243,7 +1186,7 @@ function reportError(e) {
                         c.send({type:'player_ready', role:'p2', ready:window.SMA.p2IsReady});
                         c.send({type:'player_ready', role:'p3', ready:window.SMA.p3IsReady});
                         c.send({type:'player_ready', role:'p4', ready:window.SMA.p4IsReady});
-                    } else if (!document.getElementById('stage-select-screen').classList.contains('hidden')) {
+                    } else if (!document.getElementById('battle-hub-screen').classList.contains('hidden')) {
                         c.send({type:'goto_sss'});
                         c.send({type:'stage_update', role:'p1', stageId:window.SMA.p1Stage});
                         c.send({type:'stage_update', role:'p2', stageId:window.SMA.p2Stage});
@@ -3414,11 +3357,11 @@ function reportError(e) {
                     btn.addEventListener('mouseup', release);
                     btn.addEventListener('mouseleave', release);
 
-                    var action = function(e) {
+                    var action = function(e) { console.log('Button clicked:', id);
                         e.preventDefault(); e.stopPropagation();
                         if (btn.classList.contains('disabled') || btn.disabled) return; 
                         setTimeout(function() { 
-                            try { func.apply(this); } catch(err) { reportError("Menu: " + err); }
+                            try { func.apply(this); } catch(err) { console.error("Menu Error: ", err); reportError("Menu: " + err); }
                         }, 80); 
                     };
                     btn.addEventListener('touchstart', action, {passive:false});
@@ -3569,8 +3512,7 @@ function reportError(e) {
             bindBtn('btn-spec-action', function() { if(window.SMA.isGravity) window.SMA.showNotification("観戦未対応",1000); else window.SMA.joinRoom('spec'); });
             bindBtn('btn-join-cancel', function() { location.reload(); });
             bindBtn('btn-title', function() { location.reload(); });
-            bindBtn('btn-goto-css', function() { window.SMA.hostGoToCSS(); });
-            bindBtn('btn-goto-sss', function() { window.SMA.hostGoToSSS(); }); // New Host flow
+            bindBtn('btn-goto-sss', function() { window.SMA.broadcast({type:'goto_hub_select'}); window.SMA.showHubSelectPanel(); });
             bindBtn('btn-create-cancel', function() { location.reload(); });
             
             // STAGE SELECT
@@ -3587,18 +3529,6 @@ function reportError(e) {
             };
             bindStage('stage-battlefield', 'battlefield');
             bindStage('stage-final', 'final');
-            
-            // FIXED: Branching logic for SSS button
-            bindBtn('btn-sss-ready', function() { 
-                if(window.SMA.isSolo) { 
-                    window.SMA.selectedStage = window.SMA.myStageId; 
-                    window.SMA.goToCharSelectSolo(); 
-                } else {
-                    window.SMA.toggleStageReady(); 
-                }
-            });
-            bindBtn('btn-sss-start', function() { window.SMA.hostGoToCSS(); });
-            bindBtn('btn-sss-back', function() { location.reload(); });
 
             // CHAR SELECT BINDINGS
             var bindChar = function(id, charId) {
@@ -3619,16 +3549,9 @@ function reportError(e) {
             bindChar('card-hammer', 'hammer');
             bindChar('card-mirror', 'mirror');
 
-            // FIXED: Branching logic for CSS button
-            bindBtn('btn-css-ready', function() { 
-                if(window.SMA.isSolo) {
-                    window.SMA.launchSoloGame();
-                } else {
-                    window.SMA.toggleReady(); 
-                }
-            });
-            bindBtn('btn-css-start', function() { window.SMA.hostFinalStart(); });
-            bindBtn('btn-css-back', function() { location.reload(); });
+            // BATTLE HUB BUTTONS
+            bindBtn('btn-hub-ready', function() { window.SMA.toggleHubReady(); });
+            bindBtn('btn-hub-back', function() { location.reload(); });
 
             if(g('btn-sound')) {
                 var sndAction = function(e) { 

@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>スマグラ</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@700;900&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <link rel="stylesheet" href="css/style.css">
 </head>
@@ -11,14 +14,14 @@
     <div id="error-report"></div>
     <div id="version-display">v431</div>
     <div id="game-container">
-        <!-- New Notification Overlay -->
+        <!-- 通知オーバーレイ -->
         <div id="notification-overlay">
             <div id="notification-box">
                 <div id="notification-text"></div>
             </div>
         </div>
 
-        <!-- UI elements -->
+        <!-- HUD（試合中表示） -->
         <div id="hud-layer">
             <div id="p1-hud" class="hud-panel">
                 <img id="p1-icon" class="hud-icon" style="display:none">
@@ -56,48 +59,66 @@
             <div id="controls-hint" style="position:absolute; bottom:5px; width:100%; text-align:center; color:#636e72; font-size:10px;">Slide: 移動 | A: 攻撃 | Shield: シールド/回避</div>
         </div>
         
+        <!-- コンフィグオーバーレイ -->
         <div id="config-overlay" class="hidden">
             <div id="config-controls">
                 <div class="drag-hint">ボタンをドラッグして配置を変更</div>
-                <button id="btn-save-layout" class="menu-btn primary">保存して戻る</button>
+                <button id="btn-save-layout" class="menu-btn accent">保存して戻る</button>
                 <button id="btn-reset-layout" class="menu-btn">初期配置に戻す</button>
             </div>
         </div>
 
+        <!-- ===== メインメニュー ===== -->
         <div id="menu-screen" class="screen">
-            <h1>スマグラ <span id="menu-version" style="display:none;">v431</span></h1>
-            <input type="text" id="username" placeholder="名前を入力" maxlength="8">
-            <button id="btn-solo" class="menu-btn primary">ひとりで遊ぶ</button>
-            <button id="btn-online" class="menu-btn">オンライン対戦</button>
-            <button id="btn-config" class="menu-btn">ボタン配置変更</button>
-            <button id="btn-sound" class="menu-btn">サウンド: ON</button>
-            <button id="btn-help" class="menu-btn">遊び方・ルール</button>
+            <div class="title-logo">SMAGRA</div>
+            <div class="title-sub">スマッシュグラヴィティ</div>
+
+            <div id="profile-panel">
+                <div class="profile-icon">👤</div>
+                <div id="display-username" class="profile-name">名無し</div>
+                <div class="profile-edit-hint">▼ タップして名前変更</div>
+                <input type="text" id="username" placeholder="名前を入力" maxlength="8" style="display:none; position:absolute; top:0;left:0;width:100%;height:100%;opacity:0;z-index:10;">
+            </div>
+            
+            <div class="menu-buttons">
+                <button id="btn-solo" class="menu-btn p1-color">ひとりで遊ぶ</button>
+                <button id="btn-online" class="menu-btn p2-color">オンライン対戦</button>
+                <button id="btn-help" class="menu-btn">遊び方・ルール</button>
+            </div>
+
+            <div class="menu-footer">
+                <button id="btn-config" class="menu-btn small">⚙ 配置</button>
+                <button id="btn-sound" class="menu-btn small">🔊 ON</button>
+            </div>
         </div>
 
-        <div id="online-menu-screen" class="screen hidden" style="display:none; flex-direction:column; height:100%; padding:15px 10px; box-sizing:border-box;">
-            <!-- 上部ツールバー（縦持ちスマホ対応） -->
-            <div style="display:flex; justify-content:center; align-items:center; gap:8px; margin-top:30px; margin-bottom:15px; flex-shrink:0; flex-wrap:wrap;">
-                <button id="btn-create" class="menu-btn" style="margin:0; padding:10px 14px; font-size:0.85rem; width:auto; min-width:0;">部屋を作る</button>
-                <select id="room-capacity" style="background:#2d3436; color:#fff; border:1px solid #555; border-radius:8px; padding:8px 6px; font-size:0.85rem;">
+        <!-- ===== オンラインメニュー ===== -->
+        <div id="online-menu-screen" class="screen hidden">
+            <div class="online-toolbar">
+                <button id="btn-create" class="menu-btn p1-color compact">🏠 部屋を作る</button>
+                <select id="room-capacity">
                     <option value="2">2人</option>
                     <option value="3">3人</option>
                     <option value="4" selected>4人</option>
                 </select>
-                <button id="btn-join" class="menu-btn" style="margin:0; padding:10px 14px; font-size:0.85rem; width:auto; min-width:0;">ID検索</button>
-                <button id="btn-online-back" class="menu-btn" style="margin:0; padding:10px 14px; font-size:0.85rem; width:auto; min-width:0; background:#636e72; border-color:#b2bec3; color:#dfe6e9;">戻る</button>
+                <button id="btn-join" class="menu-btn compact">🔍 ID検索</button>
             </div>
 
-            <!-- 公開ルーム一覧ヘッダー -->
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-shrink:0;">
-                <span style="color:#f1c40f; font-size:1rem; font-weight:bold;">公開ルーム一覧</span>
-                <button id="btn-refresh-rooms" style="background:#34495e; border:1px solid #555; color:#fff; border-radius:8px; padding:8px 16px; font-size:0.85rem; cursor:pointer; font-weight:bold;">更新</button>
+            <!-- 公開ルーム一覧 -->
+            <div class="room-list-header">
+                <span>📡 公開ルーム一覧</span>
+                <button id="btn-refresh-rooms" class="menu-btn small">更新</button>
             </div>
-            <!-- ルーム一覧（スクロール領域） -->
-            <div id="room-list-container" class="room-list-container" style="flex:1; overflow-y:auto; min-height:0;">
+            <div id="room-list-container" class="room-list-container">
                 <div class="room-list-loading">読み込み中...</div>
+            </div>
+
+            <div class="screen-footer">
+                <button id="btn-online-back" class="menu-btn small">← 戻る</button>
             </div>
         </div>
 
+        <!-- ===== ヘルプ画面 ===== -->
         <div id="help-screen" class="screen hidden">
             <h2>遊び方・ルール</h2>
             <div id="help-content">
@@ -126,178 +147,102 @@
                     <li><b>溜め攻撃</b>: Aボタン長押しでチャージ！離すと強力な技が出るぞ！</li>
                 </ul>
             </div>
-            <button id="btn-close-help" class="menu-btn primary">閉じる</button>
+            <button id="btn-close-help" class="menu-btn accent">閉じる</button>
         </div>
 
-        <!-- STAGE SELECT SCREEN -->
-        <div id="stage-select-screen" class="screen hidden">
-            <h2>ステージ選択</h2>
-            <div style="display:flex; gap:20px; flex-wrap:wrap; justify-content:center;">
-                <div id="stage-battlefield" class="stage-card selected">
-                    <div class="stage-preview">
-                        <div style="position:relative; width:80px; height:40px;">
-                            <div style="position:absolute; bottom:0; width:80px; height:4px; background:#fff;"></div>
-                            <div style="position:absolute; top:10px; left:10px; width:20px; height:2px; background:#fff;"></div>
-                            <div style="position:absolute; top:0; left:30px; width:20px; height:2px; background:#fff;"></div>
-                            <div style="position:absolute; top:10px; right:10px; width:20px; height:2px; background:#fff;"></div>
-                        </div>
-                    </div>
-                    <div class="stage-name">戦場 (夜)</div>
+        <!-- ===== 統合バトルハブ ===== -->
+        <div id="battle-hub-screen" class="screen hidden">
+            <!-- 上部: プレイヤーカード -->
+            <div id="lobby-info" class="lobby-players-container">
+                <div id="slot-p1" class="lobby-player-card p1">
+                    <div class="player-color-bar"></div>
+                    <div id="lobby-icon-p1" class="lobby-player-avatar">👤</div>
+                    <div class="lobby-player-status"></div>
+                    <div class="player-info"><span id="lobby-name-p1" class="lobby-player-name">あなた</span></div>
                 </div>
-                <div id="stage-final" class="stage-card">
-                    <div class="stage-preview">
-                        <div style="position:relative; width:80px; height:40px;">
-                            <div style="position:absolute; bottom:0; width:80px; height:4px; background:#fff;"></div>
-                        </div>
-                    </div>
-                    <div class="stage-name">終点 (夕方)</div>
+                <div id="slot-p2" class="lobby-player-card p2">
+                    <div class="player-color-bar"></div>
+                    <div id="lobby-icon-p2" class="lobby-player-avatar">👤</div>
+                    <div class="lobby-player-status"></div>
+                    <div class="player-info"><span id="lobby-name-p2" class="lobby-player-name">待機中...</span></div>
                 </div>
-            </div>
-            <div id="stage-status-bar">
-                <div class="p-status">
-                    <div class="p-status-label" id="sss-p1-name">1P</div>
-                    <div id="sss-p1-box" class="p-status-box">選択中... <span class="check-icon">✅</span></div>
+                <div id="slot-p3" class="lobby-player-card p3" style="display:none">
+                    <div class="player-color-bar"></div>
+                    <div id="lobby-icon-p3" class="lobby-player-avatar">👤</div>
+                    <div class="lobby-player-status"></div>
+                    <div class="player-info"><span id="lobby-name-p3" class="lobby-player-name">待機中...</span></div>
                 </div>
-                <div class="p-status">
-                    <div class="p-status-label" id="sss-p2-name">2P</div>
-                    <div id="sss-p2-box" class="p-status-box">選択中... <span class="check-icon">✅</span></div>
-                </div>
-                <div class="p-status" id="sss-p3-status" style="display:none">
-                    <div class="p-status-label" id="sss-p3-name">3P</div>
-                    <div id="sss-p3-box" class="p-status-box">選択中... <span class="check-icon">✅</span></div>
-                </div>
-                <div class="p-status" id="sss-p4-status" style="display:none">
-                    <div class="p-status-label" id="sss-p4-name">4P</div>
-                    <div id="sss-p4-box" class="p-status-box">選択中... <span class="check-icon">✅</span></div>
+                <div id="slot-p4" class="lobby-player-card p4" style="display:none">
+                    <div class="player-color-bar"></div>
+                    <div id="lobby-icon-p4" class="lobby-player-avatar">👤</div>
+                    <div class="lobby-player-status"></div>
+                    <div class="player-info"><span id="lobby-name-p4" class="lobby-player-name">待機中...</span></div>
                 </div>
             </div>
-            <button id="btn-sss-ready" class="menu-btn primary">決定！</button>
-            <button id="btn-sss-start" class="menu-btn primary hidden">キャラ選択へ</button>
-            <button id="btn-sss-back" class="menu-btn">戻る</button>
+
+            <!-- 中央: ルーム情報パネル -->
+            <div id="hub-room-panel" class="selection-panel">
+                <h2>ルーム作成完了</h2>
+                <div class="room-id-box">
+                    <span>ID: <span id="room-id-display">----</span></span>
+                    <button id="btn-copy-room-id" class="icon-btn">📋</button>
+                </div>
+                <div style="color:#aaa; margin-bottom: 20px;">対戦相手を待っています...</div>
+                <button id="btn-goto-sss" class="menu-btn p2-color disabled">ステージ選択へ進む</button>
+                <button id="btn-create-cancel" class="menu-btn small" style="margin-top:20px;">解散する</button>
+            </div>
+
+            <!-- 中央: ステージ＆キャラ選択パネル -->
+            <div id="hub-select-panel" class="selection-panel">
+                <div class="section-title">STAGE SELECT</div>
+                <div class="stage-carousel" id="stage-carousel">
+                    <div id="stage-battlefield" class="stage-card selected">
+                        <div class="stage-name">戦場 (夜)</div>
+                    </div>
+                    <div id="stage-final" class="stage-card">
+                        <div class="stage-name">終点 (夕方)</div>
+                    </div>
+                </div>
+
+                <div class="section-title fighter">FIGHTER SELECT</div>
+                <div id="char-grid">
+                    <div id="card-sword" class="char-card selected"><div class="icon">⚔️</div><div class="label">剣士</div></div>
+                    <div id="card-mage" class="char-card"><div class="icon">🪄</div><div class="label">メイジ</div></div>
+                    <div id="card-brawler" class="char-card"><div class="icon">👊</div><div class="label">武闘家</div></div>
+                    <div id="card-spear" class="char-card"><div class="icon">🔱</div><div class="label">槍使い</div></div>
+                    <div id="card-hammer" class="char-card"><div class="icon">🔨</div><div class="label">ハンマー</div></div>
+                    <div id="card-mirror" class="char-card"><div class="icon">🪞</div><div class="label">鏡の魔術師</div></div>
+                </div>
+            </div>
+
+            <!-- 下部: アクションバー -->
+            <div class="bottom-action-bar" id="hub-action-bar">
+                <button id="btn-hub-back" class="menu-btn small">← 終了する</button>
+                <button id="btn-hub-ready" class="menu-btn accent" style="width:200px; margin:0;">準備完了！</button>
+            </div>
         </div>
 
-        <div id="char-select-screen" class="screen hidden">
-            <h2>キャラクター選択</h2>
-            <div id="char-grid">
-                <div id="card-sword" class="char-card selected">
-                    <div class="icon">⚔️</div>
-                    <div class="label">剣士</div>
-                </div>
-                <div id="card-mage" class="char-card">
-                    <div class="icon">🪄</div>
-                    <div class="label">メイジ</div>
-                </div>
-                <div id="card-brawler" class="char-card">
-                    <div class="icon">👊</div>
-                    <div class="label">武闘家</div>
-                </div>
-                <div id="card-spear" class="char-card">
-                    <div class="icon">🔱</div>
-                    <div class="label">槍使い</div>
-                </div>
-                <div id="card-hammer" class="char-card">
-                    <div class="icon">🔨</div>
-                    <div class="label">ハンマー使い</div>
-                </div>
-                <!-- 鏡の魔術師 -->
-                <div id="card-mirror" class="char-card">
-                    <div class="icon">🪞</div>
-                    <div class="label">鏡の魔術師</div>
-                </div>
-                <!-- 7th Slot -->
-                <div id="card-locked" class="char-card locked">
-                    <div class="icon">?</div>
-                    <div class="label">Coming Soon...</div>
-                </div>
-            </div>
-            <div id="player-status-bar">
-                <div class="p-status">
-                    <div class="p-status-label" id="css-p1-name">1P</div>
-                    <div id="css-p1-box" class="p-status-box">選択中... <span class="check-icon">✅</span></div>
-                </div>
-                <div class="p-status">
-                    <div class="p-status-label" id="css-p2-name">2P</div>
-                    <div id="css-p2-box" class="p-status-box">待機中... <span class="check-icon">✅</span></div>
-                </div>
-                <div class="p-status" id="css-p3-status" style="display:none">
-                    <div class="p-status-label" id="css-p3-name">3P</div>
-                    <div id="css-p3-box" class="p-status-box">待機中... <span class="check-icon">✅</span></div>
-                </div>
-                <div class="p-status" id="css-p4-status" style="display:none">
-                    <div class="p-status-label" id="css-p4-name">4P</div>
-                    <div id="css-p4-box" class="p-status-box">待機中... <span class="check-icon">✅</span></div>
-                </div>
-            </div>
-            <button id="btn-css-ready" class="menu-btn primary">準備完了！</button>
-            <button id="btn-css-start" class="menu-btn primary hidden">対戦開始！</button>
-            <button id="btn-css-back" class="menu-btn">戻る</button>
-        </div>
-
-        <div id="create-room-screen" class="screen hidden">
-            <h2>部屋番号</h2>
-            <div class="room-id-container">
-                <div id="room-id-display">----</div>
-                <button id="btn-copy-room-id" class="copy-btn">📋 コピー</button>
-            </div>
-            <div id="lobby-info" class="lobby-cards-container">
-                <div id="slot-p1" class="lobby-card p1-card">
-                    <img id="lobby-icon-p1" class="player-avatar" src="" style="display:none;">
-                    <div class="player-info">
-                        <span class="player-role">1P</span>
-                        <span id="lobby-name-p1" class="player-name">あなた</span>
-                    </div>
-                </div>
-                <div id="slot-p2" class="lobby-card p2-card waiting">
-                    <img id="lobby-icon-p2" class="player-avatar" src="" style="display:none;">
-                    <div class="player-info">
-                        <span class="player-role">2P</span>
-                        <span id="lobby-name-p2" class="player-name">待機中...</span>
-                    </div>
-                </div>
-                <div id="slot-p3" class="lobby-card p3-card waiting" style="display:none">
-                    <img id="lobby-icon-p3" class="player-avatar" src="" style="display:none;">
-                    <div class="player-info">
-                        <span class="player-role">3P</span>
-                        <span id="lobby-name-p3" class="player-name">待機中...</span>
-                    </div>
-                </div>
-                <div id="slot-p4" class="lobby-card p4-card waiting" style="display:none">
-                    <img id="lobby-icon-p4" class="player-avatar" src="" style="display:none;">
-                    <div class="player-info">
-                        <span class="player-role">4P</span>
-                        <span id="lobby-name-p4" class="player-name">待機中...</span>
-                    </div>
-                </div>
-            </div>
-            <div class="spec-info-container">観戦者: <span id="spec-list">なし</span></div>
-            <button id="btn-goto-sss" class="menu-btn primary disabled">ステージ選択へ</button>
-            <button id="btn-create-cancel" class="menu-btn">キャンセル</button>
-        </div>
-
-        <div id="room-list-screen" class="screen hidden">
-            <h2>公開ルーム一覧</h2>
-            <div id="room-list-container" class="room-list-container">
-                <div class="room-list-loading">読み込み中...</div>
-            </div>
-            <button id="btn-refresh-rooms" class="menu-btn primary">更新</button>
-            <button id="btn-room-list-back" class="menu-btn">戻る</button>
-        </div>
-
+        <!-- ===== ルーム参加画面 ===== -->
         <div id="join-room-screen" class="screen hidden">
-            <h2>部屋番号を入力</h2>
-            <input type="text" pattern="\d*" id="join-input" placeholder="下5桁など" maxlength="30">
-            <button id="btn-join-action" class="menu-btn primary">対戦に参加</button>
-            <button id="btn-spec-action" class="menu-btn">観戦する</button>
-            <button id="btn-join-cancel" class="menu-btn">戻る</button>
-            <div id="join-status"></div>
+            <div class="glass-panel">
+                <h2>部屋のIDを入力</h2>
+                <input type="text" pattern="\d*" id="join-input" placeholder="下5桁 または フルID" maxlength="30">
+                <button id="btn-join-action" class="menu-btn accent">対戦に参加</button>
+                <div style="display:flex; gap:10px; margin-top:20px;">
+                    <button id="btn-spec-action" class="menu-btn small">観戦する</button>
+                    <button id="btn-join-cancel" class="menu-btn small">戻る</button>
+                </div>
+            </div>
         </div>
+
+        <!-- ===== ゲームオーバー画面 ===== -->
         <div id="game-over-screen" class="screen hidden">
             <h1 id="result-text">GAME OVER</h1>
-            <button id="btn-title" class="menu-btn primary">タイトルへ</button>
+            <button id="btn-title" class="menu-btn accent">タイトルへ</button>
         </div>
     </div>
 
-    <!-- MAIN SCRIPT -->
-    <script src="js/main.js?v=431"></script>
+    <!-- メインスクリプト -->
+    <script src="js/main.js?v=432"></script>
 </body>
 </html>
