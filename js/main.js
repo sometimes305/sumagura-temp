@@ -503,7 +503,7 @@ function reportError(e) {
                 
                     // 10分以内に作られたルームのみ表示
                     var now = Date.now();
-                    var TEN_MIN = 60 * 60 * 1000; // 1時間
+                    var TEN_MIN = 10 * 60 * 1000;
                     rooms = rooms.filter(function(room) {
                         var ts = room.create_time || room.created_at || room.createTime || room.createdAt;
                         if (!ts) return true; // タイムスタンプがない場合は表示
