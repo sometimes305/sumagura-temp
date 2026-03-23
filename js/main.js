@@ -228,7 +228,10 @@ function reportError(e) {
             try {
                 var urlParams = new URLSearchParams(window.location.search);
                 var urlName = urlParams.get('username');
-                var rawIcon = urlParams.get('portrait') || urlParams.get('avatar') || urlParams.get('icon') || urlParams.get('head_img') || urlParams.get('headimgurl');
+                var rawAvatar = urlParams.get('avatar');
+                var rawPortrait = urlParams.get('portrait');
+                console.log("[SMA] URL avatar param:", rawAvatar, "portrait param:", rawPortrait);
+                var rawIcon = rawPortrait || rawAvatar || urlParams.get('icon') || urlParams.get('head_img') || urlParams.get('headimgurl');
                 var urlIcon = rawIcon ? decodeURIComponent(rawIcon) : null;
                 var autoRoomId = urlParams.get('room_id') || urlParams.get('roomid');
                 if (autoRoomId) window.SMA.gravityAutoJoinRoom = autoRoomId;
@@ -252,7 +255,7 @@ function reportError(e) {
                         if(profImg && profEmoji) { profImg.src = urlIcon; profImg.style.display = 'block'; profEmoji.style.display = 'none'; }
                     }
                     if (typeof window.SMA.saveSettings === 'function') window.SMA.saveSettings();
-                    console.log("[SMA] Gravity User Loaded from URL:", urlName, "icon:", urlIcon);
+                    console.log("[SMA] Gravity User Loaded from URL:", urlName, "rawIcon:", rawIcon, "decodedIcon:", urlIcon, "fullURL:", window.location.href);
                     return; // URLから取得できた場合はSDK呼び出しをスキップ
                 }
             } catch(e) {}
@@ -500,7 +503,7 @@ function reportError(e) {
                 
                     // 10分以内に作られたルームのみ表示
                     var now = Date.now();
-                    var TEN_MIN = 10 * 60 * 1000;
+                    var TEN_MIN = 60 * 60 * 1000; // 1時間
                     rooms = rooms.filter(function(room) {
                         var ts = room.create_time || room.created_at || room.createTime || room.createdAt;
                         if (!ts) return true; // タイムスタンプがない場合は表示
