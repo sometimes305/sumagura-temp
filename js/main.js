@@ -3644,6 +3644,7 @@ function reportError(e) {
                 window.SMA.executeHubFinalStart(activeRoles); 
             });
             bindBtn('btn-hub-ready', function() { window.SMA.toggleHubReady(); });
+            bindBtn('btn-hub-cancel-ready', function() { window.SMA.toggleHubReady(false); });
             bindBtn('btn-hub-back', function() { location.reload(); });
 
             if(g('btn-sound')) {
