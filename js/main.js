@@ -954,6 +954,27 @@ function reportError(e) {
             window.SMA.startGameMulti();
         };
 
+        // 再戦処理: プレイヤー接続を維持したままキャラ/ステージ選択に戻る
+        window.SMA.rematch = function() {
+            // ゲームオーバー画面を閉じる
+            document.getElementById('game-over-screen').classList.add('hidden');
+            // HUD・コントローラーを非表示
+            document.getElementById('hud-layer').style.display = 'none';
+            document.getElementById('controller-area').style.display = 'none';
+            // アニメーションフレームを停止
+            if(window.SMA.animationFrameId) { cancelAnimationFrame(window.SMA.animationFrameId); window.SMA.animationFrameId = null; }
+            window.SMA.gameRunning = false;
+            // バトルハブ画面を再表示
+            var hub = document.getElementById('battle-hub-screen');
+            hub.classList.remove('hidden'); hub.style.display = 'flex';
+            // キャラ/ステージ選択パネルへ
+            window.SMA.showHubSelectPanel();
+            // ゲストにrematch通知を送る
+            if(window.SMA.isHost) {
+                window.SMA.broadcast({ type: 'rematch' });
+            }
+        };
+
         window.SMA.showHubSelectPanel = function() {
             var roomPanel = document.getElementById('hub-room-panel');
             if(roomPanel) { roomPanel.classList.remove('active'); roomPanel.style.display = 'none'; }
@@ -1865,6 +1886,9 @@ function reportError(e) {
                 }
                 document.getElementById('result-text').innerText = win + ' WINS!'; 
                 document.getElementById('game-over-screen').classList.remove('hidden'); 
+                // ホストかつオンラインなら再戦ボタン表示
+                var btnRematch = document.getElementById('btn-rematch');
+                if(btnRematch) btnRematch.style.display = (window.SMA.isOnline && window.SMA.isHost) ? 'block' : 'none';
                 window.SMA.playSound('win'); 
                 window.parent.postMessage({ type: 'gameOver', winner: win }, '*'); 
                 if(window.SMA.isOnline && window.SMA.isHost) window.SMA.connections.forEach(function(c) { c.conn.send({type:'sync', gState:'GAMEOVER', win:win}); }); 
@@ -1943,6 +1967,22 @@ function reportError(e) {
             if(d.events) { d.events.forEach(function(e) { if(e.type === 'snd') window.SMA.playSound(e.key); if(e.type === 'part') window.SMA.createParticles(e.x, e.y, e.n, e.c); if(e.type === 'comet') window.SMA.triggerComet(e.x, e.y, e.dir, e.c); }); } 
             window.SMA.updateHud(); 
             if(window.SMA.gameState==='GAMEOVER') { document.getElementById('result-text').innerText = d.win; document.getElementById('game-over-screen').classList.remove('hidden'); } 
+        };
+        // rematch受信処理（ゲスト側）
+        var origHandleClient = window.SMA.handleClient;
+        window.SMA.handleClient = function(d) {
+            if(d.type === 'rematch') {
+                document.getElementById('game-over-screen').classList.add('hidden');
+                document.getElementById('hud-layer').style.display = 'none';
+                document.getElementById('controller-area').style.display = 'none';
+                if(window.SMA.animationFrameId) { cancelAnimationFrame(window.SMA.animationFrameId); window.SMA.animationFrameId = null; }
+                window.SMA.gameRunning = false;
+                var hub = document.getElementById('battle-hub-screen');
+                hub.classList.remove('hidden'); hub.style.display = 'flex';
+                window.SMA.showHubSelectPanel();
+                return;
+            }
+            origHandleClient(d);
         };
         
         // 5. FIGHTER CLASS
@@ -3596,6 +3636,7 @@ function reportError(e) {
             bindBtn('btn-join-action', function() { if(window.SMA.isGravity) window.SMA.showGravityJoinRoom(); else window.SMA.joinRoom('join'); });
             bindBtn('btn-spec-action', function() { if(window.SMA.isGravity) window.SMA.showNotification("観戦未対応",1000); else window.SMA.joinRoom('spec'); });
             bindBtn('btn-join-cancel', function() { location.reload(); });
+            bindBtn('btn-rematch', function() { window.SMA.rematch(); });
             bindBtn('btn-title', function() { location.reload(); });
             bindBtn('btn-goto-sss', function() { window.SMA.broadcast({type:'goto_hub_select'}); window.SMA.showHubSelectPanel(); });
             bindBtn('btn-create-cancel', function() { location.reload(); });
