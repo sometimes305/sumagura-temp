@@ -3644,7 +3644,20 @@ function reportError(e) {
                 window.SMA.executeHubFinalStart(activeRoles); 
             });
             bindBtn('btn-hub-ready', function() { window.SMA.toggleHubReady(); });
-            bindBtn('btn-hub-cancel-ready', function() { window.SMA.toggleHubReady(false); });
+            bindBtn('btn-hub-cancel-ready', function() { 
+                console.log("[SMA] Cancel ready clicked");
+                var overlay = document.getElementById('hub-start-overlay');
+                if(overlay) overlay.style.display = 'none';
+                window.SMA.amIReady = false;
+                var btnReady = document.getElementById('btn-hub-ready');
+                if(btnReady) { btnReady.innerText = "準備完了！"; btnReady.style.background = ""; btnReady.style.borderColor = ""; }
+                if(window.SMA.isOnline) {
+                    var hubRole = (window.SMA.myRole === 'host') ? 'p1' : window.SMA.myRole;
+                    var msg = { type:'hub_ready', role:hubRole, ready:false, stageId:window.SMA.myStageId, charId:window.SMA.myCharId };
+                    if(window.SMA.isHost) { window.SMA.updateHubState(msg); window.SMA.broadcast(msg); }
+                    else { if(window.SMA.netConn) window.SMA.netConn.send(msg); }
+                }
+            });
             bindBtn('btn-hub-back', function() { location.reload(); });
 
             if(g('btn-sound')) {
