@@ -1,16 +1,18 @@
 /* ==========================================
-   スマグラ — スマブラSP風テーマ
+   スマグラ — アニメ風バトル玩具UI
+   パッケージ画像の世界観に統一
+   青空ファンタジー / 太黒フチ / 立体感 / ビビッドカラー
    ========================================== */
 
 /* --- ベース --- */
 * { box-sizing: border-box; }
 body {
     margin: 0; padding: 0; padding-bottom: env(safe-area-inset-bottom);
-    background: #0a0a1a;
+    background: #3aa5e8;
     overflow: hidden; touch-action: none;
     font-family: 'Noto Sans JP', 'Arial', sans-serif;
     user-select: none; -webkit-user-select: none;
-    color: white;
+    color: #222;
     display: flex; justify-content: center; align-items: center;
     height: 100vh;
 }
@@ -26,7 +28,7 @@ canvas {
     background-color: #0f0f23; object-fit: contain; touch-action: none;
 }
 
-/* --- HUD（試合中） --- */
+/* --- HUD（試合中）— 変更なし --- */
 #hud-layer {
     position: absolute; top: 80px; left: 0; width: 100%;
     display: flex; justify-content: center; gap: 10px;
@@ -40,13 +42,12 @@ canvas {
     background: rgba(0,0,0,0.6); padding: 5px 12px;
     border-radius: 0; border-bottom: 3px solid rgba(255,255,255,0.3);
     flex: 1; min-width: 60px; max-width: 150px;
-    /* clip-path removed */
 }
 .name-label { font-size: 14px; font-weight: 900; margin-bottom: 2px; text-transform: uppercase; }
 .percent { font-size: 32px; font-weight: 900; font-family: 'Impact', 'Noto Sans JP', sans-serif; letter-spacing: 1px; }
 .stock { font-size: 16px; color: #dfe6e9; letter-spacing: 2px; }
 
-/* --- テキストオーバーレイ --- */
+/* --- テキストオーバーレイ（試合中）— 変更なし --- */
 #text-overlay {
     position: absolute; top: 0; left: 0; width: 100%; height: 60%;
     display: flex; justify-content: center; align-items: center;
@@ -66,17 +67,17 @@ canvas {
     pointer-events: none; z-index: 500; opacity: 0; transition: opacity 0.3s;
 }
 #notification-box {
-    background: rgba(10, 10, 30, 0.95);
-    border: 3px solid #fff; border-radius: 4px;
+    background: #fff;
+    border: 4px solid #222; border-radius: 12px;
     padding: 30px 50px; text-align: center;
-    box-shadow: 0 0 40px rgba(0,0,0,0.8);
+    box-shadow: 0 6px 0 #222, 0 10px 30px rgba(0,0,0,0.4);
     transform: scale(0.9); transition: transform 0.3s;
 }
 #notification-overlay.active { opacity: 1; }
 #notification-overlay.active #notification-box { transform: scale(1); }
-#notification-text { font-size: 24px; font-weight: 900; color: #fff; line-height: 1.5; white-space: pre-line; }
+#notification-text { font-size: 22px; font-weight: 900; color: #222; line-height: 1.5; white-space: pre-line; }
 
-/* --- コントローラー --- */
+/* --- コントローラー（試合中）— 変更なし --- */
 #controller-area {
     position: absolute; top: 0; left: 0; width: 100%; height: 100%;
     background-color: transparent; pointer-events: none; z-index: 50; touch-action: none;
@@ -108,62 +109,56 @@ canvas {
 
 
 /* ========================================
-   画面共通 — スマブラSP風スクリーン
+   画面共通 — 青空ファンタジー背景
    ======================================== */
 .screen {
     position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-    /* 斜めストライプ背景（スマブラSP風） */
+    /* 青空グラデーション＋薄い雲パターン */
     background:
-        repeating-linear-gradient(
-            -45deg,
-            rgba(255,255,255,0.015) 0px,
-            rgba(255,255,255,0.015) 2px,
-            transparent 2px,
-            transparent 12px
-        ),
-        linear-gradient(135deg, #0d0d2b 0%, #1a1040 40%, #0a0a1e 100%);
+        radial-gradient(ellipse at 30% 20%, rgba(255,255,255,0.25) 0%, transparent 50%),
+        radial-gradient(ellipse at 70% 60%, rgba(255,255,255,0.15) 0%, transparent 40%),
+        linear-gradient(180deg, #4db8ff 0%, #7ecbff 30%, #b3e0ff 60%, #d4edff 100%);
     display: flex; flex-direction: column;
     justify-content: flex-start; align-items: center;
-    color: white; z-index: 200;
+    color: #222; z-index: 200;
     overflow-y: auto; -webkit-overflow-scrolling: touch;
     pointer-events: auto;
     padding: 20px 0; box-sizing: border-box;
 }
 .hidden { display: none !important; }
 
-/* --- タイトルロゴ（スマブラ風の太い文字） --- */
+/* --- タイトルロゴ（黄色いバトル風の太い文字） --- */
 .title-logo {
     font-size: 56px; font-weight: 900;
     font-family: 'Impact', 'Noto Sans JP', sans-serif;
-    color: #fff; letter-spacing: 12px;
+    color: #ffe033; letter-spacing: 8px;
+    -webkit-text-stroke: 3px #222;
     text-shadow:
-        0 0 10px rgba(100,180,255,0.5),
-        3px 3px 0 #1a1a4a,
-        -1px -1px 0 #1a1a4a;
+        4px 4px 0 #c8860a,
+        6px 6px 0 rgba(0,0,0,0.3);
     margin: 10px 0 0;
-    /* 金属光沢風グラデーション */
-    background: linear-gradient(180deg, #fff 0%, #a8c8ff 50%, #6090d0 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    filter: drop-shadow(3px 3px 0 #0a0a2a);
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
 }
 .title-sub {
-    font-size: 14px; font-weight: 700;
-    color: #8090b0; letter-spacing: 6px;
+    font-size: 14px; font-weight: 900;
+    color: #fff; letter-spacing: 6px;
+    -webkit-text-stroke: 1px #444;
+    text-shadow: 2px 2px 0 rgba(0,0,0,0.4);
     margin-bottom: 20px;
 }
 
 h1 {
     margin: 10px 0 20px; font-size: 44px;
     color: #fff; text-align: center;
-    text-shadow: 3px 3px 0 #0a0a2a;
+    -webkit-text-stroke: 2px #222;
+    text-shadow: 3px 3px 0 rgba(0,0,0,0.4);
     font-family: 'Impact', 'Noto Sans JP', sans-serif;
     letter-spacing: 5px; flex-shrink: 0;
 }
 h2 {
-    font-size: 24px; color: #fff;
-    text-shadow: 2px 2px 0 #0a0a2a;
+    font-size: 22px; color: #fff;
+    -webkit-text-stroke: 1.5px #333;
+    text-shadow: 2px 2px 0 rgba(0,0,0,0.3);
     margin-bottom: 15px; text-transform: uppercase;
     letter-spacing: 3px; text-align: center; width: 100%; flex-shrink: 0;
     font-weight: 900;
@@ -171,87 +166,93 @@ h2 {
 
 
 /* ================================================
-   ボタン — スマブラ風（斜めカット + ベタ塗り + 太枠）
+   ボタン — 太フチ＋立体＋ビビッドカラー（玩具風）
    ================================================ */
 .menu-btn {
-    background: rgba(30, 30, 60, 0.8);
-    border: 3px solid rgba(255,255,255,0.25);
+    background: #fff;
+    border: 3.5px solid #222;
     padding: 14px 0; width: 85%; max-width: 320px;
-    margin: 8px 0; color: #fff;
+    margin: 8px 0; color: #222;
     font-size: 18px; font-weight: 900;
-    border-radius: 4px;
+    border-radius: 10px;
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: all 0.12s ease;
     text-align: center; flex-shrink: 0;
     z-index: 210; position: relative; overflow: hidden;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+    box-shadow: 0 5px 0 #bbb, 0 8px 15px rgba(0,0,0,0.2);
     letter-spacing: 2px;
-    /* 斜めカット（スマブラ風） */
-    /* clip-path removed */
     font-family: 'Noto Sans JP', sans-serif;
 }
 .menu-btn:active, .menu-btn.pressed {
-    transform: scale(0.96);
-    filter: brightness(1.3);
-    box-shadow: inset 0 2px 8px rgba(0,0,0,0.5);
+    transform: translateY(4px);
+    box-shadow: 0 1px 0 #999, 0 3px 6px rgba(0,0,0,0.15);
 }
 
-/* プレイヤーカラーボタン */
+/* プレイヤーカラーボタン — ビビッドカラー */
 .menu-btn.p1-color {
-    background: linear-gradient(135deg, #c0392b 0%, #e74c3c 100%);
-    border-color: #ff6b6b;
-    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+    background: linear-gradient(180deg, #ff6b6b 0%, #e74c3c 100%);
+    border-color: #222;
+    color: #fff;
+    -webkit-text-stroke: 0.5px #8b0000;
+    box-shadow: 0 5px 0 #a52a2a, 0 8px 15px rgba(0,0,0,0.25);
 }
 .menu-btn.p2-color {
-    background: linear-gradient(135deg, #2472a4 0%, #3498db 100%);
-    border-color: #74b9ff;
-    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+    background: linear-gradient(180deg, #74b9ff 0%, #3498db 100%);
+    border-color: #222;
+    color: #fff;
+    -webkit-text-stroke: 0.5px #1a5276;
+    box-shadow: 0 5px 0 #1a6dad, 0 8px 15px rgba(0,0,0,0.25);
 }
 .menu-btn.accent {
-    background: linear-gradient(135deg, #f39c12 0%, #f1c40f 100%);
-    border-color: #ffeaa7;
-    color: #1a1a2e;
-    text-shadow: none;
+    background: linear-gradient(180deg, #ffe066 0%, #f1c40f 100%);
+    border-color: #222;
+    color: #222;
+    -webkit-text-stroke: 0;
+    box-shadow: 0 5px 0 #c8960a, 0 8px 15px rgba(0,0,0,0.25);
 }
 .menu-btn.disabled { opacity: 0.35; pointer-events: none; filter: grayscale(0.8); cursor: default; }
 .menu-btn.small {
     padding: 8px 16px; font-size: 13px; width: auto;
     max-width: none; margin: 0; min-width: 80px;
-    /* clip-path removed */ border-radius: 4px;
+    border-radius: 8px;
+    box-shadow: 0 3px 0 #bbb, 0 5px 10px rgba(0,0,0,0.15);
 }
 .menu-btn.compact {
     padding: 10px 16px; font-size: 14px; width: auto;
     min-width: 0; margin: 0;
-    /* clip-path removed */
+    border-radius: 8px;
 }
 
 
 /* --- 入力フィールド --- */
 input[type="text"], input[type="number"] {
     padding: 12px; font-size: 18px;
-    border-radius: 4px; border: 2px solid rgba(255,255,255,0.3);
+    border-radius: 8px; border: 3px solid #222;
     margin-bottom: 15px; text-align: center; width: 250px;
-    background: rgba(10,10,30,0.8); color: white; flex-shrink: 0;
+    background: #fff; color: #222; flex-shrink: 0;
     font-weight: 700; transition: 0.2s;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.1), 0 3px 0 #ccc;
 }
 input[type="text"]:focus {
-    border-color: #3498db; box-shadow: 0 0 12px rgba(52,152,219,0.4); outline: none;
+    border-color: #3498db; box-shadow: 0 0 0 3px rgba(52,152,219,0.3), inset 0 2px 4px rgba(0,0,0,0.1); outline: none;
 }
 select {
-    background: rgba(10,10,30,0.8); color: #fff;
-    border: 2px solid rgba(255,255,255,0.3); border-radius: 4px;
+    background: #fff; color: #222;
+    border: 3px solid #222; border-radius: 8px;
     padding: 8px 12px; font-size: 14px; font-weight: 700; outline: none;
+    box-shadow: 0 3px 0 #ccc;
 }
 
-/* --- ガラスパネル（参加画面等で使用） --- */
+/* --- ガラスパネル → 白パネル（玩具風） --- */
 .glass-panel {
-    background: rgba(15, 15, 40, 0.9);
-    border: 2px solid rgba(255,255,255,0.15);
-    border-radius: 4px;
-    box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+    background: rgba(255, 255, 255, 0.92);
+    border: 3.5px solid #222;
+    border-radius: 14px;
+    box-shadow: 0 6px 0 #bbb, 0 10px 25px rgba(0,0,0,0.2);
     padding: 25px; width: 90%; max-width: 400px;
     display: flex; flex-direction: column; align-items: center;
     margin-bottom: 20px; flex-shrink: 0;
+    color: #222;
 }
 
 /* --- プロフィールパネル --- */
@@ -260,15 +261,16 @@ select {
     align-items: center; justify-content: center;
     margin-bottom: 25px; cursor: pointer; position: relative;
     width: auto; max-width: 280px; padding: 12px 30px;
-    background: rgba(20,20,50,0.6);
-    border: 2px solid rgba(255,255,255,0.15);
-    border-radius: 4px;
+    background: rgba(255,255,255,0.85);
+    border: 3px solid #222;
+    border-radius: 12px;
+    box-shadow: 0 4px 0 #bbb, 0 6px 12px rgba(0,0,0,0.15);
     transition: 0.2s;
 }
-#profile-panel:hover { border-color: #3498db; }
+#profile-panel:hover { border-color: #3498db; transform: translateY(-2px); }
 .profile-icon { font-size: 36px; margin-bottom: 6px; }
-.profile-name { font-size: 20px; font-weight: 900; border-bottom: 2px solid rgba(255,255,255,0.3); padding-bottom: 3px; }
-.profile-edit-hint { font-size: 10px; color: #666; margin-top: 4px; }
+.profile-name { font-size: 20px; font-weight: 900; color: #222; border-bottom: 3px solid #222; padding-bottom: 3px; }
+.profile-edit-hint { font-size: 10px; color: #888; margin-top: 4px; }
 
 /* --- メニュー構造 --- */
 .menu-buttons { display: flex; flex-direction: column; align-items: center; width: 100%; gap: 4px; }
@@ -288,46 +290,48 @@ select {
 }
 .lobby-player-card {
     flex: 1; max-width: 120px; min-width: 55px;
-    background: rgba(15,15,40,0.8);
-    border: 3px solid rgba(255,255,255,0.15);
-    border-radius: 4px;
+    background: rgba(255,255,255,0.88);
+    border: 3px solid #222;
+    border-radius: 10px;
     display: flex; flex-direction: column; align-items: center;
-    padding: 10px 5px; transition: 0.2s;
+    padding: 10px 5px; transition: 0.15s;
     position: relative; overflow: hidden;
+    box-shadow: 0 4px 0 #bbb, 0 6px 10px rgba(0,0,0,0.15);
 }
 /* プレイヤーカラーバー（上辺） */
 .player-color-bar {
-    position: absolute; top: 0; left: 0; width: 100%; height: 4px;
-    background: rgba(255,255,255,0.2);
+    position: absolute; top: 0; left: 0; width: 100%; height: 5px;
+    background: #ccc;
 }
 .lobby-player-card.p1 .player-color-bar { background: #e74c3c; }
 .lobby-player-card.p2 .player-color-bar { background: #3498db; }
 .lobby-player-card.p3 .player-color-bar { background: #f1c40f; }
 .lobby-player-card.p4 .player-color-bar { background: #2ecc71; }
 
-.lobby-player-card.active { border-color: #3498db; background: rgba(52,152,219,0.15); }
-.lobby-player-card.ready { border-color: #2ecc71; background: rgba(46,204,113,0.15); }
+.lobby-player-card.active { border-color: #3498db; background: rgba(200,230,255,0.9); }
+.lobby-player-card.ready { border-color: #2ecc71; background: rgba(200,255,220,0.9); }
 
 .lobby-player-avatar {
-    width: 48px; height: 48px; border-radius: 4px;
-    border: 2px solid #444; background: #111;
+    width: 48px; height: 48px; border-radius: 50%;
+    border: 3px solid #222; background: #eee;
     object-fit: contain; margin: 8px 0 6px;
     font-size: 22px; display: flex; justify-content: center; align-items: center;
-    color: #555; transition: 0.2s;
+    color: #999; transition: 0.2s;
 }
 .lobby-player-card.ready .lobby-player-avatar { border-color: #2ecc71; }
 .lobby-player-name {
     font-size: 11px; white-space: nowrap; overflow: hidden;
     text-overflow: ellipsis; width: 100%; text-align: center;
-    color: #ccc; font-weight: 900;
+    color: #333; font-weight: 900;
 }
 .lobby-player-status {
     position: absolute; top: 6px; right: -2px;
     background: #e74c3c; color: white;
     font-size: 9px; font-weight: 900;
-    padding: 2px 6px; border-radius: 2px;
-    display: none; box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    padding: 2px 6px; border-radius: 4px;
+    display: none; box-shadow: 0 2px 0 rgba(0,0,0,0.3);
     text-transform: uppercase;
+    border: 2px solid #222;
 }
 .lobby-player-card.is-host .lobby-player-status { display: block; background: #e67e22; }
 .lobby-player-card.ready .lobby-player-status { display: block; background: #2ecc71; }
@@ -346,18 +350,23 @@ select {
 
 .section-title {
     font-size: 14px; font-weight: 900;
-    color: #3498db; letter-spacing: 4px;
+    color: #fff; letter-spacing: 4px;
     text-transform: uppercase;
     margin-bottom: 8px;
-    padding: 4px 20px;
-    border-left: 4px solid #3498db;
-    background: rgba(52,152,219,0.1);
+    padding: 5px 20px;
+    border-left: 5px solid #222;
+    background: linear-gradient(90deg, #3498db, #5dade2);
+    border-radius: 0 6px 6px 0;
     align-self: flex-start;
     margin-left: 20px;
+    -webkit-text-stroke: 0.5px #1a5276;
+    box-shadow: 0 3px 0 #1a6dad;
 }
 .section-title.fighter {
-    color: #e74c3c; border-left-color: #e74c3c;
-    background: rgba(231,76,60,0.1);
+    background: linear-gradient(90deg, #e74c3c, #ec7063);
+    border-left-color: #222;
+    -webkit-text-stroke: 0.5px #8b0000;
+    box-shadow: 0 3px 0 #a52a2a;
     margin-top: 15px;
 }
 
@@ -369,45 +378,49 @@ select {
 }
 .stage-card {
     width: 170px; height: 100px;
-    background: #111; border: 3px solid rgba(255,255,255,0.15);
-    border-radius: 4px;
+    background: #ddd; border: 3px solid #222;
+    border-radius: 10px;
     display: flex; flex-direction: column;
     justify-content: flex-end; align-items: center;
     cursor: pointer; transition: 0.15s; position: relative; overflow: hidden;
-    box-shadow: 0 3px 8px rgba(0,0,0,0.5);
+    box-shadow: 0 4px 0 #999, 0 6px 10px rgba(0,0,0,0.2);
 }
 .stage-card.selected {
     border-color: #f1c40f;
-    box-shadow: 0 0 15px rgba(241,196,15,0.5);
+    border-width: 4px;
+    box-shadow: 0 4px 0 #c8960a, 0 0 20px rgba(241,196,15,0.5);
     transform: translateY(-4px);
 }
 .stage-card .stage-name {
     font-weight: 900; font-size: 14px;
     padding: 6px; width: 100%; text-align: center;
-    background: rgba(0,0,0,0.75); color: #fff;
+    background: rgba(0,0,0,0.7); color: #fff;
+    border-radius: 0 0 7px 7px;
 }
 
 /* --- キャラカード --- */
 .char-card {
     width: 85px; height: 85px;
-    background: rgba(15,15,40,0.8); border: 3px solid rgba(255,255,255,0.15);
-    border-radius: 4px;
+    background: rgba(255,255,255,0.88); border: 3px solid #222;
+    border-radius: 10px;
     display: flex; flex-direction: column;
     justify-content: center; align-items: center;
     cursor: pointer; transition: 0.15s; position: relative;
+    box-shadow: 0 4px 0 #bbb, 0 6px 10px rgba(0,0,0,0.15);
 }
 .char-card.selected {
     border-color: #3498db;
-    box-shadow: 0 0 12px rgba(52,152,219,0.5);
-    background: rgba(52,152,219,0.15);
+    border-width: 4px;
+    box-shadow: 0 4px 0 #1a6dad, 0 0 15px rgba(52,152,219,0.5);
+    background: rgba(200,230,255,0.95);
     transform: scale(1.08);
 }
 .char-card .icon {
     font-size: 34px; margin-bottom: 3px;
-    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
 }
 .char-card .label {
-    font-size: 10px; font-weight: 900; color: #ccc;
+    font-size: 10px; font-weight: 900; color: #444;
     width: 100%; text-align: center;
 }
 
@@ -415,11 +428,12 @@ select {
 .bottom-action-bar {
     width: 100%; max-width: 700px;
     padding: 12px 20px;
-    background: rgba(10,10,30,0.9);
-    border-top: 3px solid rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.85);
+    border-top: 3px solid #222;
     position: sticky; bottom: 0;
     display: flex; justify-content: space-between; align-items: center;
     box-sizing: border-box; flex-shrink: 0; z-index: 250;
+    box-shadow: 0 -4px 10px rgba(0,0,0,0.1);
 }
 
 
@@ -434,8 +448,9 @@ select {
 .room-list-header {
     display: flex; justify-content: space-between; align-items: center;
     width: 95%; max-width: 500px; margin: 0 auto 8px;
-    font-size: 14px; font-weight: 900; color: #f1c40f;
+    font-size: 14px; font-weight: 900; color: #222;
     letter-spacing: 1px;
+    -webkit-text-stroke: 0.5px #666;
 }
 
 #room-list-container {
@@ -443,37 +458,43 @@ select {
     display: flex; flex-direction: column; align-items: center; padding: 8px 0;
 }
 .room-card {
-    background: rgba(20,20,50,0.8);
-    border: 2px solid rgba(255,255,255,0.1);
-    border-radius: 4px;
+    background: rgba(255,255,255,0.9);
+    border: 3px solid #222;
+    border-radius: 10px;
     padding: 12px 18px; width: 95%; max-width: 500px;
     display: flex; justify-content: space-between; align-items: center;
     cursor: pointer; transition: 0.15s; margin-bottom: 10px;
-    box-sizing: border-box; box-shadow: 0 3px 8px rgba(0,0,0,0.4);
+    box-sizing: border-box;
+    box-shadow: 0 4px 0 #bbb, 0 6px 10px rgba(0,0,0,0.15);
 }
 .room-card:hover {
-    border-color: #3498db; background: rgba(52,152,219,0.1);
-    transform: translateY(-2px);
+    border-color: #3498db;
+    transform: translateY(-3px);
+    box-shadow: 0 6px 0 #1a6dad, 0 8px 15px rgba(0,0,0,0.2);
 }
-.room-card .room-title { font-size: 16px; font-weight: 900; color: #fff; }
-.room-card .room-host { font-size: 13px; color: #888; margin-top: 3px; }
+.room-card .room-title { font-size: 16px; font-weight: 900; color: #222; }
+.room-card .room-host { font-size: 13px; color: #666; margin-top: 3px; }
 .room-card .room-count {
     font-size: 13px; font-weight: 900; color: #fff;
-    background: #e74c3c; padding: 5px 10px; border-radius: 3px;
+    background: linear-gradient(180deg, #ff6b6b, #e74c3c);
+    padding: 6px 12px; border-radius: 6px;
+    border: 2px solid #222;
+    box-shadow: 0 3px 0 #a52a2a;
 }
-.room-list-loading, .room-list-empty { color: #555; font-size: 14px; text-align: center; margin-top: 40px; }
+.room-list-loading, .room-list-empty { color: #888; font-size: 14px; text-align: center; margin-top: 40px; font-weight: 700; }
 
 /* --- ルームIDボックス --- */
 .room-id-box {
-    background: rgba(10,10,30,0.8);
-    border: 2px dashed #3498db; border-radius: 4px;
+    background: rgba(255,255,255,0.9);
+    border: 3px dashed #3498db; border-radius: 10px;
     padding: 10px 20px; font-size: 22px;
-    color: #3498db; font-weight: 900;
+    color: #2471a3; font-weight: 900;
     font-family: 'Courier New', monospace; letter-spacing: 3px;
     display: flex; align-items: center; gap: 15px; margin-bottom: 20px;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.08);
 }
 .icon-btn {
-    background: none; border: none; color: #fff; font-size: 18px;
+    background: none; border: none; color: #222; font-size: 18px;
     cursor: pointer; padding: 5px; opacity: 0.6; transition: 0.2s;
 }
 .icon-btn:hover { opacity: 1; transform: scale(1.1); color: #3498db; }
@@ -482,16 +503,17 @@ select {
 /* --- ヘルプ画面 --- */
 #help-content {
     width: 90%; max-width: 550px;
-    background: rgba(10,10,30,0.8);
-    border: 2px solid rgba(255,255,255,0.1);
-    border-radius: 4px; padding: 20px;
+    background: rgba(255,255,255,0.92);
+    border: 3px solid #222;
+    border-radius: 12px; padding: 20px;
     text-align: left; max-height: 75%;
-    overflow-y: auto; color: #ddd; line-height: 1.7; font-size: 14px;
+    overflow-y: auto; color: #333; line-height: 1.7; font-size: 14px;
+    box-shadow: 0 5px 0 #bbb, 0 8px 15px rgba(0,0,0,0.15);
 }
 #help-content h3 {
-    border-bottom: 2px solid rgba(255,255,255,0.15);
+    border-bottom: 3px solid #222;
     padding-bottom: 4px; margin-top: 18px;
-    color: #3498db; font-weight: 900;
+    color: #2471a3; font-weight: 900;
 }
 #help-content ul { padding-left: 18px; }
 
@@ -506,23 +528,25 @@ select {
 }
 #config-controls { pointer-events: auto; text-align: center; }
 .drag-hint {
-    color: #f1c40f; font-size: 18px; font-weight: 900;
+    color: #ffe066; font-size: 18px; font-weight: 900;
     margin-bottom: 20px;
-    text-shadow: 0 0 8px rgba(241,196,15,0.3);
+    -webkit-text-stroke: 1px #222;
+    text-shadow: 2px 2px 0 rgba(0,0,0,0.5);
 }
 
 
 /* --- エラー・バージョン --- */
 #error-report {
     position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
-    background: rgba(0,0,0,0.95); border: 3px solid #e74c3c;
-    color: white; padding: 20px; z-index: 99999;
+    background: #fff; border: 4px solid #e74c3c;
+    color: #222; padding: 20px; z-index: 99999;
     display: none; text-align: left; max-width: 90%;
-    word-wrap: break-word; border-radius: 4px;
+    word-wrap: break-word; border-radius: 10px;
+    box-shadow: 0 5px 0 #a52a2a, 0 8px 20px rgba(0,0,0,0.3);
 }
 #version-display {
     position: absolute; bottom: 5px; right: 8px;
-    color: rgba(255,255,255,0.15); font-size: 11px;
+    color: rgba(0,0,0,0.15); font-size: 11px;
     pointer-events: none; z-index: 100; font-family: monospace;
 }
 
