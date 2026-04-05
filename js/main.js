@@ -1084,8 +1084,10 @@ function reportError(e) {
                 if(p2) gotoSssBtn.classList.remove('disabled'); else gotoSssBtn.classList.add('disabled');
             }
             
+            var maxP = parseInt(document.getElementById('room-capacity') ? document.getElementById('room-capacity').value : 2) || 2;
             var lobbyMsg = {
                 type:'lobby', 
+                maxPlayers: maxP,
                 p1:window.SMA.localPlayerName, p1Icon:window.SMA.localPlayerIcon,
                 p2:p2?p2.name:null, p2Icon:p2?p2.icon:null,
                 p3:p3?p3.name:null, p3Icon:p3?p3.icon:null,
@@ -1152,6 +1154,9 @@ function reportError(e) {
                         }
                     }
                 };
+                // 最大人数に応じたスロット表示（ゲスト側）
+                if(d.maxPlayers) window.SMA.showPlayerSlots(d.maxPlayers);
+
                 updateSlot(1, d.p1, d.p1Icon);
                 updateSlot(2, d.p2, d.p2Icon);
                 updateSlot(3, d.p3, d.p3Icon);
