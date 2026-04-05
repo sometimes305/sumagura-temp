@@ -916,6 +916,7 @@ function reportError(e) {
 
             var allReady = activeRoles.every(r => window.SMA.hubData[r] && window.SMA.hubData[r].ready);
             var btnStart = document.getElementById('hub-start-overlay');
+            console.log("[SMA] checkHubAllReady:", "roles="+JSON.stringify(activeRoles), "allReady="+allReady, "overlay="+!!btnStart, "hubData="+JSON.stringify(window.SMA.hubData));
             if(allReady) { 
                 if(btnStart) btnStart.style.display = 'flex';
             } else {
