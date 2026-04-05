@@ -216,10 +216,14 @@
                 </div>
             </div>
 
+            <!-- 試合開始オーバーレイ（画面中央） -->
+            <div id="hub-start-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; z-index:9999; background:rgba(0,0,0,0.6); justify-content:center; align-items:center;">
+                <button id="btn-hub-start" class="menu-btn p2-color" style="width:280px; font-size:1.5rem; padding:20px 30px; animation: pulse 1s infinite alternate;">試合開始！</button>
+            </div>
+
             <!-- 下部: アクションバー -->
             <div class="bottom-action-bar" id="hub-action-bar" style="display:none;">
                 <button id="btn-hub-back" class="menu-btn small">← 終了する</button>
-                <button id="btn-hub-start" class="menu-btn p2-color" style="width:200px; margin:0; display:none; animation: pulse 1s infinite alternate;">試合開始！</button>
                 <button id="btn-hub-ready" class="menu-btn accent" style="width:200px; margin:0;">準備完了！</button>
             </div>
         </div>

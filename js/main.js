@@ -915,7 +915,7 @@ function reportError(e) {
             if(window.SMA.connections.find(c => c.role === 'p4')) activeRoles.push('p4');
 
             var allReady = activeRoles.every(r => window.SMA.hubData[r] && window.SMA.hubData[r].ready);
-            var btnStart = document.getElementById('btn-hub-start');
+            var btnStart = document.getElementById('hub-start-overlay');
             if(allReady) { 
                 if(btnStart) btnStart.style.display = 'block';
             } else {
@@ -979,7 +979,7 @@ function reportError(e) {
             if(defChar) defChar.classList.add('selected');
             var btn = document.getElementById('btn-hub-ready');
             if(btn) { btn.innerText = "準備完了！"; btn.style.background = ""; btn.style.borderColor = ""; }
-            var btnSt = document.getElementById('btn-hub-start');
+            var btnSt = document.getElementById('hub-start-overlay');
             if(btnSt) btnSt.style.display = 'none';
         };
 
