@@ -418,6 +418,13 @@ function reportError(e) {
             // P1ロビーカードを正しく更新
             var nameEl1 = document.getElementById('lobby-name-p1');
             if(nameEl1) nameEl1.innerText = window.SMA.localPlayerName;
+            var iconEl1 = document.getElementById('lobby-icon-p1');
+            if(iconEl1 && window.SMA.localPlayerIcon) {
+                iconEl1.style.backgroundImage = 'url(' + window.SMA.localPlayerIcon + ')';
+                iconEl1.style.backgroundSize = 'cover';
+                iconEl1.style.backgroundPosition = 'center';
+                iconEl1.innerText = '';
+            }
             // 最大人数に応じたカード表示
             var maxP = parseInt(document.getElementById('room-capacity').value || 2);
             window.SMA.showPlayerSlots(maxP); try { window.SMA.netPeer = new Peer(window.SMA.ID_PREFIX+rid); window.SMA.netPeer.on('connection', function(c) { window.SMA.handleConn(c); }); window.SMA.netPeer.on('error', function(e) { 
@@ -451,8 +458,10 @@ function reportError(e) {
             var iconEl = document.getElementById('lobby-icon-p1');
             if(nameEl) nameEl.innerText = window.SMA.localPlayerName;
             if(iconEl && window.SMA.localPlayerIcon) {
-                iconEl.src = window.SMA.localPlayerIcon;
-                iconEl.style.display = 'inline-block';
+                iconEl.style.backgroundImage = 'url(' + window.SMA.localPlayerIcon + ')';
+                iconEl.style.backgroundSize = 'cover';
+                iconEl.style.backgroundPosition = 'center';
+                iconEl.innerText = '';
             }
 
             try {
@@ -996,10 +1005,6 @@ function reportError(e) {
             var el3 = document.getElementById('p3-name'); if(el3) el3.innerText = s.p3 || "3P";
             var el4 = document.getElementById('p4-name'); if(el4) el4.innerText = s.p4 || "4P";
 
-            // ゲーム中の大きなアイコンは非表示にする（邪魔なため）
-            ['p1-icon','p2-icon','p3-icon','p4-icon'].forEach(function(id) {
-                var el = document.getElementById(id); if(el) el.style.display = 'none';
-            });
 
             window.SMA.bootGame(); 
         };
@@ -1899,20 +1904,26 @@ function reportError(e) {
                     }
                 }
                 if(stkEl) {
-                    var icon = getStockIcon(player.charId);
-                    stkEl.innerText = icon.repeat(Math.max(0, player.stocks));
-                }
-                
-                // アイコン反映
-                if (iconEl && window.SMA.lobbyState) {
-                    var iconUrl = window.SMA.lobbyState['p' + (hi+1) + 'Icon'];
-                    if (iconUrl) {
-                        if (iconEl.src !== iconUrl) iconEl.src = iconUrl;
-                        iconEl.style.display = 'block';
+                    var pIconUrl = null;
+                    if (window.SMA.lobbyState) {
+                        pIconUrl = window.SMA.lobbyState['p' + (hi+1) + 'Icon'];
+                    }
+                    if (pIconUrl) {
+                        // プレイヤーアイコン画像でストック表示
+                        var stockHtml = '';
+                        for (var si = 0; si < Math.max(0, player.stocks); si++) {
+                            stockHtml += '<img src="' + pIconUrl + '" style="width:16px;height:16px;border-radius:50%;margin:0 1px;vertical-align:middle;">';
+                        }
+                        stkEl.innerHTML = stockHtml;
                     } else {
-                        iconEl.style.display = 'none';
+                        // アイコンなし時はキャラ絵文字にフォールバック
+                        var icon = getStockIcon(player.charId);
+                        stkEl.innerText = icon.repeat(Math.max(0, player.stocks));
                     }
                 }
+                
+                // アイコンはストック表示に統合したため、hud-icon要素は非表示のまま
+                if (iconEl) iconEl.style.display = 'none';
             }
             var elOvlMsg = document.getElementById('overlay-msg'); var elTxtOvl = document.getElementById('text-overlay'); 
             if(window.SMA.gameState==='COUNTDOWN') { var t = '3'; if(window.SMA.countdownTimer<60)t='1'; else if(window.SMA.countdownTimer<120)t='2'; if(elOvlMsg) elOvlMsg.innerText=t; if(elTxtOvl) elTxtOvl.style.opacity=1; } 
