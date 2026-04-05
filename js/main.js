@@ -534,7 +534,7 @@ function reportError(e) {
                         var card = document.createElement('div');
                         card.className = 'room-card';
                         var roomId = String(room.room_id || room.roomId || '');
-                        var playerCount = room.current_players || room.player_count || room.online_users || room.cur_user_count || room.user_count || 0;
+                        var playerCount = room.gamer_num || room.current_players || room.player_count || room.online_users || room.cur_user_count || room.user_count || 0;
                         var maxPlayers = room.max_players || room.max_user_count || 4;
                         
                         var timeStr = "";
