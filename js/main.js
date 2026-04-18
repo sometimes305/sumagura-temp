@@ -1730,7 +1730,35 @@ function reportError(e) {
                         }
                     });
                 } catch(e) {}
- for(var i=0; i<window.SMA.projectiles.length; i++) { var p = window.SMA.projectiles[i]; if(p.type === 'fire_trap') { window.SMA.ctx.save(); for(var k=0; k<3; k++) { window.SMA.ctx.fillStyle = "rgba(255, " + (Math.floor(Math.random()*150)+50) + ", 0, " + (0.5+Math.random()*0.5) + ")"; var w = p.w * (0.8+Math.random()*0.4); var h = p.h * (1.0+Math.random()*0.5); var fx = p.x + (Math.random()-0.5)*20; window.SMA.ctx.beginPath(); window.SMA.ctx.moveTo(fx-w/2, p.y+40); window.SMA.ctx.lineTo(fx+w/2, p.y+40); window.SMA.ctx.lineTo(fx, p.y-h); window.SMA.ctx.fill(); } window.SMA.ctx.restore(); } else if (p.type === 'spear_throw') { try { window.SMA.ctx.save(); window.SMA.ctx.translate(p.x, p.y); window.SMA.ctx.rotate(p.angle); window.SMA.ctx.translate(-35, 0); window.SMA.drawTrident(window.SMA.ctx, 0, 0, 0, p.color); window.SMA.ctx.restore(); } catch(e){} } else if (p.type === 'shockwave') { window.SMA.ctx.fillStyle = "#ffeaa7"; window.SMA.ctx.beginPath(); window.SMA.ctx.arc(p.x, p.y, p.w/2, 0, Math.PI, true); window.SMA.ctx.fill(); } else { window.SMA.ctx.fillStyle = p.color; window.SMA.ctx.beginPath(); window.SMA.ctx.arc(p.x, p.y, p.w/2, 0, Math.PI*2); window.SMA.ctx.fill(); } } window.SMA.drawComets(window.SMA.ctx); window.SMA.updateParticles(window.SMA.ctx); window.SMA.ctx.restore(); } window.SMA.updateHud(); } catch(e) { reportError("Loop Error: " + e); } window.SMA.animationFrameId = requestAnimationFrame(window.SMA.gameLoop); };
+ for(var i=0; i<window.SMA.projectiles.length; i++) { var p = window.SMA.projectiles[i]; if(p.type === 'fire_trap') { window.SMA.ctx.save(); for(var k=0; k<3; k++) { window.SMA.ctx.fillStyle = "rgba(255, " + (Math.floor(Math.random()*150)+50) + ", 0, " + (0.5+Math.random()*0.5) + ")"; var w = p.w * (0.8+Math.random()*0.4); var h = p.h * (1.0+Math.random()*0.5); var fx = p.x + (Math.random()-0.5)*20; window.SMA.ctx.beginPath(); window.SMA.ctx.moveTo(fx-w/2, p.y+40); window.SMA.ctx.lineTo(fx+w/2, p.y+40); window.SMA.ctx.lineTo(fx, p.y-h); window.SMA.ctx.fill(); } window.SMA.ctx.restore(); } else if (p.type === 'spear_throw') { try { window.SMA.ctx.save(); window.SMA.ctx.translate(p.x, p.y); window.SMA.ctx.rotate(p.angle); window.SMA.ctx.translate(-35, 0); window.SMA.drawTrident(window.SMA.ctx, 0, 0, 0, p.color); window.SMA.ctx.restore(); } catch(e){} } else if (p.type === 'shockwave') { window.SMA.ctx.fillStyle = "#ffeaa7"; window.SMA.ctx.beginPath(); window.SMA.ctx.arc(p.x, p.y, p.w/2, 0, Math.PI, true); window.SMA.ctx.fill(); } else if (p.type === 'angel_arrow') {
+                    // エンジェル弓矢: 矢の形で描画
+                    window.SMA.ctx.save();
+                    window.SMA.ctx.translate(p.x, p.y);
+                    var arrowAngle = Math.atan2(p.vy, p.vx);
+                    window.SMA.ctx.rotate(arrowAngle);
+                    // 矢の光エフェクト
+                    window.SMA.ctx.shadowBlur = 8; window.SMA.ctx.shadowColor = p.color;
+                    // 矢じり（三角形）
+                    window.SMA.ctx.fillStyle = p.color;
+                    window.SMA.ctx.beginPath();
+                    window.SMA.ctx.moveTo(12, 0);
+                    window.SMA.ctx.lineTo(-4, -5);
+                    window.SMA.ctx.lineTo(-4, 5);
+                    window.SMA.ctx.closePath();
+                    window.SMA.ctx.fill();
+                    // 矢の棒
+                    window.SMA.ctx.strokeStyle = '#c89b3c'; window.SMA.ctx.lineWidth = 2;
+                    window.SMA.ctx.beginPath();
+                    window.SMA.ctx.moveTo(-4, 0);
+                    window.SMA.ctx.lineTo(-22, 0);
+                    window.SMA.ctx.stroke();
+                    // 羽根（矢の後ろ）
+                    window.SMA.ctx.strokeStyle = '#fff'; window.SMA.ctx.lineWidth = 1;
+                    window.SMA.ctx.beginPath(); window.SMA.ctx.moveTo(-20, 0); window.SMA.ctx.lineTo(-25, -4); window.SMA.ctx.stroke();
+                    window.SMA.ctx.beginPath(); window.SMA.ctx.moveTo(-20, 0); window.SMA.ctx.lineTo(-25, 4); window.SMA.ctx.stroke();
+                    window.SMA.ctx.shadowBlur = 0;
+                    window.SMA.ctx.restore();
+                } else { window.SMA.ctx.fillStyle = p.color; window.SMA.ctx.beginPath(); window.SMA.ctx.arc(p.x, p.y, p.w/2, 0, Math.PI*2); window.SMA.ctx.fill(); } } window.SMA.drawComets(window.SMA.ctx); window.SMA.updateParticles(window.SMA.ctx); window.SMA.ctx.restore(); } window.SMA.updateHud(); } catch(e) { reportError("Loop Error: " + e); } window.SMA.animationFrameId = requestAnimationFrame(window.SMA.gameLoop); };
         window.SMA.checkHit = function(atk, vic) { 
             if(vic.invincible > 0 || vic.actionState === 'RESPAWN' || vic.actionState === 'DEAD') return;
 
@@ -2159,17 +2187,17 @@ function reportError(e) {
                 jumpMult: 0.85, speed: 1.0, kbMult: 1.2, maxJumps: 3,
                 attacks: {
                     // NA: 光の弓矢を前方に射出（射程750px = WORLD_W/2）。チャージで3本（直進/斜め上/斜め下）
-                    NEUTRAL: { type:'arrow_shot', spawnFrame: 6, dmg: 5, kb: 2.0, scale: 0.06, speed: 14, radius: 8, frames: 18, lag: 6, stun: 3, range: 750, color: '#ffe066' },
+                    NEUTRAL: { type:'arrow_shot', spawnFrame: 6, dmg: 5, kb: 1.5, scale: 0.06, speed: 10.5, radius: 8, frames: 18, lag: 6, stun: 3, range: 750, color: '#ffe066' },
                     // 横A: 羽ばたき攻撃。空中時は自己後方ノックバック
-                    SIDE:    { type:'wing_flap', dmg: 13, kb: 2.8, scale: 0.1, angle: -25, frames: 22, lag: 18, stun: 8, color: '#fff' },
+                    SIDE:    { type:'wing_flap', dmg: 13, kb: 8.4, scale: 0.1, angle: -25, frames: 22, lag: 18, stun: 8, color: '#fff' },
                     // 上A: 飛翔攻撃（攻撃判定付き上昇）
-                    UP:      { type:'wing_rise', dmg: 11, kb: 2.2, scale: 0.1, angle: -85, frames: 30, lag: 20, stun: 6, color: '#ffe066' },
+                    UP:      { type:'wing_rise', dmg: 11, kb: 2.64, scale: 0.1, angle: -85, frames: 30, lag: 20, stun: 6, color: '#ffe066' },
                     // 下A: 円形衝撃波（固定吹っ飛ばし、撃墜不可）。空中で滞空
-                    DOWN:    { type:'shockwave', dmg: 8, kb: 4.0, scale: 0, angle: -45, frames: 35, lag: 25, stun: 10, shockRadius: 200, color: '#ffe066' },
-                    AIR_NEUTRAL: { type:'arrow_shot', spawnFrame: 6, dmg: 5, kb: 2.0, scale: 0.06, speed: 14, radius: 8, frames: 18, lag: 6, stun: 3, range: 750, color: '#ffe066' },
-                    AIR_SIDE:{ type:'wing_flap', dmg: 12, kb: 2.5, scale: 0.1, angle: -30, frames: 22, lag: 18, stun: 7, color: '#fff', airKnockback: true },
-                    AIR_UP:  { type:'wing_rise', dmg: 10, kb: 2.0, scale: 0.1, angle: -90, frames: 28, lag: 18, stun: 5, color: '#ffe066' },
-                    AIR_DOWN:{ type:'shockwave', dmg: 7, kb: 4.0, scale: 0, angle: -45, frames: 35, lag: 25, stun: 10, shockRadius: 200, color: '#ffe066', hover: true },
+                    DOWN:    { type:'shockwave', dmg: 8, kb: 4.0, scale: 0, angle: -45, frames: 35, lag: 28, stun: 10, shockRadius: 200, color: '#ffe066' },
+                    AIR_NEUTRAL: { type:'arrow_shot', spawnFrame: 6, dmg: 5, kb: 1.5, scale: 0.06, speed: 10.5, radius: 8, frames: 18, lag: 6, stun: 3, range: 750, color: '#ffe066' },
+                    AIR_SIDE:{ type:'wing_flap', dmg: 12, kb: 7.5, scale: 0.1, angle: -30, frames: 22, lag: 18, stun: 7, color: '#fff', airKnockback: true },
+                    AIR_UP:  { type:'wing_rise', dmg: 10, kb: 2.4, scale: 0.1, angle: -90, frames: 28, lag: 18, stun: 5, color: '#ffe066' },
+                    AIR_DOWN:{ type:'shockwave', dmg: 7, kb: 4.0, scale: 0, angle: -45, frames: 35, lag: 28, stun: 10, shockRadius: 200, color: '#ffe066', hover: true },
                     LEDGE_ATK: { dmg: 7, kb: 10.0, scale: 0.01, angle: -45, frames: 30, lag: 10, stun: 10 }
                 },
                 throws: {
@@ -2410,8 +2438,8 @@ function reportError(e) {
                 if (this.stateTimer >= hitStart && this.stateTimer <= hitEnd) {
                     var dir = this.facingRight ? 1 : -1;
                     this.hitbox.active = true;
-                    this.hitbox.w = 80; this.hitbox.h = 50;
-                    this.hitbox.x = this.x + this.w/2 + dir * 20 - 40;
+                    this.hitbox.w = 160; this.hitbox.h = 100;
+                    this.hitbox.x = this.x + this.w/2 + dir * 40 - 80;
                     this.hitbox.y = this.y + 5;
                 } else { this.hitbox.active = false; }
                 // 空中横Aの自己後方ノックバック
@@ -2427,7 +2455,7 @@ function reportError(e) {
                 // 上A: 飛翔攻撃（hitbox方式）
                 var riseStart = 6; var riseEnd = 20;
                 if (this.stateTimer >= riseStart && this.stateTimer <= riseEnd) {
-                    this.vy = -8;
+                    this.vy = -9.6;
                     this.vx *= 0.5;
                     this.hitbox.active = true;
                     this.hitbox.w = 50; this.hitbox.h = 70;
@@ -3101,29 +3129,34 @@ function reportError(e) {
                             if (isWingFlap && this.stateTimer >= 6 && this.stateTimer <= 16) {
                                 // 横A: 両翼を前方に突き出して打ちつけるモーション
                                 var flapProg = Math.min(1, (this.stateTimer - 6) / 5);
-                                // 上翼（前方へ）
+                                // 上翼（前方へ）- 倍サイズ
                                 ctx.beginPath();
-                                ctx.moveTo(cx, this.y+15);
-                                ctx.quadraticCurveTo(cx + dir*(20+flapProg*25), this.y+5, cx + dir*(35+flapProg*15), this.y+18);
-                                ctx.quadraticCurveTo(cx + dir*(20+flapProg*10), this.y+22, cx, this.y+22);
+                                ctx.moveTo(cx, this.y+10);
+                                ctx.quadraticCurveTo(cx + dir*(40+flapProg*50), this.y, cx + dir*(70+flapProg*30), this.y+15);
+                                ctx.quadraticCurveTo(cx + dir*(40+flapProg*20), this.y+25, cx, this.y+22);
                                 ctx.fill(); ctx.stroke();
-                                // 下翼（前方へ）
+                                // 下翼（前方へ）- 倍サイズ
                                 ctx.beginPath();
-                                ctx.moveTo(cx, this.y+25);
-                                ctx.quadraticCurveTo(cx + dir*(20+flapProg*25), this.y+30, cx + dir*(35+flapProg*15), this.y+35);
-                                ctx.quadraticCurveTo(cx + dir*(20+flapProg*10), this.y+38, cx, this.y+32);
+                                ctx.moveTo(cx, this.y+24);
+                                ctx.quadraticCurveTo(cx + dir*(40+flapProg*50), this.y+28, cx + dir*(70+flapProg*30), this.y+38);
+                                ctx.quadraticCurveTo(cx + dir*(40+flapProg*20), this.y+42, cx, this.y+34);
                                 ctx.fill(); ctx.stroke();
                             } else if (isWingRise) {
-                                // 上A: 翼を大きく広げて上昇
+                                // 上A: 左右対称に翼を大きく広げて飛翔
+                                var riseFlap = Math.sin(this.stateTimer * 0.8) * 5;
+                                // 左翼
                                 ctx.beginPath();
-                                ctx.moveTo(cx, this.y+18);
-                                ctx.quadraticCurveTo(cx - dir*35, this.y+5+wingFlap, cx - dir*45, this.y+20+wingFlap);
-                                ctx.quadraticCurveTo(cx - dir*30, this.y+25, cx, this.y+25);
+                                ctx.moveTo(cx-3, this.y+18);
+                                ctx.quadraticCurveTo(cx-40, this.y+2+riseFlap, cx-50, this.y+18+riseFlap);
+                                ctx.quadraticCurveTo(cx-35, this.y+22, cx-20, this.y+28);
+                                ctx.quadraticCurveTo(cx-8, this.y+24, cx-3, this.y+22);
                                 ctx.fill(); ctx.stroke();
+                                // 右翼
                                 ctx.beginPath();
-                                ctx.moveTo(cx, this.y+22);
-                                ctx.quadraticCurveTo(cx - dir*30, this.y+28+wingFlap, cx - dir*40, this.y+35+wingFlap);
-                                ctx.quadraticCurveTo(cx - dir*25, this.y+32, cx, this.y+30);
+                                ctx.moveTo(cx+3, this.y+18);
+                                ctx.quadraticCurveTo(cx+40, this.y+2+riseFlap, cx+50, this.y+18+riseFlap);
+                                ctx.quadraticCurveTo(cx+35, this.y+22, cx+20, this.y+28);
+                                ctx.quadraticCurveTo(cx+8, this.y+24, cx+3, this.y+22);
                                 ctx.fill(); ctx.stroke();
                             } else {
                                 // 通常: 背中側に翼（向いている方向の反対）
