@@ -1363,6 +1363,15 @@ window.SMA.handleConn = function (c) {
 
 // 4. CORE GAME FUNCTIONS
 window.SMA.initCanvas = function () { if (!window.SMA.canvas) window.SMA.canvas = document.getElementById('gameCanvas'); if (window.SMA.canvas) { window.SMA.canvas.width = window.SMA.canvas.clientWidth || 1280; window.SMA.canvas.height = window.SMA.canvas.clientHeight || 720; window.SMA.SCREEN_W = window.SMA.canvas.width; window.SMA.SCREEN_H = window.SMA.canvas.height; if (!window.SMA.ctx) window.SMA.ctx = window.SMA.canvas.getContext('2d'); } };
+window.SMA.getTopExclusionHeight = function () {
+    var h = window.innerHeight || document.documentElement.clientHeight || 0;
+    return h >= 812 ? 98 : 74;
+};
+window.SMA.applyTopExclusionLayout = function () {
+    var topExclusionHeight = window.SMA.getTopExclusionHeight();
+    document.documentElement.style.setProperty('--top-exclusion-height', topExclusionHeight + 'px');
+    return topExclusionHeight;
+};
 window.SMA.bootGame = function () {
     if (!window.SMA.Fighter) { alert("Fighter Class Missing"); return; }
     if (!window.SMA.CHAR_DATA) { alert("Data Missing"); return; }
@@ -3826,6 +3835,7 @@ window.SMA.Fighter.prototype.draw = function (ctx) {
 window.onload = function () {
     var g = function (id) { return document.getElementById(id); };
     g('overlay-msg').innerText = "READY";
+    window.SMA.applyTopExclusionLayout();
 
     // Helper function defined FIRST
     window.SMA.saveSettings = function () {
@@ -4184,4 +4194,8 @@ window.onload = function () {
         el.addEventListener('mousedown', d); el.addEventListener('mouseup', u);
     };
     bind('btn-jump', 'jump'); bind('btn-attack', 'attack'); bind('btn-grab', 'grab'); bind('btn-shield', 'shield');
+    window.addEventListener('resize', function () {
+        window.SMA.applyTopExclusionLayout();
+        window.SMA.initCanvas();
+    });
 };
