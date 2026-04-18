@@ -1,4 +1,4 @@
-function reportError(e) {
+﻿function reportError(e) {
     var msg = (e && e.message) ? e.message : e.toString();
     if (msg.indexOf('Script error') !== -1) return;
     var d = document.getElementById('error-report');
@@ -60,6 +60,152 @@ window.SMA.hasJoined = false;
 // Gravity SDK Bridge Utils
 window.SMA.gravityRequests = {};
 window.SMA.gravityRoomRequests = {};
+window.SMA.gravityUsePeerInMatch = true;
+window.SMA.gravityRtPeer = null;
+window.SMA.gravityRtConn = null; // guest -> host
+window.SMA.gravityRtConns = [];  // host -> guests
+window.SMA.gravityRtHostPeerId = null;
+window.SMA.gravityFallbackSyncIntervalMs = 500;
+window.SMA.lastGravityFallbackSyncAt = 0;
+window.SMA.lastGravitySpecSyncAt = 0;
+window.SMA.gravitySpecSyncIntervalMs = 500;
+
+window.SMA.makeGravityHostPeerId = function (roomId) {
+    var rid = String(roomId || '').replace(/[^a-zA-Z0-9_-]/g, '');
+    if (!rid) rid = 'room';
+    rid = rid.slice(-24);
+    return "sma_rt_" + rid;
+};
+
+window.SMA.stopGravityRealtime = function () {
+    if (window.SMA.gravityRtConns && window.SMA.gravityRtConns.length) {
+        window.SMA.gravityRtConns.forEach(function (c) { try { if (c && c.open) c.close(); } catch (e) { } });
+    }
+    window.SMA.gravityRtConns = [];
+    if (window.SMA.gravityRtConn) { try { if (window.SMA.gravityRtConn.open) window.SMA.gravityRtConn.close(); } catch (e) { } }
+    window.SMA.gravityRtConn = null;
+    if (window.SMA.gravityRtPeer) { try { window.SMA.gravityRtPeer.destroy(); } catch (e) { } }
+    window.SMA.gravityRtPeer = null;
+};
+
+window.SMA.startGravityRealtimeHost = function (roomId) {
+    if (!window.SMA.isGravity || !window.SMA.gravityUsePeerInMatch) return;
+    window.SMA.stopGravityRealtime();
+    window.SMA.gravityRtHostPeerId = window.SMA.makeGravityHostPeerId(roomId);
+    try {
+        window.SMA.gravityRtPeer = new Peer(window.SMA.gravityRtHostPeerId);
+        window.SMA.gravityRtPeer.on('connection', function (c) {
+            c._rtRole = null;
+            c.on('data', function (d) {
+                try { if (typeof d === 'string') d = JSON.parse(d); } catch (e) { return; }
+                if (!d || typeof d !== 'object') return;
+                if (d.type === 'rt_hello') {
+                    c._rtRole = d.role || null;
+                    return;
+                }
+                if (d.type === 'rt_input' && window.SMA.isHost) {
+                    var role = d.role || c._rtRole || 'p2';
+                    var keys = d.keys || {};
+                    window.SMA.remoteKeysMap[role] = keys;
+                    window.SMA.remoteLastInputTimeMap[role] = Date.now();
+                    if (keys.triggerJump || keys.triggerStartCharge || keys.triggerReleaseAttack || keys.triggerGrab) {
+                        if (!window.SMA.remoteEventsMap[role]) window.SMA.remoteEventsMap[role] = [];
+                        window.SMA.remoteEventsMap[role].push(keys);
+                    }
+                }
+            });
+            c.on('close', function () {
+                window.SMA.gravityRtConns = window.SMA.gravityRtConns.filter(function (x) { return x !== c; });
+            });
+            c.on('error', function () { });
+            window.SMA.gravityRtConns.push(c);
+        });
+        window.SMA.gravityRtPeer.on('error', function (e) {
+            console.warn("[SMA] gravity host peer error:", e);
+        });
+    } catch (e) {
+        console.warn("[SMA] startGravityRealtimeHost failed:", e);
+    }
+};
+
+window.SMA.startGravityRealtimeGuest = function (roomId) {
+    if (!window.SMA.isGravity || !window.SMA.gravityUsePeerInMatch) return;
+    window.SMA.stopGravityRealtime();
+    window.SMA.gravityRtHostPeerId = window.SMA.makeGravityHostPeerId(roomId);
+    try {
+        window.SMA.gravityRtPeer = new Peer();
+        window.SMA.gravityRtPeer.on('open', function () {
+            try {
+                var conn = window.SMA.gravityRtPeer.connect(window.SMA.gravityRtHostPeerId);
+                window.SMA.gravityRtConn = conn;
+                conn.on('open', function () {
+                    try { conn.send({ type: 'rt_hello', role: window.SMA.myRole }); } catch (e) { }
+                });
+                conn.on('data', function (d) {
+                    try { if (typeof d === 'string') d = JSON.parse(d); } catch (e) { return; }
+                    if (!d || typeof d !== 'object') return;
+                    if (d.type === 'rt_sync') {
+                        window.SMA.applySync(d);
+                    }
+                });
+                conn.on('close', function () { window.SMA.gravityRtConn = null; });
+                conn.on('error', function () { window.SMA.gravityRtConn = null; });
+            } catch (e) { }
+        });
+        window.SMA.gravityRtPeer.on('error', function (e) {
+            console.warn("[SMA] gravity guest peer error:", e);
+        });
+    } catch (e) {
+        console.warn("[SMA] startGravityRealtimeGuest failed:", e);
+    }
+};
+
+window.SMA.sendGravityInput = function (keys) {
+    if (window.SMA.gravityUsePeerInMatch && window.SMA.gravityRtConn && window.SMA.gravityRtConn.open) {
+        try {
+            window.SMA.gravityRtConn.send({ type: 'rt_input', role: window.SMA.myRole, keys: keys });
+            return true;
+        } catch (e) { }
+    }
+    window.parent.postMessage({
+        type: "API",
+        action: "AgentSDK.room.sendMessage",
+        params: { message: JSON.stringify({ type: 'input', keys: keys, senderRole: window.SMA.myRole }) }
+    }, "*");
+    return false;
+};
+
+window.SMA.sendGravitySync = function (pkt) {
+    if (!window.SMA.isGravity || !window.SMA.isHost) return;
+    var now = Date.now();
+    var hasRtPlayer = false;
+
+    if (window.SMA.gravityUsePeerInMatch && window.SMA.gravityRtConns && window.SMA.gravityRtConns.length) {
+        var rtPayload = Object.assign({ type: 'rt_sync' }, pkt);
+        window.SMA.gravityRtConns.forEach(function (c) {
+            if (!c || !c.open) return;
+            if (c._rtRole === 'spec') return;
+            hasRtPlayer = true;
+            try { c.send(rtPayload); } catch (e) { }
+        });
+    }
+
+    var hasSpec = window.SMA.connections.some(function (x) { return x.role === 'spec'; });
+    var needFallbackForPlayers = !hasRtPlayer;
+    var needFallbackForSpecs = hasSpec && (now - window.SMA.lastGravitySpecSyncAt >= window.SMA.gravitySpecSyncIntervalMs);
+    var needFallback = needFallbackForPlayers || needFallbackForSpecs;
+    if (!needFallback) return;
+    if (!needFallbackForSpecs && now - window.SMA.lastGravityFallbackSyncAt < window.SMA.gravityFallbackSyncIntervalMs) return;
+
+    window.SMA.lastGravityFallbackSyncAt = now;
+    if (needFallbackForSpecs) window.SMA.lastGravitySpecSyncAt = now;
+    window.parent.postMessage({
+        type: "API",
+        action: "AgentSDK.room.sendMessage",
+        params: { message: JSON.stringify(pkt) }
+    }, "*");
+};
+
 window.SMA.callGravitySDK = function (action, params) {
     if (!window.SMA.isGravity) return Promise.reject("Not in Gravity environment");
     return new Promise(function (resolve, reject) {
@@ -520,6 +666,7 @@ window.SMA.showGravityCreateRoom = async function () {
         var roomData = res.data || res;
         window.SMA.gravityRoomId = (roomData && (roomData.room_id || roomData.roomId)) || "0000";
         document.getElementById('room-id-display').innerText = window.SMA.gravityRoomId.slice(-5);
+        window.SMA.startGravityRealtimeHost(window.SMA.gravityRoomId);
         window.SMA.showNotification("部屋を作成しました", 2000);
     } catch (e) {
         console.error("[SMA] Create Error:", e);
@@ -705,6 +852,7 @@ window.SMA.showGravityJoinRoom = async function (roomIdParam, joinRole) {
         .then(function (res) {
             console.log("[SMA] join_room success:", JSON.stringify(res));
             window.SMA.gravityRoomId = rid;
+            window.SMA.startGravityRealtimeGuest(window.SMA.gravityRoomId);
             window.SMA.setJoinLoading(false);
 
             // ロビー画面へ遷移
@@ -1265,7 +1413,12 @@ window.SMA.handleClient = async function (d) {
         window.SMA.selectedStage = d.stage; window.SMA.playerCount = d.playerCount || 2;
         window.SMA.startGameMulti();
     }
-    if (d.type === 'sync') { if (!window.SMA.gameRunning) { window.SMA.selectedStage = d.stg || 'battlefield'; window.SMA.bootGame(); } window.SMA.applySync(d); }
+    if (d.type === 'sync') {
+        // 試合中はPeerJS同期を優先し、SDKの低頻度フォールバック同期は重複適用しない
+        if (window.SMA.isGravity && !window.SMA.isHost && window.SMA.myRole !== 'spec' && window.SMA.gravityRtConn && window.SMA.gravityRtConn.open) return;
+        if (!window.SMA.gameRunning) { window.SMA.selectedStage = d.stg || 'battlefield'; window.SMA.bootGame(); }
+        window.SMA.applySync(d);
+    }
 };
 window.SMA.handleConn = function (c) {
     c.on('data', function (d) {
@@ -1621,14 +1774,8 @@ window.SMA.gameLoop = function () {
                             pkt['p' + (si + 1)] = allPlayers[si].serialize();
                         }
                         window.SMA.connections.forEach(function (c) { if (c.conn.open) try { c.conn.send({ type: 'sync', data: JSON.stringify(pkt) }); } catch (e) { } });
-                        // Gravity同期 (JSON形式で送信)
-                        if (window.SMA.isGravity) {
-                            window.parent.postMessage({
-                                type: "API",
-                                action: "AgentSDK.room.sendMessage",
-                                params: { message: JSON.stringify(pkt) }
-                            }, "*");
-                        }
+                        // Gravityは試合中PeerJS優先。必要時のみSDKへ低頻度フォールバック。
+                        if (window.SMA.isGravity) window.SMA.sendGravitySync(pkt);
                         window.SMA.syncEvents = [];
                     }
                 }
@@ -1636,11 +1783,7 @@ window.SMA.gameLoop = function () {
                 if (window.SMA.netConn && window.SMA.netConn.open) window.SMA.netConn.send({ type: 'input', keys: window.SMA.myKeys });
                 // Gravity入力送信
                 if (window.SMA.isGravity && !window.SMA.isHost) {
-                    window.parent.postMessage({
-                        type: "API",
-                        action: "AgentSDK.room.sendMessage",
-                        params: { message: JSON.stringify({ type: 'input', keys: window.SMA.myKeys }) }
-                    }, "*");
+                    window.SMA.sendGravityInput(window.SMA.myKeys);
                 }
                 window.SMA.players.forEach(function (p) { if (p && p.actionState !== 'DEAD') { p.animScale.x += (1.0 - p.animScale.x) * 0.2; p.animScale.y += (1.0 - p.animScale.y) * 0.2; if (p.actionState !== 'LEDGE_ROLL') p.rotation = 0; } });
             }
