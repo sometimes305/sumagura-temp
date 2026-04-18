@@ -2179,7 +2179,7 @@ window.SMA.CHAR_DATA = {
         }
     },
     mirror: {
-        jumpMult: 1.1, speed: 1.035, kbMult: 1.1,
+        jumpMult: 1.1, speed: 1.035, kbMult: 1.15,
         attacks: {
             NEUTRAL: { type: 'mirror_slash', range: 50, dmg: 4, kb: 1.44, scale: 0.06, angle: -30, frames: 10, lag: 6, stun: 3, color: '#81ecec' },
             SIDE: { type: 'mirror_throw', dmg: 8, kb: 1.8, scale: 0.06, angle: -20, frames: 22, lag: 12, stun: 5, color: '#81ecec' },
@@ -2255,7 +2255,7 @@ window.SMA.Fighter.prototype.update = function (inputKeys, opponent) {
         if (inputKeys.jump) { this.actionState = 'IDLE'; this.vy = -12; this.y -= 10; this.invincible = 20; } else if (inputKeys.down || (this.facingRight && inputKeys.left) || (!this.facingRight && inputKeys.right)) { this.actionState = 'IDLE'; this.y += 10; this.invincible = 10; this.ledgeCooldown = 30; } else if (inputKeys.attack) { this.enterState('LEDGE_ATK', 30); this.invincible = 20; this.hasHit = false; var set = S.CHAR_DATA[this.charId].attacks; this.currentAttack = set.LEDGE_ATK; var p = this.ledgeGrabbed.platform; var dir = this.ledgeGrabbed.dir; this.y = p.y - this.h; this.x = (dir === 'left') ? p.x : (p.x + p.w - this.w); } else if (inputKeys.shield) { this.enterState('LEDGE_ROLL', 25); this.invincible = 25; var p = this.ledgeGrabbed.platform; var dir = this.ledgeGrabbed.dir; this.y = p.y - this.h; this.x = (dir === 'left') ? p.x : (p.x + p.w - this.w); } else if (inputKeys.up || (this.facingRight && inputKeys.right) || (!this.facingRight && inputKeys.left)) { this.actionState = 'LEDGE_UP'; this.stateTimer = 20; this.invincible = 30; } return;
     }
     if (this.actionState === 'LEDGE_UP') { this.stateTimer--; this.vx = 0; this.vy = 0; if (this.stateTimer <= 0) { this.actionState = 'IDLE'; if (this.ledgeGrabbed) { var p = this.ledgeGrabbed.platform; var dir = this.ledgeGrabbed.dir; this.y = p.y - this.h; this.x = (dir === 'left') ? p.x : (p.x + p.w - this.w); } } return; }
-    if (this.actionState === 'LEDGE_ATK') { this.stateTimer--; this.vx = 0; this.vy = 0; if (this.stateTimer > 20) { var p = this.ledgeGrabbed.platform; var dir = this.ledgeGrabbed.dir; var startX = (dir === 'left') ? p.x - this.w : p.x + p.w; var endX = (dir === 'left') ? p.x : p.x + p.w - this.w; var startY = p.y; var endY = p.y - this.h; var t = (30 - this.stateTimer) / 10; this.x = startX + (endX - startX) * t; this.y = startY + (endY - startY) * t; } if (this.stateTimer < 20 && this.stateTimer > 10) { this.hitbox.active = true; this.hitbox.w = 150; this.hitbox.h = 60; this.hitbox.x = this.facingRight ? (this.x - 50) : (this.x + this.w + 50 - 150); this.hitbox.y = this.y; var set = S.CHAR_DATA[this.charId].attacks; this.currentAttack = set.LEDGE_ATK; this.chargePower = 1.0; } else { this.hitbox.active = false; } if (this.stateTimer <= 0) { this.actionState = 'IDLE'; this.currentAttack = null; } return; }
+    if (this.actionState === 'LEDGE_ATK') { this.stateTimer--; this.vx = 0; this.vy = 0; if (this.stateTimer > 20) { var p = this.ledgeGrabbed.platform; var dir = this.ledgeGrabbed.dir; var startX = (dir === 'left') ? p.x - this.w : p.x + p.w; var endX = (dir === 'left') ? p.x : p.x + p.w - this.w; var startY = p.y; var endY = p.y - this.h; var t = (30 - this.stateTimer) / 10; this.x = startX + (endX - startX) * t; this.y = startY + (endY - startY) * t; } if (this.stateTimer < 20 && this.stateTimer > 10) { this.hitbox.active = true; this.hitbox.w = 150; this.hitbox.h = 60; if (this.charId === 'mirror') { this.hitbox.w *= 1.25; this.hitbox.h *= 1.25; } this.hitbox.x = this.facingRight ? (this.x - 50) : (this.x + this.w + 50 - 150); this.hitbox.y = this.y; var set = S.CHAR_DATA[this.charId].attacks; this.currentAttack = set.LEDGE_ATK; this.chargePower = 1.0; } else { this.hitbox.active = false; } if (this.stateTimer <= 0) { this.actionState = 'IDLE'; this.currentAttack = null; } return; }
     if (this.actionState === 'LEDGE_ROLL') { this.stateTimer--; var rollSpeed = 5; this.vx = this.facingRight ? rollSpeed : -rollSpeed; this.rotation += 0.5; if (this.stateTimer <= 0) { this.vx = 0; this.actionState = 'IDLE'; this.rotation = 0; } this.x += this.vx; return; }
     switch (this.actionState) {
         case 'LAG': this.stateTimer--; if (this.stateTimer <= 0) this.actionState = 'IDLE'; this.vx *= S.FRICTION; this.applyPhysics(); break;
@@ -2644,7 +2644,7 @@ window.SMA.Fighter.prototype.handleAttackFrame = function () {
         var szMult = (p - 1.0) / 0.7 * 0.2 + 1.0;
         var range = (atk.range || 50) * szMult;
         if (this.stateTimer >= 3 && this.stateTimer <= 8) {
-            this.hitbox.active = true; this.hitbox.w = range; this.hitbox.h = 25 * szMult;
+            this.hitbox.active = true; this.hitbox.w = range * 1.25; this.hitbox.h = 25 * szMult * 1.25;
             this.hitbox.x = this.x + (this.facingRight ? 15 : -15 - range) + this.w / 2;
             this.hitbox.y = this.y + 20 - (this.hitbox.h - 25) / 2;
         } else { this.hitbox.active = false; }
@@ -2657,7 +2657,7 @@ window.SMA.Fighter.prototype.handleAttackFrame = function () {
         var chargeRatio = Math.max(0, (p - 1.0) / 0.7);
         if (this.stateTimer >= 4 && this.stateTimer <= 18) {
             this.hitbox.active = true;
-            this.hitbox.w = 45; this.hitbox.h = 50;
+            this.hitbox.w = 56; this.hitbox.h = 62;
             this.hitbox.x = this.x + this.w / 2 - 22;
             this.hitbox.y = this.y - 45;
 
@@ -2674,7 +2674,7 @@ window.SMA.Fighter.prototype.handleAttackFrame = function () {
         var p = this.chargePower || 1.0;
         var chargeRatio = Math.max(0, (p - 1.0) / 0.7);
         var szMult = chargeRatio * 0.2 + 1.0;
-        var curW = 85 * szMult; var curH = 70 * szMult;
+        var curW = 105 * szMult; var curH = 87 * szMult;
         if (this.stateTimer >= 4 && this.stateTimer <= 18) {
             this.hitbox.active = true;
             this.hitbox.w = curW; this.hitbox.h = curH;
@@ -2691,7 +2691,7 @@ window.SMA.Fighter.prototype.handleAttackFrame = function () {
     if (atk.type === 'mirror_spin') {
         var p = this.chargePower || 1.0;
         var szMult = (p - 1.0) / 0.7 * 0.2 + 1.0;
-        var curSz = 80 * szMult;
+        var curSz = 100 * szMult;
         if (this.stateTimer >= 4 && this.stateTimer <= 20) {
             this.hitbox.active = true; this.hitbox.w = curSz; this.hitbox.h = curSz;
             this.hitbox.x = this.x + this.w / 2 - curSz / 2; this.hitbox.y = this.y + this.h / 2 - curSz / 2;
