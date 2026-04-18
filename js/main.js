@@ -72,7 +72,8 @@ window.SMA.gravitySpecSyncIntervalMs = 500;
 window.SMA.lastGravityRtSyncAt = 0;
 window.SMA.gravityRtStaleMs = 800;
 window.SMA.lastGravitySyncRequestAt = 0;
-window.SMA.gravityForceSdkSyncUntil = 0;
+window.SMA.lastGravityRescueByRole = {};
+window.SMA.lastHostSyncPacket = null;
 
 window.SMA.makeGravityHostPeerId = function (roomId) {
     var rid = String(roomId || '').replace(/[^a-zA-Z0-9_-]/g, '');
@@ -187,6 +188,7 @@ window.SMA.sendGravitySync = function (pkt) {
     if (!window.SMA.isGravity || !window.SMA.isHost) return;
     var now = Date.now();
     var rtSendOkCount = 0;
+    window.SMA.lastHostSyncPacket = pkt;
 
     if (window.SMA.gravityUsePeerInMatch && window.SMA.gravityRtConns && window.SMA.gravityRtConns.length) {
         var rtPayload = Object.assign({ type: 'rt_sync' }, pkt);
@@ -201,8 +203,7 @@ window.SMA.sendGravitySync = function (pkt) {
     }
 
     var hasSpec = window.SMA.connections.some(function (x) { return x.role === 'spec'; });
-    var forceSdkForPlayers = now < (window.SMA.gravityForceSdkSyncUntil || 0);
-    var needFallbackForPlayers = (rtSendOkCount === 0) || forceSdkForPlayers;
+    var needFallbackForPlayers = (rtSendOkCount === 0);
     var needFallbackForSpecs = hasSpec && (now - window.SMA.lastGravitySpecSyncAt >= window.SMA.gravitySpecSyncIntervalMs);
     var needFallback = needFallbackForPlayers || needFallbackForSpecs;
     if (!needFallback) return;
@@ -214,6 +215,23 @@ window.SMA.sendGravitySync = function (pkt) {
         type: "API",
         action: "AgentSDK.room.sendMessage",
         params: { message: JSON.stringify(pkt) }
+    }, "*");
+};
+
+window.SMA.sendGravityRescueSync = function (toRole) {
+    if (!window.SMA.isGravity || !window.SMA.isHost) return;
+    if (!toRole) return;
+    var now = Date.now();
+    var last = window.SMA.lastGravityRescueByRole[toRole] || 0;
+    if (now - last < 500) return;
+    var pkt = window.SMA.lastHostSyncPacket;
+    if (!pkt) return;
+    window.SMA.lastGravityRescueByRole[toRole] = now;
+    var targeted = Object.assign({ toRole: toRole }, pkt);
+    window.parent.postMessage({
+        type: "API",
+        action: "AgentSDK.room.sendMessage",
+        params: { message: JSON.stringify(targeted) }
     }, "*");
 };
 
@@ -336,7 +354,7 @@ window.addEventListener('message', function (event) {
 
                 // Host-side input handling
                 if (parsed.type === 'rt_sync_request' && window.SMA.isHost) {
-                    window.SMA.gravityForceSdkSyncUntil = Date.now() + 2000;
+                    window.SMA.sendGravityRescueSync(parsed.senderRole);
                     return;
                 }
                 if (parsed.type === 'input' && window.SMA.isHost) {
@@ -381,7 +399,7 @@ window.addEventListener('message', function (event) {
                         if (parsedL.keys.triggerJump) window.SMA.remoteEvents.push(parsedL.keys);
                     }
                 } else if (parsedL.type === 'rt_sync_request' && window.SMA.isHost) {
-                    window.SMA.gravityForceSdkSyncUntil = Date.now() + 2000;
+                    window.SMA.sendGravityRescueSync(parsedL.senderRole);
                 } else {
                     window.SMA.handleClient(parsedL);
                 }
@@ -1431,6 +1449,7 @@ window.SMA.handleClient = async function (d) {
         window.SMA.startGameMulti();
     }
     if (d.type === 'sync') {
+        if (d.toRole && d.toRole !== window.SMA.myRole) return;
         // 試合中はPeerJS同期を優先し、SDKの低頻度フォールバック同期は重複適用しない
         var rtHealthy = (Date.now() - (window.SMA.lastGravityRtSyncAt || 0)) < ((window.SMA.gravityRtStaleMs || 800) + 300);
         if (window.SMA.isGravity && !window.SMA.isHost && window.SMA.myRole !== 'spec' && window.SMA.gravityRtConn && window.SMA.gravityRtConn.open && rtHealthy) return;
