@@ -308,7 +308,7 @@ window.SMA.startGravityRealtimeGuest = function (roomId) {
                 conn.on('data', async function (d) {
                     d = await window.SMA.parseGravityRtData(d);
                     if (!d) return;
-                    if (d.type === 'rt_sync') {
+                    if (d.type === 'rt_sync' || d.type === 'sync') {
                         window.SMA.lastGravityRtSyncAt = Date.now();
                         window.SMA.applySync(d);
                         return;
@@ -340,7 +340,7 @@ window.SMA.sendGravityInput = function (keys) {
 window.SMA.sendGravitySync = function (pkt) {
     if (!window.SMA.isGravity || !window.SMA.isHost) return;
     if (window.SMA.gravityUsePeerInMatch && window.SMA.gravityRtConns && window.SMA.gravityRtConns.length) {
-        var rtPayload = Object.assign({ type: 'rt_sync' }, pkt);
+        var rtPayload = Object.assign({}, pkt, { type: 'rt_sync' });
         window.SMA.gravityRtConns.forEach(function (c) {
             if (!c || !c.open) return;
             try {
