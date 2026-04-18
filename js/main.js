@@ -597,15 +597,33 @@ window.SMA.fetchRoomList = async function () {
                 '<div class="room-host">' + playerCount + '/' + maxPlayers + '人</div>' +
                 '</div>' +
                 '<div class="room-count">入室</div>';
-            card.onclick = (function (rid) {
-                return function () {
-                    if (rid) {
-                        var onlineScreen = document.getElementById('online-menu-screen');
-                        if (onlineScreen) { onlineScreen.classList.add('hidden'); onlineScreen.style.display = 'none'; }
-                        window.SMA.showGravityJoinRoom(rid);
-                    }
-                };
-            })(roomId);
+            card.innerHTML = card.innerHTML.replace(/<div class="room-count">.*?<\/div>/, '<div class="room-actions"><button class="room-action-btn join">蜈･螳､</button><button class="room-action-btn spec">隕ｳ謌ｦ</button></div>');
+            var btnJoin = card.querySelector('.room-action-btn.join');
+            var btnSpec = card.querySelector('.room-action-btn.spec');
+            var doJoin = function (rid, role) {
+                if (!rid) return;
+                var onlineScreen = document.getElementById('online-menu-screen');
+                if (onlineScreen) { onlineScreen.classList.add('hidden'); onlineScreen.style.display = 'none'; }
+                window.SMA.showGravityJoinRoom(rid, role);
+            };
+            if (btnJoin) {
+                btnJoin.onclick = (function (rid) {
+                    return function (e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        doJoin(rid, 'join');
+                    };
+                })(roomId);
+            }
+            if (btnSpec) {
+                btnSpec.onclick = (function (rid) {
+                    return function (e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        doJoin(rid, 'spec');
+                    };
+                })(roomId);
+            }
             container.appendChild(card);
         });
     } catch (e) {

@@ -750,30 +750,30 @@ select {
     margin: 2px auto 8px;
     display: flex;
     justify-content: center;
-    min-height: 16px;
+    min-height: 34px;
 }
 
 .spectator-strip {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
+    gap: 8px;
     flex-wrap: nowrap;
 }
 
 .spectator-icon {
-    width: 12px;
-    height: 12px;
+    width: 30px;
+    height: 30px;
     border-radius: 50%;
-    border: 1px solid rgba(255, 255, 255, 0.9);
+    border: 2px solid rgba(255, 255, 255, 0.9);
     background: rgba(255, 255, 255, 0.25);
     background-size: cover;
     background-position: center;
     color: #fff;
-    font-size: 8px;
-    line-height: 10px;
+    font-size: 12px;
+    line-height: 26px;
     text-align: center;
-    flex: 0 0 12px;
+    flex: 0 0 30px;
     overflow: hidden;
 }
 
@@ -1009,6 +1009,35 @@ select {
     border-radius: 6px;
     border: 2px solid #222;
     box-shadow: 0 3px 0 #a52a2a;
+}
+
+.room-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.room-action-btn {
+    font-size: 12px;
+    font-weight: 900;
+    color: #fff;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 2px solid #222;
+    box-shadow: 0 3px 0 rgba(0, 0, 0, 0.3);
+    cursor: pointer;
+    min-width: 52px;
+    text-align: center;
+}
+
+.room-action-btn.join {
+    background: linear-gradient(180deg, #ff6b6b, #e74c3c);
+    box-shadow: 0 3px 0 #a52a2a;
+}
+
+.room-action-btn.spec {
+    background: linear-gradient(180deg, #74b9ff, #3498db);
+    box-shadow: 0 3px 0 #1a6dad;
 }
 
 .room-list-loading,
