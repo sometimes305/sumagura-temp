@@ -303,6 +303,9 @@ window.addEventListener('message', function (event) {
 
                 // Host-side input handling
                 if (parsed.type === 'input' && window.SMA.isHost) {
+                    if (window.SMA.isGravity && window.SMA.gravityUsePeerInMatch && window.SMA.gameRunning) {
+                        return;
+                    }
                     var role = parsed.senderRole || 'p2';
                     window.SMA.remoteKeysMap[role] = parsed.keys;
                     window.SMA.remoteLastInputTimeMap[role] = Date.now();
@@ -331,6 +334,9 @@ window.addEventListener('message', function (event) {
             try {
                 var parsedL = JSON.parse(payloadLegacy.message);
                 if (parsedL.type === 'input' && window.SMA.isHost) {
+                    if (window.SMA.isGravity && window.SMA.gravityUsePeerInMatch && window.SMA.gameRunning) {
+                        return;
+                    }
                     var roleL = parsedL.role || 'p2';
                     window.SMA.remoteKeysMap[roleL] = parsedL.keys;
                     window.SMA.remoteLastInputTimeMap[roleL] = Date.now();
@@ -1758,7 +1764,9 @@ window.SMA.gameLoop = function () {
                     }
                 }
             } else {
-                if (window.SMA.netConn && window.SMA.netConn.open) window.SMA.netConn.send({ type: 'input', keys: window.SMA.myKeys });
+                if (window.SMA.netConn && window.SMA.netConn.open && !(window.SMA.isGravity && window.SMA.gravityUsePeerInMatch)) {
+                    window.SMA.netConn.send({ type: 'input', keys: window.SMA.myKeys });
+                }
                 // Gravity入力送信
                 if (window.SMA.isGravity && !window.SMA.isHost) {
                     window.SMA.sendGravityInput(window.SMA.myKeys);
