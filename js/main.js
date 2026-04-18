@@ -2187,14 +2187,14 @@ function reportError(e) {
                 jumpMult: 0.85, speed: 1.0, kbMult: 1.2, maxJumps: 3,
                 attacks: {
                     // NA: 光の弓矢を前方に射出（射程750px = WORLD_W/2）。チャージで3本（直進/斜め上/斜め下）
-                    NEUTRAL: { type:'arrow_shot', spawnFrame: 6, dmg: 5, kb: 1.0, scale: 0.06, speed: 10.5, radius: 8, frames: 18, lag: 9, stun: 3, range: 750, color: '#ffe066' },
+                    NEUTRAL: { type:'arrow_shot', spawnFrame: 6, dmg: 5, kb: 1.0, scale: 0.06, speed: 10.5, radius: 8, frames: 18, lag: 12, stun: 3, range: 750, color: '#ffe066' },
                     // 横A: 羽ばたき攻撃。空中時は自己後方ノックバック
                     SIDE:    { type:'wing_flap', dmg: 13, kb: 2.8, scale: 0.1, angle: -25, frames: 22, lag: 18, stun: 8, color: '#fff' },
                     // 上A: 飛翔攻撃（攻撃判定付き上昇）
                     UP:      { type:'wing_rise', dmg: 11, kb: 2.64, scale: 0.1, angle: -85, frames: 30, lag: 20, stun: 6, color: '#ffe066', limit: true },
                     // 下A: 円形衝撃波（固定吹っ飛ばし、撃墜不可）。空中で滞空
                     DOWN:    { type:'shockwave', dmg: 8, kb: 8.0, scale: 0, angle: -45, frames: 35, lag: 28, stun: 10, shockRadius: 200, color: '#ffe066' },
-                    AIR_NEUTRAL: { type:'arrow_shot', spawnFrame: 6, dmg: 5, kb: 1.0, scale: 0.06, speed: 10.5, radius: 8, frames: 18, lag: 9, stun: 3, range: 750, color: '#ffe066' },
+                    AIR_NEUTRAL: { type:'arrow_shot', spawnFrame: 6, dmg: 5, kb: 1.0, scale: 0.06, speed: 10.5, radius: 8, frames: 18, lag: 12, stun: 3, range: 750, color: '#ffe066' },
                     AIR_SIDE:{ type:'wing_flap', dmg: 12, kb: 2.8, scale: 0.1, angle: -30, frames: 22, lag: 18, stun: 7, color: '#fff', airKnockback: true },
                     AIR_UP:  { type:'wing_rise', dmg: 10, kb: 2.4, scale: 0.1, angle: -90, frames: 28, lag: 18, stun: 5, color: '#ffe066', limit: true },
                     AIR_DOWN:{ type:'shockwave', dmg: 7, kb: 8.0, scale: 0, angle: -45, frames: 35, lag: 28, stun: 10, shockRadius: 200, color: '#ffe066', hover: true },
@@ -2391,7 +2391,7 @@ function reportError(e) {
                 if(this.chargePower === 1.0) this.chargePower = 1.0;
             }
         };
-        window.SMA.Fighter.prototype.releaseAttack = function(typeStr) { var S=window.SMA; if (this.actionState === 'CHARGE' || this.actionState === 'IDLE') { var power = this.chargePower; if (this.actionState === 'IDLE') power = 1.0; this.actionState = 'ATTACK'; if (!this.isGrounded) { if (typeStr === 'DOWN') typeStr = 'AIR_DOWN'; else if (typeStr === 'SIDE') typeStr = 'AIR_SIDE'; else if (typeStr === 'NEUTRAL') typeStr = 'AIR_NEUTRAL'; if(this.charId==='spear' && typeStr==='AIR_UP' && this.hasUpSpecial) return; if(this.charId==='angel' && typeStr==='AIR_UP' && this.hasUpSpecial) return; } var set = S.CHAR_DATA[this.charId].attacks; if(set[typeStr]) this.currentAttack = set[typeStr]; else this.currentAttack = null; this.currentAttackType = typeStr; this.chargePower = power; this.hasHit = false; this.mirrorHasHit = false; this.stateTimer = 0; if(this.currentAttack) { if(this.currentAttack.type === 'arrow_shot') S.playSound('magic'); else if(this.currentAttack.type === 'shot') S.playSound('magic'); else if(this.currentAttack.type === 'fire_shot') S.playSound('magic'); else if(this.currentAttack.type === 'up_rush') S.playSound('jump'); else if(this.currentAttack.type === 'ground_shock') {} else if(this.currentAttack.type === 'boomerang' || this.currentAttack.type === 'boomerang_up') S.playSound('sword'); else if(this.currentAttackType === 'UP' && this.charId === 'mage') S.playSound('spin'); else S.playSound('sword'); } } };
+        window.SMA.Fighter.prototype.releaseAttack = function(typeStr) { var S=window.SMA; if (this.actionState === 'CHARGE' || this.actionState === 'IDLE') { var power = this.chargePower; if (this.actionState === 'IDLE') power = 1.0; if (!this.isGrounded && this.charId==='angel' && typeStr==='UP' && this.hasUpSpecial) return; this.actionState = 'ATTACK'; if (!this.isGrounded) { if (typeStr === 'DOWN') typeStr = 'AIR_DOWN'; else if (typeStr === 'SIDE') typeStr = 'AIR_SIDE'; else if (typeStr === 'NEUTRAL') typeStr = 'AIR_NEUTRAL'; if(this.charId==='spear' && typeStr==='AIR_UP' && this.hasUpSpecial) return; } var set = S.CHAR_DATA[this.charId].attacks; if(set[typeStr]) this.currentAttack = set[typeStr]; else this.currentAttack = null; this.currentAttackType = typeStr; this.chargePower = power; this.hasHit = false; this.mirrorHasHit = false; this.stateTimer = 0; if(this.currentAttack) { if(this.currentAttack.type === 'arrow_shot') S.playSound('magic'); else if(this.currentAttack.type === 'shot') S.playSound('magic'); else if(this.currentAttack.type === 'fire_shot') S.playSound('magic'); else if(this.currentAttack.type === 'up_rush') S.playSound('jump'); else if(this.currentAttack.type === 'ground_shock') {} else if(this.currentAttack.type === 'boomerang' || this.currentAttack.type === 'boomerang_up') S.playSound('sword'); else if(this.currentAttackType === 'UP' && this.charId === 'mage') S.playSound('spin'); else S.playSound('sword'); } } };
         window.SMA.Fighter.prototype.handleAttackFrame = function() { 
             var S=window.SMA; this.stateTimer++; var atk = this.currentAttack; if(!atk) return; 
             
@@ -2445,8 +2445,8 @@ function reportError(e) {
                 // 空中横Aの自己後方ノックバック
                 if (atk.airKnockback && !this.isGrounded && this.stateTimer === hitEnd) {
                     var dir = this.facingRight ? 1 : -1;
-                    this.vx = -dir * 6;
-                    this.vy = -2;
+                    this.vx = -dir * 18;
+                    this.vy = -6;
                 }
                 if (this.stateTimer >= atk.frames) { this.actionState = 'LAG'; this.stateTimer = atk.lag; this.currentAttack = null; this.chargePower = 1.0; this.hitbox.active = false; }
                 return;
@@ -2472,22 +2472,19 @@ function reportError(e) {
                     this.vy = 0; this.vx *= 0.8;
                 }
                 var shockFrame = 15;
-                if (this.stateTimer >= shockFrame && this.stateTimer <= shockFrame + 5) {
+                if (this.stateTimer === shockFrame) {
+                    // 衝撃波ヒットフレーム：1回のみ判定
                     var sr = atk.shockRadius || 200;
                     this.hitbox.active = true;
                     this.hitbox.w = sr * 2; this.hitbox.h = sr * 2;
                     this.hitbox.x = this.x + this.w/2 - sr;
                     this.hitbox.y = this.y + this.h/2 - sr;
-                    // 各フレームでhasHitをリセットし、相手位置に応じてfacingRightを切り替え
-                    // → checkHitが呼ばれた時にfacingRightに応じてangle方向が反転する
-                    this.hasHit = false;
-                    // 最も近い被弾候補の位置をチェックしてfacingRightを動的変更
+                    // 最も近い被弾候補の位置をチェックしてfacingRightを動的変更（吹っ飛ばし方向用）
                     var myCx = this.x + this.w/2;
                     for (var si = 0; si < S.players.length; si++) {
                         var sp = S.players[si];
                         if (sp === this || sp.stocks <= 0 || sp.actionState === 'DEAD' || sp.invincible > 0) continue;
                         var spCx = sp.x + sp.w/2;
-                        // hitbox内にいるか大まかにチェック
                         var dx = spCx - myCx; var dy = (sp.y + sp.h/2) - (this.y + this.h/2);
                         if (Math.sqrt(dx*dx+dy*dy) < sr) {
                             this.facingRight = (spCx >= myCx);
