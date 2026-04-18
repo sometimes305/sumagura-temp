@@ -74,6 +74,28 @@ window.SMA.makeGravityHostPeerId = function (roomId) {
     return "sma_rt_" + rid;
 };
 
+window.SMA.parseGravityRtData = async function (d) {
+    try {
+        if (typeof Blob !== 'undefined' && d instanceof Blob) {
+            if (typeof d.text === 'function') d = await d.text();
+            else {
+                d = await new Promise(function (resolve, reject) {
+                    var fr = new FileReader();
+                    fr.onload = function () { resolve(fr.result); };
+                    fr.onerror = reject;
+                    fr.readAsText(d);
+                });
+            }
+        } else if (typeof ArrayBuffer !== 'undefined' && d instanceof ArrayBuffer) {
+            d = new TextDecoder().decode(new Uint8Array(d));
+        }
+        if (typeof d === 'string') d = JSON.parse(d);
+        return (d && typeof d === 'object') ? d : null;
+    } catch (e) {
+        return null;
+    }
+};
+
 window.SMA.stopGravityRealtime = function () {
     if (window.SMA.gravityRtConns && window.SMA.gravityRtConns.length) {
         window.SMA.gravityRtConns.forEach(function (c) { try { if (c && c.open) c.close(); } catch (e) { } });
@@ -93,9 +115,9 @@ window.SMA.startGravityRealtimeHost = function (roomId) {
         window.SMA.gravityRtPeer = new Peer(window.SMA.gravityRtHostPeerId);
         window.SMA.gravityRtPeer.on('connection', function (c) {
             c._rtRole = null;
-            c.on('data', function (d) {
-                try { if (typeof d === 'string') d = JSON.parse(d); } catch (e) { return; }
-                if (!d || typeof d !== 'object') return;
+            c.on('data', async function (d) {
+                d = await window.SMA.parseGravityRtData(d);
+                if (!d) return;
                 if (d.type === 'rt_hello') {
                     c._rtRole = d.role || null;
                     return;
@@ -141,9 +163,9 @@ window.SMA.startGravityRealtimeGuest = function (roomId) {
                 conn.on('open', function () {
                     try { conn.send({ type: 'rt_hello', role: window.SMA.myRole }); } catch (e) { }
                 });
-                conn.on('data', function (d) {
-                    try { if (typeof d === 'string') d = JSON.parse(d); } catch (e) { return; }
-                    if (!d || typeof d !== 'object') return;
+                conn.on('data', async function (d) {
+                    d = await window.SMA.parseGravityRtData(d);
+                    if (!d) return;
                     if (d.type === 'rt_sync') {
                         window.SMA.lastGravityRtSyncAt = Date.now();
                         window.SMA.applySync(d);
