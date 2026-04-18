@@ -597,7 +597,7 @@ window.SMA.fetchRoomList = async function () {
                 '<div class="room-host">' + playerCount + '/' + maxPlayers + '人</div>' +
                 '</div>' +
                 '<div class="room-count">入室</div>';
-            card.innerHTML = card.innerHTML.replace(/<div class="room-count">.*?<\/div>/, '<div class="room-actions"><button class="room-action-btn join">蜈･螳､</button><button class="room-action-btn spec">隕ｳ謌ｦ</button></div>');
+            card.innerHTML = card.innerHTML.replace(/<div class="room-count">.*?<\/div>/, '<div class="room-actions"><button class="room-action-btn join">入室</button><button class="room-action-btn spec">観戦</button></div>');
             var btnJoin = card.querySelector('.room-action-btn.join');
             var btnSpec = card.querySelector('.room-action-btn.spec');
             var doJoin = function (rid, role) {
