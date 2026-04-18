@@ -2843,13 +2843,13 @@ window.SMA.Fighter.prototype.handleAttackFrame = function () {
             var maxDist = atk.range || 750;
             var atkScale = (atk.scale !== undefined) ? atk.scale : 0.06;
             // メイン弾（まっすぐ） - ownerRole方式
-            S.projectiles.push({ x: sx, y: sy, vx: spd * dir, vy: 0, w: r * 2, h: r * 2, ownerRole: this.role, dmg: Math.round(atk.dmg * this.chargePower), kb: atk.kb * this.chargePower, scale: atkScale, type: 'angel_arrow', life: Math.ceil(maxDist / spd), angle: 0, color: atk.color || '#ffe066' });
+            S.projectiles.push({ x: sx, y: sy, vx: spd * dir, vy: 0, w: r * 2, h: r * 2, ownerRole: this.playerRole, dmg: Math.round(atk.dmg * this.chargePower), kb: atk.kb * this.chargePower, scale: atkScale, type: 'angel_arrow', life: Math.ceil(maxDist / spd), angle: 0, color: atk.color || '#ffe066' });
             // チャージ時: 斜め上・斜め下にも発射
             if (this.chargePower > 1.3) {
                 var angUp = -25 * Math.PI / 180;
                 var angDn = 25 * Math.PI / 180;
-                S.projectiles.push({ x: sx, y: sy, vx: spd * dir * Math.cos(angUp), vy: spd * Math.sin(angUp), w: r * 1.6, h: r * 1.6, ownerRole: this.role, dmg: Math.round(atk.dmg * this.chargePower * 0.8), kb: atk.kb * this.chargePower * 0.8, scale: atkScale, type: 'angel_arrow', life: Math.ceil(maxDist / spd), angle: 0, color: '#fff5ba' });
-                S.projectiles.push({ x: sx, y: sy, vx: spd * dir * Math.cos(angDn), vy: spd * Math.sin(angDn), w: r * 1.6, h: r * 1.6, ownerRole: this.role, dmg: Math.round(atk.dmg * this.chargePower * 0.8), kb: atk.kb * this.chargePower * 0.8, scale: atkScale, type: 'angel_arrow', life: Math.ceil(maxDist / spd), angle: 0, color: '#fff5ba' });
+                S.projectiles.push({ x: sx, y: sy, vx: spd * dir * Math.cos(angUp), vy: spd * Math.sin(angUp), w: r * 1.6, h: r * 1.6, ownerRole: this.playerRole, dmg: Math.round(atk.dmg * this.chargePower * 0.8), kb: atk.kb * this.chargePower * 0.8, scale: atkScale, type: 'angel_arrow', life: Math.ceil(maxDist / spd), angle: 0, color: '#fff5ba' });
+                S.projectiles.push({ x: sx, y: sy, vx: spd * dir * Math.cos(angDn), vy: spd * Math.sin(angDn), w: r * 1.6, h: r * 1.6, ownerRole: this.playerRole, dmg: Math.round(atk.dmg * this.chargePower * 0.8), kb: atk.kb * this.chargePower * 0.8, scale: atkScale, type: 'angel_arrow', life: Math.ceil(maxDist / spd), angle: 0, color: '#fff5ba' });
             }
             S.playSound('magic');
         }
@@ -3144,7 +3144,7 @@ window.SMA.Fighter.prototype.handleAttackFrame = function () {
                 vy: vy,
                 w: r * 2,
                 h: r * 2,
-                ownerRole: this.role,
+                ownerRole: this.playerRole,
                 dmg: atk.dmg,
                 kb: atk.kb,
                 scale: (atk.scale !== undefined) ? atk.scale : 0.1, // FIX: Pass scale property!
@@ -3207,7 +3207,7 @@ window.SMA.Fighter.prototype.handleAttackFrame = function () {
             }
             // FIX: Pass scale
             var atkScale = (atk.scale !== undefined) ? atk.scale : 0.1;
-            S.projectiles.push({ x: startX, y: startY, vx: vx, vy: vy, w: 40, h: 40, ownerRole: this.role, dmg: atk.dmg, kb: atk.kb, scale: atkScale, type: 'spear_throw', life: 60, angle: 0, color: atk.color });
+            S.projectiles.push({ x: startX, y: startY, vx: vx, vy: vy, w: 40, h: 40, ownerRole: this.playerRole, dmg: atk.dmg, kb: atk.kb, scale: atkScale, type: 'spear_throw', life: 60, angle: 0, color: atk.color });
         }
         if (this.stateTimer >= atk.frames) {
             this.actionState = 'LAG'; this.stateTimer = atk.lag; this.chargePower = 1.0;
@@ -3277,7 +3277,7 @@ window.SMA.Fighter.prototype.handleAttackFrame = function () {
             var vx = this.facingRight ? 10 : -10;
             // FIX: Pass scale
             var atkScale = (atk.scale !== undefined) ? atk.scale : 0.1;
-            S.projectiles.push({ x: startX, y: startY, vx: vx, vy: 0, w: 40, h: 30, ownerRole: this.role, dmg: atk.dmg, kb: atk.kb, scale: atkScale, type: 'shockwave', life: 30, color: '#ffeaa7' });
+            S.projectiles.push({ x: startX, y: startY, vx: vx, vy: 0, w: 40, h: 30, ownerRole: this.playerRole, dmg: atk.dmg, kb: atk.kb, scale: atkScale, type: 'shockwave', life: 30, color: '#ffeaa7' });
             S.playSound('special');
             S.shake = 10;
         }
