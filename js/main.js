@@ -2485,9 +2485,9 @@ window.SMA.Fighter.prototype.handleAttackFrame = function () {
         return;
     }
     if (atk.type === 'wing_rise') {
-        // 上A: 飛翔攻撃 — 着地まで1回のみ上昇可能、2回目は供養（モーションだけ）
-        var isUpFail = (this.hasUpSpecial && atk.limit);
-        if (this.stateTimer === 1 && atk.limit && !this.hasUpSpecial) this.hasUpSpecial = true;
+        // 上A: 飛翔攻撃 — 空中では着地まで1回のみ上昇可能、2回目は供養（モーションだけ）
+        var isUpFail = (this.hasUpSpecial && atk.limit && !this.isGrounded);
+        if (this.stateTimer === 1 && atk.limit && !this.isGrounded && !this.hasUpSpecial) this.hasUpSpecial = true;
         var riseStart = 6; var riseEnd = 20;
         if (this.stateTimer >= riseStart && this.stateTimer <= riseEnd) {
             if (!isUpFail) {
