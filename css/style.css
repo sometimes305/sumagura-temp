@@ -744,6 +744,39 @@ select {
     background: #3498db;
 }
 
+.spectator-strip-wrap {
+    width: 100%;
+    max-width: 550px;
+    margin: 2px auto 8px;
+    display: flex;
+    justify-content: center;
+    min-height: 16px;
+}
+
+.spectator-strip {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    flex-wrap: nowrap;
+}
+
+.spectator-icon {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.9);
+    background: rgba(255, 255, 255, 0.25);
+    background-size: cover;
+    background-position: center;
+    color: #fff;
+    font-size: 8px;
+    line-height: 10px;
+    text-align: center;
+    flex: 0 0 12px;
+    overflow: hidden;
+}
+
 /* --- 選択パネル --- */
 .selection-panel {
     flex: 1;
