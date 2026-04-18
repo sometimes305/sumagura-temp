@@ -69,6 +69,7 @@ window.SMA.gravityFallbackSyncIntervalMs = 500;
 window.SMA.lastGravityFallbackSyncAt = 0;
 window.SMA.lastGravitySpecSyncAt = 0;
 window.SMA.gravitySpecSyncIntervalMs = 500;
+window.SMA.lastGravityRtSyncAt = 0;
 
 window.SMA.makeGravityHostPeerId = function (roomId) {
     var rid = String(roomId || '').replace(/[^a-zA-Z0-9_-]/g, '');
@@ -145,6 +146,7 @@ window.SMA.startGravityRealtimeGuest = function (roomId) {
                     try { if (typeof d === 'string') d = JSON.parse(d); } catch (e) { return; }
                     if (!d || typeof d !== 'object') return;
                     if (d.type === 'rt_sync') {
+                        window.SMA.lastGravityRtSyncAt = Date.now();
                         window.SMA.applySync(d);
                     }
                 });
@@ -1415,7 +1417,8 @@ window.SMA.handleClient = async function (d) {
     }
     if (d.type === 'sync') {
         // 試合中はPeerJS同期を優先し、SDKの低頻度フォールバック同期は重複適用しない
-        if (window.SMA.isGravity && !window.SMA.isHost && window.SMA.myRole !== 'spec' && window.SMA.gravityRtConn && window.SMA.gravityRtConn.open) return;
+        var rtHealthy = (Date.now() - (window.SMA.lastGravityRtSyncAt || 0)) < 1500;
+        if (window.SMA.isGravity && !window.SMA.isHost && window.SMA.myRole !== 'spec' && window.SMA.gravityRtConn && window.SMA.gravityRtConn.open && rtHealthy) return;
         if (!window.SMA.gameRunning) { window.SMA.selectedStage = d.stg || 'battlefield'; window.SMA.bootGame(); }
         window.SMA.applySync(d);
     }
