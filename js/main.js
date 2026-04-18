@@ -2205,14 +2205,14 @@ window.SMA.CHAR_DATA = {
         jumpMult: 0.85, speed: 1.0, kbMult: 1.2, maxJumps: 3,
         attacks: {
             // NA: 光の弓矢を前方に射出（射程750px = WORLD_W/2）。チャージで3本（直進/斜め上/斜め下）
-            NEUTRAL: { type: 'arrow_shot', spawnFrame: 6, dmg: 5, kb: 1.0, scale: 0.06, speed: 10.5, radius: 8, frames: 18, lag: 12, stun: 3, range: 750, color: '#ffe066' },
+            NEUTRAL: { type: 'arrow_shot', spawnFrame: 6, dmg: 3, kb: 0.9, scale: 0.06, speed: 8, radius: 8, frames: 18, lag: 12, stun: 3, range: 750, color: '#ffe066' },
             // 横A: 羽ばたき攻撃。空中時は自己後方ノックバック
             SIDE: { type: 'wing_flap', dmg: 13, kb: 2.8, scale: 0.1, angle: -25, frames: 22, lag: 18, stun: 8, color: '#fff' },
             // 上A: 飛翔攻撃（攻撃判定付き上昇）
             UP: { type: 'wing_rise', dmg: 11, kb: 2.64, scale: 0.1, angle: -85, frames: 30, lag: 20, stun: 6, color: '#ffe066', limit: true },
             // 下A: 円形衝撃波（固定吹っ飛ばし、撃墜不可）。空中で滞空
             DOWN: { type: 'shockwave', dmg: 8, kb: 8.0, scale: 0, angle: -45, frames: 35, lag: 31, stun: 10, shockRadius: 160, color: '#ffe066' },
-            AIR_NEUTRAL: { type: 'arrow_shot', spawnFrame: 6, dmg: 5, kb: 1.0, scale: 0.06, speed: 10.5, radius: 8, frames: 18, lag: 12, stun: 3, range: 750, color: '#ffe066' },
+            AIR_NEUTRAL: { type: 'arrow_shot', spawnFrame: 6, dmg: 3, kb: 1.0, scale: 0.06, speed: 10.5, radius: 8, frames: 18, lag: 12, stun: 3, range: 750, color: '#ffe066' },
             AIR_SIDE: { type: 'wing_flap', dmg: 12, kb: 2.8, scale: 0.1, angle: -30, frames: 22, lag: 18, stun: 7, color: '#fff', airKnockback: true },
             AIR_UP: { type: 'wing_rise', dmg: 10, kb: 2.4, scale: 0.1, angle: -90, frames: 28, lag: 18, stun: 5, color: '#ffe066', limit: true },
             AIR_DOWN: { type: 'shockwave', dmg: 7, kb: 8.0, scale: 0, angle: -45, frames: 35, lag: 31, stun: 10, shockRadius: 160, color: '#ffe066', hover: true },
