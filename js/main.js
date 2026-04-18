@@ -118,7 +118,10 @@ window.SMA.startGravityRealtimeHost = function (roomId) {
             c.on('close', function () {
                 window.SMA.gravityRtConns = window.SMA.gravityRtConns.filter(function (x) { return x !== c; });
             });
-            c.on('error', function () { });
+            c.on('error', function () {
+                window.SMA.gravityRtConns = window.SMA.gravityRtConns.filter(function (x) { return x !== c; });
+                try { c.close(); } catch (e) { }
+            });
             window.SMA.gravityRtConns.push(c);
         });
         window.SMA.gravityRtPeer.on('error', function (e) {
@@ -180,20 +183,22 @@ window.SMA.sendGravityInput = function (keys) {
 window.SMA.sendGravitySync = function (pkt) {
     if (!window.SMA.isGravity || !window.SMA.isHost) return;
     var now = Date.now();
-    var hasRtPlayer = false;
+    var rtSendOkCount = 0;
 
     if (window.SMA.gravityUsePeerInMatch && window.SMA.gravityRtConns && window.SMA.gravityRtConns.length) {
         var rtPayload = Object.assign({ type: 'rt_sync' }, pkt);
         window.SMA.gravityRtConns.forEach(function (c) {
             if (!c || !c.open) return;
             if (c._rtRole === 'spec') return;
-            hasRtPlayer = true;
-            try { c.send(rtPayload); } catch (e) { }
+            try {
+                c.send(rtPayload);
+                rtSendOkCount++;
+            } catch (e) { }
         });
     }
 
     var hasSpec = window.SMA.connections.some(function (x) { return x.role === 'spec'; });
-    var needFallbackForPlayers = !hasRtPlayer;
+    var needFallbackForPlayers = (rtSendOkCount === 0);
     var needFallbackForSpecs = hasSpec && (now - window.SMA.lastGravitySpecSyncAt >= window.SMA.gravitySpecSyncIntervalMs);
     var needFallback = needFallbackForPlayers || needFallbackForSpecs;
     if (!needFallback) return;
