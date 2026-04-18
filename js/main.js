@@ -2187,17 +2187,17 @@ function reportError(e) {
                 jumpMult: 0.85, speed: 1.0, kbMult: 1.2, maxJumps: 3,
                 attacks: {
                     // NA: 光の弓矢を前方に射出（射程750px = WORLD_W/2）。チャージで3本（直進/斜め上/斜め下）
-                    NEUTRAL: { type:'arrow_shot', spawnFrame: 6, dmg: 5, kb: 1.5, scale: 0.06, speed: 10.5, radius: 8, frames: 18, lag: 6, stun: 3, range: 750, color: '#ffe066' },
+                    NEUTRAL: { type:'arrow_shot', spawnFrame: 6, dmg: 5, kb: 1.0, scale: 0.06, speed: 10.5, radius: 8, frames: 18, lag: 9, stun: 3, range: 750, color: '#ffe066' },
                     // 横A: 羽ばたき攻撃。空中時は自己後方ノックバック
-                    SIDE:    { type:'wing_flap', dmg: 13, kb: 8.4, scale: 0.1, angle: -25, frames: 22, lag: 18, stun: 8, color: '#fff' },
+                    SIDE:    { type:'wing_flap', dmg: 13, kb: 2.8, scale: 0.1, angle: -25, frames: 22, lag: 18, stun: 8, color: '#fff' },
                     // 上A: 飛翔攻撃（攻撃判定付き上昇）
-                    UP:      { type:'wing_rise', dmg: 11, kb: 2.64, scale: 0.1, angle: -85, frames: 30, lag: 20, stun: 6, color: '#ffe066' },
+                    UP:      { type:'wing_rise', dmg: 11, kb: 2.64, scale: 0.1, angle: -85, frames: 30, lag: 20, stun: 6, color: '#ffe066', limit: true },
                     // 下A: 円形衝撃波（固定吹っ飛ばし、撃墜不可）。空中で滞空
-                    DOWN:    { type:'shockwave', dmg: 8, kb: 4.0, scale: 0, angle: -45, frames: 35, lag: 28, stun: 10, shockRadius: 200, color: '#ffe066' },
-                    AIR_NEUTRAL: { type:'arrow_shot', spawnFrame: 6, dmg: 5, kb: 1.5, scale: 0.06, speed: 10.5, radius: 8, frames: 18, lag: 6, stun: 3, range: 750, color: '#ffe066' },
-                    AIR_SIDE:{ type:'wing_flap', dmg: 12, kb: 7.5, scale: 0.1, angle: -30, frames: 22, lag: 18, stun: 7, color: '#fff', airKnockback: true },
-                    AIR_UP:  { type:'wing_rise', dmg: 10, kb: 2.4, scale: 0.1, angle: -90, frames: 28, lag: 18, stun: 5, color: '#ffe066' },
-                    AIR_DOWN:{ type:'shockwave', dmg: 7, kb: 4.0, scale: 0, angle: -45, frames: 35, lag: 28, stun: 10, shockRadius: 200, color: '#ffe066', hover: true },
+                    DOWN:    { type:'shockwave', dmg: 8, kb: 8.0, scale: 0, angle: -45, frames: 35, lag: 28, stun: 10, shockRadius: 200, color: '#ffe066' },
+                    AIR_NEUTRAL: { type:'arrow_shot', spawnFrame: 6, dmg: 5, kb: 1.0, scale: 0.06, speed: 10.5, radius: 8, frames: 18, lag: 9, stun: 3, range: 750, color: '#ffe066' },
+                    AIR_SIDE:{ type:'wing_flap', dmg: 12, kb: 2.8, scale: 0.1, angle: -30, frames: 22, lag: 18, stun: 7, color: '#fff', airKnockback: true },
+                    AIR_UP:  { type:'wing_rise', dmg: 10, kb: 2.4, scale: 0.1, angle: -90, frames: 28, lag: 18, stun: 5, color: '#ffe066', limit: true },
+                    AIR_DOWN:{ type:'shockwave', dmg: 7, kb: 8.0, scale: 0, angle: -45, frames: 35, lag: 28, stun: 10, shockRadius: 200, color: '#ffe066', hover: true },
                     LEDGE_ATK: { dmg: 7, kb: 10.0, scale: 0.01, angle: -45, frames: 30, lag: 10, stun: 10 }
                 },
                 throws: {
@@ -2391,7 +2391,7 @@ function reportError(e) {
                 if(this.chargePower === 1.0) this.chargePower = 1.0;
             }
         };
-        window.SMA.Fighter.prototype.releaseAttack = function(typeStr) { var S=window.SMA; if (this.actionState === 'CHARGE' || this.actionState === 'IDLE') { var power = this.chargePower; if (this.actionState === 'IDLE') power = 1.0; this.actionState = 'ATTACK'; if (!this.isGrounded) { if (typeStr === 'DOWN') typeStr = 'AIR_DOWN'; else if (typeStr === 'SIDE') typeStr = 'AIR_SIDE'; else if (typeStr === 'NEUTRAL') typeStr = 'AIR_NEUTRAL'; if(this.charId==='spear' && typeStr==='AIR_UP' && this.hasUpSpecial) return; } var set = S.CHAR_DATA[this.charId].attacks; if(set[typeStr]) this.currentAttack = set[typeStr]; else this.currentAttack = null; this.currentAttackType = typeStr; this.chargePower = power; this.hasHit = false; this.mirrorHasHit = false; this.stateTimer = 0; if(this.currentAttack) { if(this.currentAttack.type === 'arrow_shot') S.playSound('magic'); else if(this.currentAttack.type === 'shot') S.playSound('magic'); else if(this.currentAttack.type === 'fire_shot') S.playSound('magic'); else if(this.currentAttack.type === 'up_rush') S.playSound('jump'); else if(this.currentAttack.type === 'ground_shock') {} else if(this.currentAttack.type === 'boomerang' || this.currentAttack.type === 'boomerang_up') S.playSound('sword'); else if(this.currentAttackType === 'UP' && this.charId === 'mage') S.playSound('spin'); else S.playSound('sword'); } } };
+        window.SMA.Fighter.prototype.releaseAttack = function(typeStr) { var S=window.SMA; if (this.actionState === 'CHARGE' || this.actionState === 'IDLE') { var power = this.chargePower; if (this.actionState === 'IDLE') power = 1.0; this.actionState = 'ATTACK'; if (!this.isGrounded) { if (typeStr === 'DOWN') typeStr = 'AIR_DOWN'; else if (typeStr === 'SIDE') typeStr = 'AIR_SIDE'; else if (typeStr === 'NEUTRAL') typeStr = 'AIR_NEUTRAL'; if(this.charId==='spear' && typeStr==='AIR_UP' && this.hasUpSpecial) return; if(this.charId==='angel' && typeStr==='AIR_UP' && this.hasUpSpecial) return; } var set = S.CHAR_DATA[this.charId].attacks; if(set[typeStr]) this.currentAttack = set[typeStr]; else this.currentAttack = null; this.currentAttackType = typeStr; this.chargePower = power; this.hasHit = false; this.mirrorHasHit = false; this.stateTimer = 0; if(this.currentAttack) { if(this.currentAttack.type === 'arrow_shot') S.playSound('magic'); else if(this.currentAttack.type === 'shot') S.playSound('magic'); else if(this.currentAttack.type === 'fire_shot') S.playSound('magic'); else if(this.currentAttack.type === 'up_rush') S.playSound('jump'); else if(this.currentAttack.type === 'ground_shock') {} else if(this.currentAttack.type === 'boomerang' || this.currentAttack.type === 'boomerang_up') S.playSound('sword'); else if(this.currentAttackType === 'UP' && this.charId === 'mage') S.playSound('spin'); else S.playSound('sword'); } } };
         window.SMA.Fighter.prototype.handleAttackFrame = function() { 
             var S=window.SMA; this.stateTimer++; var atk = this.currentAttack; if(!atk) return; 
             
@@ -2438,8 +2438,8 @@ function reportError(e) {
                 if (this.stateTimer >= hitStart && this.stateTimer <= hitEnd) {
                     var dir = this.facingRight ? 1 : -1;
                     this.hitbox.active = true;
-                    this.hitbox.w = 160; this.hitbox.h = 100;
-                    this.hitbox.x = this.x + this.w/2 + dir * 40 - 80;
+                    this.hitbox.w = 120; this.hitbox.h = 75;
+                    this.hitbox.x = this.x + this.w/2 + dir * 30 - 60;
                     this.hitbox.y = this.y + 5;
                 } else { this.hitbox.active = false; }
                 // 空中横Aの自己後方ノックバック
@@ -2452,7 +2452,8 @@ function reportError(e) {
                 return;
             }
             if (atk.type === 'wing_rise') {
-                // 上A: 飛翔攻撃（hitbox方式）
+                // 上A: 飛翔攻撃（hitbox方式）— 着地まで1回制限
+                if (this.stateTimer === 1 && atk.limit) this.hasUpSpecial = true;
                 var riseStart = 6; var riseEnd = 20;
                 if (this.stateTimer >= riseStart && this.stateTimer <= riseEnd) {
                     this.vy = -9.6;
@@ -2466,7 +2467,7 @@ function reportError(e) {
                 return;
             }
             if (atk.type === 'shockwave') {
-                // 下A: 円形衝撃波（hitbox方式）
+                // 下A: 円形衝撃波（位置依存の吹っ飛ばし方向）
                 if (atk.hover && !this.isGrounded) {
                     this.vy = 0; this.vx *= 0.8;
                 }
@@ -2477,6 +2478,22 @@ function reportError(e) {
                     this.hitbox.w = sr * 2; this.hitbox.h = sr * 2;
                     this.hitbox.x = this.x + this.w/2 - sr;
                     this.hitbox.y = this.y + this.h/2 - sr;
+                    // 各フレームでhasHitをリセットし、相手位置に応じてfacingRightを切り替え
+                    // → checkHitが呼ばれた時にfacingRightに応じてangle方向が反転する
+                    this.hasHit = false;
+                    // 最も近い被弾候補の位置をチェックしてfacingRightを動的変更
+                    var myCx = this.x + this.w/2;
+                    for (var si = 0; si < S.players.length; si++) {
+                        var sp = S.players[si];
+                        if (sp === this || sp.stocks <= 0 || sp.actionState === 'DEAD' || sp.invincible > 0) continue;
+                        var spCx = sp.x + sp.w/2;
+                        // hitbox内にいるか大まかにチェック
+                        var dx = spCx - myCx; var dy = (sp.y + sp.h/2) - (this.y + this.h/2);
+                        if (Math.sqrt(dx*dx+dy*dy) < sr) {
+                            this.facingRight = (spCx >= myCx);
+                            break;
+                        }
+                    }
                     if (this.stateTimer === shockFrame) {
                         S.createParticles(this.x + this.w/2, this.y + this.h/2, 25, '#ffe066');
                         S.playSound('magic');
@@ -3124,6 +3141,7 @@ function reportError(e) {
                             var wingFlap = Math.sin(Date.now()/200) * 4;
                             var isWingFlap = this.actionState === 'ATTACK' && this.currentAttack && this.currentAttack.type === 'wing_flap';
                             var isWingRise = this.actionState === 'ATTACK' && this.currentAttack && this.currentAttack.type === 'wing_rise';
+                            var isShockwave = this.actionState === 'ATTACK' && this.currentAttack && this.currentAttack.type === 'shockwave';
                             ctx.fillStyle = 'rgba(255,255,255,0.85)';
                             ctx.strokeStyle = '#ddd'; ctx.lineWidth = 1.5;
                             if (isWingFlap && this.stateTimer >= 6 && this.stateTimer <= 16) {
@@ -3158,6 +3176,23 @@ function reportError(e) {
                                 ctx.quadraticCurveTo(cx+35, this.y+22, cx+20, this.y+28);
                                 ctx.quadraticCurveTo(cx+8, this.y+24, cx+3, this.y+22);
                                 ctx.fill(); ctx.stroke();
+                            } else if (isShockwave) {
+                                // 下A: 左右対称に翼を広げる（衝撃波チャージ）
+                                var shockWingFlap = Math.sin(this.stateTimer * 0.6) * 6;
+                                // 左翼
+                                ctx.beginPath();
+                                ctx.moveTo(cx-3, this.y+18);
+                                ctx.quadraticCurveTo(cx-35, this.y+5+shockWingFlap, cx-45, this.y+20+shockWingFlap);
+                                ctx.quadraticCurveTo(cx-30, this.y+24, cx-15, this.y+28);
+                                ctx.quadraticCurveTo(cx-6, this.y+24, cx-3, this.y+22);
+                                ctx.fill(); ctx.stroke();
+                                // 右翼
+                                ctx.beginPath();
+                                ctx.moveTo(cx+3, this.y+18);
+                                ctx.quadraticCurveTo(cx+35, this.y+5+shockWingFlap, cx+45, this.y+20+shockWingFlap);
+                                ctx.quadraticCurveTo(cx+30, this.y+24, cx+15, this.y+28);
+                                ctx.quadraticCurveTo(cx+6, this.y+24, cx+3, this.y+22);
+                                ctx.fill(); ctx.stroke();
                             } else {
                                 // 通常: 背中側に翼（向いている方向の反対）
                                 ctx.beginPath();
@@ -3173,10 +3208,51 @@ function reportError(e) {
                                 ctx.quadraticCurveTo(cx - dir*15, this.y+30, cx, this.y+28);
                                 ctx.fill(); ctx.stroke();
                             }
-                            // 腕（前方に弓を構える）
+                            // 腕と弓
                             ctx.strokeStyle = sc; ctx.lineWidth = 3;
-                            ctx.beginPath(); ctx.moveTo(cx, this.y+25); ctx.lineTo(cx + dir*15, this.y+28); ctx.stroke();
-                            ctx.beginPath(); ctx.moveTo(cx, this.y+25); ctx.lineTo(cx + dir*10, this.y+35); ctx.stroke();
+                            var isArrowShot = this.actionState === 'ATTACK' && this.currentAttack && this.currentAttack.type === 'arrow_shot';
+                            var isCharging = this.actionState === 'CHARGE';
+                            if (isArrowShot || isCharging) {
+                                // NA / チャージ: 前方に弓を構えて射る構え
+                                // 弓本体（前方に向ける）
+                                ctx.strokeStyle = '#c89b3c'; ctx.lineWidth = 2.5;
+                                ctx.beginPath(); ctx.arc(cx + dir*20, this.y+25, 18, dir > 0 ? -1.2 : Math.PI-1.2, dir > 0 ? 1.2 : Math.PI+1.2); ctx.stroke();
+                                // 弦
+                                var pullBack = isCharging ? Math.min(this.chargePower * 5, 10) : 3;
+                                ctx.strokeStyle = '#fff'; ctx.lineWidth = 1;
+                                ctx.beginPath(); ctx.moveTo(cx + dir*(20+18*Math.cos(-1.2)), this.y+25+18*Math.sin(-1.2));
+                                ctx.lineTo(cx + dir*(20-pullBack), this.y+25);
+                                ctx.lineTo(cx + dir*(20+18*Math.cos(1.2)), this.y+25+18*Math.sin(1.2));ctx.stroke();
+                                // 矢（弦の上）
+                                if (isCharging || (isArrowShot && this.stateTimer < 6)) {
+                                    ctx.fillStyle = '#ffe066';
+                                    ctx.shadowBlur = 5; ctx.shadowColor = '#ffe066';
+                                    ctx.beginPath();
+                                    ctx.moveTo(cx + dir*(25), this.y+25);
+                                    ctx.lineTo(cx + dir*(20-pullBack-2), this.y+22);
+                                    ctx.lineTo(cx + dir*(20-pullBack-2), this.y+28);
+                                    ctx.closePath(); ctx.fill();
+                                    ctx.shadowBlur = 0;
+                                }
+                                // 腕（後ろ手で弦を引く）
+                                ctx.strokeStyle = sc; ctx.lineWidth = 3;
+                                ctx.beginPath(); ctx.moveTo(cx, this.y+25); ctx.lineTo(cx + dir*18, this.y+24); ctx.stroke();
+                                ctx.beginPath(); ctx.moveTo(cx, this.y+25); ctx.lineTo(cx + dir*(20-pullBack), this.y+25); ctx.stroke();
+                            } else {
+                                // 通常: 弓を下げ持ち
+                                ctx.strokeStyle = '#c89b3c'; ctx.lineWidth = 2;
+                                ctx.beginPath(); ctx.arc(cx + dir*8, this.y+35, 12, dir > 0 ? -1.0 : Math.PI-1.0, dir > 0 ? 1.0 : Math.PI+1.0); ctx.stroke();
+                                // 弦
+                                ctx.strokeStyle = '#ddd'; ctx.lineWidth = 1;
+                                ctx.beginPath(); 
+                                ctx.moveTo(cx + dir*(8+12*Math.cos(-1.0)), this.y+35+12*Math.sin(-1.0));
+                                ctx.lineTo(cx + dir*8, this.y+35);
+                                ctx.lineTo(cx + dir*(8+12*Math.cos(1.0)), this.y+35+12*Math.sin(1.0)); ctx.stroke();
+                                // 腕
+                                ctx.strokeStyle = sc; ctx.lineWidth = 3;
+                                ctx.beginPath(); ctx.moveTo(cx, this.y+25); ctx.lineTo(cx + dir*12, this.y+33); ctx.stroke();
+                                ctx.beginPath(); ctx.moveTo(cx, this.y+25); ctx.lineTo(cx - dir*5, this.y+33); ctx.stroke();
+                            }
                             // 衝撃波エフェクト
                             if (this.actionState === 'ATTACK' && this.currentAttack && this.currentAttack.type === 'shockwave') {
                                 if (this.stateTimer >= 12 && this.stateTimer <= 22) {
