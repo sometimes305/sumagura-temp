@@ -2208,11 +2208,11 @@ window.SMA.CHAR_DATA = {
             // 上A: 飛翔攻撃（攻撃判定付き上昇）
             UP: { type: 'wing_rise', dmg: 11, kb: 2.64, scale: 0.1, angle: -85, frames: 30, lag: 20, stun: 6, color: '#ffe066', limit: true },
             // 下A: 円形衝撃波（固定吹っ飛ばし、撃墜不可）。空中で滞空
-            DOWN: { type: 'shockwave', dmg: 8, kb: 8.0, scale: 0, angle: -45, frames: 35, lag: 28, stun: 10, shockRadius: 200, color: '#ffe066' },
+            DOWN: { type: 'shockwave', dmg: 8, kb: 8.0, scale: 0, angle: -45, frames: 35, lag: 31, stun: 10, shockRadius: 160, color: '#ffe066' },
             AIR_NEUTRAL: { type: 'arrow_shot', spawnFrame: 6, dmg: 5, kb: 1.0, scale: 0.06, speed: 10.5, radius: 8, frames: 18, lag: 12, stun: 3, range: 750, color: '#ffe066' },
             AIR_SIDE: { type: 'wing_flap', dmg: 12, kb: 2.8, scale: 0.1, angle: -30, frames: 22, lag: 18, stun: 7, color: '#fff', airKnockback: true },
             AIR_UP: { type: 'wing_rise', dmg: 10, kb: 2.4, scale: 0.1, angle: -90, frames: 28, lag: 18, stun: 5, color: '#ffe066', limit: true },
-            AIR_DOWN: { type: 'shockwave', dmg: 7, kb: 8.0, scale: 0, angle: -45, frames: 35, lag: 28, stun: 10, shockRadius: 200, color: '#ffe066', hover: true },
+            AIR_DOWN: { type: 'shockwave', dmg: 7, kb: 8.0, scale: 0, angle: -45, frames: 35, lag: 31, stun: 10, shockRadius: 160, color: '#ffe066', hover: true },
             LEDGE_ATK: { dmg: 7, kb: 10.0, scale: 0.01, angle: -45, frames: 30, lag: 10, stun: 10 }
         },
         throws: {
@@ -2329,7 +2329,7 @@ window.SMA.Fighter.prototype.update = function (inputKeys, opponent) {
             }
         } // mirror存在チェック
     }
-    if (this.isGrounded) { this.hasAirDodged = false; this.hasUpSpecial = false; }
+    if (this.isGrounded) { this.hasAirDodged = false; this.hasUpSpecial = false; this._wingRiseUsed = false; }
     var preGrounded = this.isGrounded;
     this.checkPlatforms(inputKeys); this.checkLedgeGrab(); this.checkSolids(); this.checkBounds();
 
@@ -2485,12 +2485,21 @@ window.SMA.Fighter.prototype.handleAttackFrame = function () {
         return;
     }
     if (atk.type === 'wing_rise') {
-        // 上A: 飛翔攻撃 — 空中では着地まで1回のみ上昇可能、2回目は供養（モーションだけ）
-        var isUpFail = (this.hasUpSpecial && atk.limit && !this.isGrounded);
-        if (this.stateTimer === 1 && atk.limit && !this.isGrounded && !this.hasUpSpecial) this.hasUpSpecial = true;
+        // 上A: 空中では着地まで1回のみ上昇可能、2回目は供養（モーションだけ）
+        // 初回フレームで成功/失敗を確定させる（angel専用フラグ）
+        if (this.stateTimer === 1) {
+            this._wingRiseFail = false;
+            if (!this.isGrounded) {
+                if (this._wingRiseUsed) {
+                    this._wingRiseFail = true;
+                } else {
+                    this._wingRiseUsed = true;
+                }
+            }
+        }
         var riseStart = 6; var riseEnd = 20;
         if (this.stateTimer >= riseStart && this.stateTimer <= riseEnd) {
-            if (!isUpFail) {
+            if (!this._wingRiseFail) {
                 // 成功: 真上に急上昇 + 攻撃判定
                 this.vy = -9.6;
                 this.vx *= 0.5;
