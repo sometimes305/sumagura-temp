@@ -1790,7 +1790,10 @@ window.SMA.checkHit = function (atk, vic) {
                 return;
             }
             if (vic.actionState === 'SHIELD') {
-                vic.shieldHP -= 15 * atk.chargePower; vic.vx = (atk.facingRight ? 1 : -1) * 2; window.SMA.createParticles(vic.x + vic.w / 2, vic.y + vic.h / 2, 5, '#0984e3'); if (vic.shieldHP <= 0) { vic.shieldHP = 0; vic.enterState('STUN', 120); } return;
+                var shieldDmg = 15 * atk.chargePower;
+                // ハンマー下A（竜巻）はシールド削り力0
+                if (atk.currentAttack && atk.currentAttack.type === 'tornado') shieldDmg = 0;
+                vic.shieldHP -= shieldDmg; vic.vx = (atk.facingRight ? 1 : -1) * 2; window.SMA.createParticles(vic.x + vic.w / 2, vic.y + vic.h / 2, 5, '#0984e3'); if (vic.shieldHP <= 0) { vic.shieldHP = 0; vic.enterState('STUN', 120); } return;
             }
             if (vic.actionState === 'CHARGE') { vic.chargePower = 1.0; }
             if (data.dmg) vic.percent += data.dmg * p;
@@ -2836,7 +2839,7 @@ window.SMA.Fighter.prototype.handleAttackFrame = function () {
         } return;
     }
     if (atk.type === 'spin_hammer') {
-        if (this.stateTimer === 1) this.vx = (this.facingRight ? 8 : -8);
+        if (this.stateTimer === 1) this.vx = (this.facingRight ? 6.4 : -6.4); // 前進距離80%に縮小
         if (this.stateTimer % 10 === 0 && this.stateTimer < 40) {
             this.hitbox.active = true; this.hitbox.w = 140; this.hitbox.h = 60; this.hitbox.x = this.x + this.w / 2 - 70; this.hitbox.y = this.y + 20;
             this.hasHit = false; // Multi hit reset
@@ -3703,7 +3706,7 @@ window.SMA.Fighter.prototype.draw = function (ctx) {
                                 if (this.currentAttack.type === 'mirror_spin' || this.currentAttackType === 'AIR_NEUTRAL') {
                                     // 空中NA: キャラの周りを一周
                                     var spinAngle = forwardP * Math.PI * 2;
-                                    var r = 40;
+                                    var r = 50;
                                     mirX = cx + (this.facingRight ? 1 : -1) * Math.cos(spinAngle) * r;
                                     mirY = this.y + 25 + Math.sin(spinAngle) * r;
                                     mirAngle = 0; // 鏡の向きは一定
@@ -3711,20 +3714,20 @@ window.SMA.Fighter.prototype.draw = function (ctx) {
                                     // 上A: 上方へ飛び出す
                                     mirScale = 1.5;
                                     mirAngle = forwardP * Math.PI * 4;
-                                    var throwH = 50;
+                                    var throwH = 62;
                                     mirX = cx;
                                     mirY = this.y - 10 - Math.sin(forwardP * Math.PI) * throwH;
                                 } else if (this.currentAttack.type === 'mirror_throw' || this.currentAttackType === 'SIDE' || this.currentAttackType === 'AIR_SIDE') {
                                     // 横A: 前方へ飛び出し回転
                                     mirScale = 1.6;
                                     mirAngle = forwardP * Math.PI * 4;
-                                    var throwDist = 60;
+                                    var throwDist = 75;
                                     var distX = Math.sin(forwardP * Math.PI) * throwDist;
                                     mirX = cx + (this.facingRight ? distX : -distX);
                                     mirY = this.y + 25;
                                 } else if (this.currentAttackType === 'NEUTRAL') {
                                     // 地上NA: 前方に一瞬突き出る（回転無し）
-                                    var pokeDist = Math.sin(forwardP * Math.PI) * 45;
+                                    var pokeDist = Math.sin(forwardP * Math.PI) * 56;
                                     mirX = cx + (this.facingRight ? 30 + pokeDist : -30 - pokeDist);
                                 } else if (this.currentAttackType === 'DOWN' || this.currentAttackType === 'AIR_DOWN' || this.currentAttack.type === 'mirror_place') {
                                     // 下A: 下方へ飛び出し回転
@@ -3755,7 +3758,7 @@ window.SMA.Fighter.prototype.draw = function (ctx) {
                             ctx.scale(mirScale, mirScale);
 
                             // 鏡の外枠（縦長楕円の代わりとしての線）
-                            var len = 14;
+                            var len = this.actionState === 'ATTACK' ? 17.5 : 14;
                             ctx.beginPath(); ctx.moveTo(0, -len); ctx.lineTo(0, len); ctx.stroke();
 
                             ctx.restore();
