@@ -3270,7 +3270,22 @@ window.SMA.Fighter.prototype.draw = function (ctx) {
                     ctx.strokeStyle = sc; ctx.lineWidth = 3;
                     var isArrowShot = this.actionState === 'ATTACK' && this.currentAttack && this.currentAttack.type === 'arrow_shot';
                     var isCharging = this.actionState === 'CHARGE';
-                    if (isArrowShot || isCharging) {
+                    var isGrabAttempt = this.actionState === 'GRAB_ATTEMPT';
+                    var isGrabHold = this.actionState === 'GRABBING' || this.actionState === 'THROWING';
+                    if (isGrabAttempt) {
+                        var grabProgress = this.stateTimer <= 7 ? this.stateTimer / 7 : 1 - (this.stateTimer - 7) / 8;
+                        var armLen = Math.round(10 + grabProgress * 35);
+                        ctx.strokeStyle = sc; ctx.lineWidth = 3;
+                        ctx.beginPath(); ctx.moveTo(cx, this.y + 25); ctx.lineTo(cx + dir * armLen, this.y + 25); ctx.stroke();
+                        ctx.beginPath(); ctx.arc(cx + dir * armLen, this.y + 25, 5, 0, Math.PI * 2); ctx.stroke();
+                        ctx.beginPath(); ctx.moveTo(cx, this.y + 25); ctx.lineTo(cx - dir * 5, this.y + 33); ctx.stroke();
+                    } else if (isGrabHold) {
+                        var pullProgress = this.actionState === 'GRABBING' ? Math.max(0, (120 - this.stateTimer) / 30) : 1.0;
+                        var holdLen = Math.round(40 - pullProgress * 15);
+                        ctx.strokeStyle = sc; ctx.lineWidth = 3;
+                        ctx.beginPath(); ctx.moveTo(cx, this.y + 25); ctx.lineTo(cx + dir * holdLen, this.y + 25); ctx.stroke();
+                        ctx.beginPath(); ctx.moveTo(cx, this.y + 25); ctx.lineTo(cx - dir * 5, this.y + 33); ctx.stroke();
+                    } else if (isArrowShot || isCharging) {
                         // NA / チャージ: 前方に弓を構えて射る構え
                         // 弓本体（前方に向ける）— 溜め中は白発光
                         var bowColor = isCharging ? '#fff' : '#c89b3c';
@@ -3313,6 +3328,7 @@ window.SMA.Fighter.prototype.draw = function (ctx) {
                         ctx.beginPath(); ctx.moveTo(cx, this.y + 25); ctx.lineTo(cx + dir * 12, this.y + 33); ctx.stroke();
                         ctx.beginPath(); ctx.moveTo(cx, this.y + 25); ctx.lineTo(cx - dir * 5, this.y + 33); ctx.stroke();
                     }
+                    if (this.actionState === 'SHIELD') { ctx.save(); ctx.fillStyle = 'rgba(116, 185, 255, ' + (this.shieldHP / 150) + ')'; ctx.strokeStyle = '#0984e3'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(cx, this.y + 30, 45, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.restore(); }
                     // 衝撃波エフェクト
                     if (this.actionState === 'ATTACK' && this.currentAttack && this.currentAttack.type === 'shockwave') {
                         if (this.stateTimer >= 12 && this.stateTimer <= 22) {
