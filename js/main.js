@@ -66,6 +66,7 @@ window.SMA.gravityRtConn = null; // guest -> host
 window.SMA.gravityRtConns = [];  // host -> guests
 window.SMA.gravityRtHostPeerId = null;
 window.SMA.lastGravityRtSyncAt = 0;
+window.SMA.gravityRtOutbox = [];
 
 window.SMA.makeGravityHostPeerId = function (roomId) {
     var rid = String(roomId || '').replace(/[^a-zA-Z0-9_-]/g, '');
@@ -105,6 +106,131 @@ window.SMA.stopGravityRealtime = function () {
     window.SMA.gravityRtConn = null;
     if (window.SMA.gravityRtPeer) { try { window.SMA.gravityRtPeer.destroy(); } catch (e) { } }
     window.SMA.gravityRtPeer = null;
+    window.SMA.gravityRtOutbox = [];
+};
+
+window.SMA.handleGravityPeerHostMessage = function (c, d) {
+    if (!d || typeof d !== 'object') return;
+    if (d.ver && d.ver !== window.SMA.VERSION) {
+        try { c.send({ type: 'error', msg: 'VERSION MISMATCH' }); } catch (e) { }
+        var ov = document.getElementById('overlay-msg');
+        if (ov) ov.innerText = "VERSION MISMATCH\nP2 has diff ver";
+        return;
+    }
+
+    if (d.type === 'handshake') {
+        var existingEntry = null;
+        var assignedRole = null;
+        if (d.role === 'join') {
+            var roles = ['p2', 'p3', 'p4'];
+            for (var ri = 0; ri < roles.length; ri++) {
+                var entry = window.SMA.connections.find(function (x) { return x.role === roles[ri]; });
+                if (entry && entry.name === d.name && (!entry.conn || !entry.conn.open)) {
+                    existingEntry = entry;
+                    assignedRole = roles[ri];
+                    break;
+                }
+            }
+        }
+
+        var isLocked = window.SMA.gameRunning || window.SMA.isInCSS;
+        if (isLocked && d.role !== 'spec' && !existingEntry) {
+            try { c.send({ type: 'error', msg: 'MATCH_IN_PROGRESS' }); } catch (e) { }
+            setTimeout(function () { try { c.close(); } catch (e) { } }, 500);
+            return;
+        }
+
+        if (existingEntry) {
+            existingEntry.conn = c;
+            existingEntry.name = d.name;
+            c._rtRole = assignedRole;
+            try { c.send({ type: 'assign_role', role: assignedRole }); } catch (e) { }
+            window.SMA.showNotification(assignedRole.toUpperCase() + "が再接続しました", 2000);
+        } else if (d.role === 'join') {
+            var p2 = window.SMA.connections.find(function (x) { return x.role === 'p2'; });
+            var p3 = window.SMA.connections.find(function (x) { return x.role === 'p3'; });
+            var p4 = window.SMA.connections.find(function (x) { return x.role === 'p4'; });
+            var newRole = null;
+            if (!p2 || !p2.conn || !p2.conn.open) newRole = 'p2';
+            else if (!p3 || !p3.conn || !p3.conn.open) newRole = 'p3';
+            else if (!p4 || !p4.conn || !p4.conn.open) newRole = 'p4';
+
+            if (!newRole) {
+                try { c.send({ type: 'error', msg: 'ROOM_FULL' }); } catch (e) { }
+                setTimeout(function () { try { c.close(); } catch (e) { } }, 500);
+                return;
+            }
+            var existing = window.SMA.connections.find(function (x) { return x.role === newRole; });
+            if (existing) {
+                existing.conn = c;
+                existing.name = d.name;
+                existing.icon = d.icon;
+            } else {
+                window.SMA.connections.push({ conn: c, role: newRole, name: d.name, icon: d.icon });
+            }
+            c._rtRole = newRole;
+            try { c.send({ type: 'assign_role', role: newRole }); } catch (e) { }
+            window.SMA.broadcastLobby();
+            window.SMA.showNotification(newRole.toUpperCase() + "が入室しました！", 2000);
+        } else {
+            var existingSpec = window.SMA.connections.find(function (x) { return x.role === 'spec' && x.name === d.name; });
+            if (existingSpec) {
+                existingSpec.conn = c;
+                existingSpec.icon = d.icon || existingSpec.icon;
+            } else {
+                window.SMA.connections.push({ conn: c, role: 'spec', name: d.name, icon: d.icon });
+            }
+            c._rtRole = 'spec';
+            window.SMA.broadcastLobby();
+        }
+        return;
+    }
+
+    if (d.type === 'stage_update') {
+        if (d.role === 'p2') window.SMA.p2Stage = d.stageId;
+        if (d.role === 'p3') window.SMA.p3Stage = d.stageId;
+        if (d.role === 'p4') window.SMA.p4Stage = d.stageId;
+        window.SMA.updateSSSUI(); window.SMA.broadcast(d);
+        return;
+    }
+    if (d.type === 'stage_ready') {
+        if (d.role === 'p2') window.SMA.p2StageReady = d.ready;
+        if (d.role === 'p3') window.SMA.p3StageReady = d.ready;
+        if (d.role === 'p4') window.SMA.p4StageReady = d.ready;
+        window.SMA.updateSSSUI(); window.SMA.broadcast(d); window.SMA.checkStageAllReady();
+        return;
+    }
+    if (d.type === 'char_update') {
+        if (d.role === 'p2') window.SMA.p2CharId = d.charId;
+        if (d.role === 'p3') window.SMA.p3CharId = d.charId;
+        if (d.role === 'p4') window.SMA.p4CharId = d.charId;
+        window.SMA.updateCSSUI(); window.SMA.broadcast(d);
+        return;
+    }
+    if (d.type === 'player_ready') {
+        if (d.role === 'p2') window.SMA.p2IsReady = d.ready;
+        if (d.role === 'p3') window.SMA.p3IsReady = d.ready;
+        if (d.role === 'p4') window.SMA.p4IsReady = d.ready;
+        window.SMA.updateCSSUI(); window.SMA.broadcast(d); window.SMA.checkAllReady();
+        return;
+    }
+
+    if (d.type === 'input' && window.SMA.isHost) {
+        var sender = window.SMA.connections.find(function (x) { return x.conn === c; });
+        var role = (sender && sender.role) ? sender.role : (c._rtRole || d.role || 'p2');
+        if (role === 'p2' || role === 'p3' || role === 'p4') {
+            window.SMA.remoteKeysMap[role] = d.keys || {};
+            window.SMA.remoteLastInputTimeMap[role] = Date.now();
+            var k = d.keys || {};
+            if (k.triggerJump || k.triggerStartCharge || k.triggerReleaseAttack || k.triggerGrab) {
+                if (!window.SMA.remoteEventsMap[role]) window.SMA.remoteEventsMap[role] = [];
+                window.SMA.remoteEventsMap[role].push(k);
+            }
+        }
+        return;
+    }
+
+    window.SMA.handleClient(d);
 };
 
 window.SMA.startGravityRealtimeHost = function (roomId) {
@@ -131,10 +257,21 @@ window.SMA.startGravityRealtimeHost = function (roomId) {
                         if (!window.SMA.remoteEventsMap[role]) window.SMA.remoteEventsMap[role] = [];
                         window.SMA.remoteEventsMap[role].push(keys);
                     }
+                    return;
                 }
+                if (window.SMA.handleGravityPeerHostMessage) window.SMA.handleGravityPeerHostMessage(c, d);
             });
             c.on('close', function () {
                 window.SMA.gravityRtConns = window.SMA.gravityRtConns.filter(function (x) { return x !== c; });
+                var idx = window.SMA.connections.findIndex(function (x) { return x.conn === c; });
+                if (idx !== -1) {
+                    if (window.SMA.connections[idx].role === 'spec') {
+                        window.SMA.connections.splice(idx, 1);
+                        window.SMA.broadcastLobby();
+                    } else {
+                        window.SMA.showNotification(window.SMA.connections[idx].role.toUpperCase() + "が切断されました", 2000);
+                    }
+                }
             });
             c.on('error', function () {
                 window.SMA.gravityRtConns = window.SMA.gravityRtConns.filter(function (x) { return x !== c; });
@@ -162,6 +299,11 @@ window.SMA.startGravityRealtimeGuest = function (roomId) {
                 window.SMA.gravityRtConn = conn;
                 conn.on('open', function () {
                     try { conn.send({ type: 'rt_hello', role: window.SMA.myRole }); } catch (e) { }
+                    if (window.SMA.gravityRtOutbox && window.SMA.gravityRtOutbox.length) {
+                        var q = window.SMA.gravityRtOutbox.slice();
+                        window.SMA.gravityRtOutbox = [];
+                        q.forEach(function (m) { try { conn.send(m); } catch (e) { } });
+                    }
                 });
                 conn.on('data', async function (d) {
                     d = await window.SMA.parseGravityRtData(d);
@@ -169,7 +311,9 @@ window.SMA.startGravityRealtimeGuest = function (roomId) {
                     if (d.type === 'rt_sync') {
                         window.SMA.lastGravityRtSyncAt = Date.now();
                         window.SMA.applySync(d);
+                        return;
                     }
+                    window.SMA.handleClient(d);
                 });
                 conn.on('close', function () { window.SMA.gravityRtConn = null; });
                 conn.on('error', function () { window.SMA.gravityRtConn = null; });
@@ -1064,7 +1208,8 @@ window.SMA.toggleHubReady = function (isForceReady) {
             window.SMA.updateHubState(msg);
             window.SMA.broadcast(msg);
         } else {
-            if (window.SMA.netConn) window.SMA.netConn.send(msg);
+            if (window.SMA.isGravity && window.SMA.gravityUsePeerInMatch) window.SMA.broadcast(msg);
+            else if (window.SMA.netConn) window.SMA.netConn.send(msg);
         }
     } else {
         // ソロモード: READYにしてUIも更新してからゲーム開始
@@ -1332,9 +1477,18 @@ window.SMA.broadcastLobby = function () {
 window.SMA.broadcast = function (msg) {
     window.SMA.connections.forEach(function (c) { if (c.conn.open && c.conn.send && !window.SMA.isGravity) c.conn.send(msg); });
     if (window.SMA.isGravity) {
-        var jsonMsg = (typeof msg === 'string') ? msg : JSON.stringify(msg);
-        console.log("[SMA] BROADCAST sending:", msg.type || "(raw)", jsonMsg.substring(0, 200));
-        window.parent.postMessage({ action: 'send_message', actionId: 'broadcast_' + Date.now(), message: jsonMsg }, "*");
+        if (window.SMA.isHost) {
+            window.SMA.gravityRtConns.forEach(function (c) {
+                if (!c || !c.open) return;
+                try { c.send(msg); } catch (e) { }
+            });
+        } else {
+            if (window.SMA.gravityRtConn && window.SMA.gravityRtConn.open) {
+                try { window.SMA.gravityRtConn.send(msg); } catch (e) { }
+            } else {
+                window.SMA.gravityRtOutbox.push(msg);
+            }
+        }
     }
 };
 
@@ -4330,7 +4484,7 @@ window.onload = function () {
             var hubRole = (window.SMA.myRole === 'host') ? 'p1' : window.SMA.myRole;
             var msg = { type: 'hub_ready', role: hubRole, ready: false, stageId: window.SMA.myStageId, charId: window.SMA.myCharId };
             if (window.SMA.isHost) { window.SMA.updateHubState(msg); window.SMA.broadcast(msg); }
-            else { if (window.SMA.netConn) window.SMA.netConn.send(msg); }
+            else { if (window.SMA.isGravity && window.SMA.gravityUsePeerInMatch) window.SMA.broadcast(msg); else if (window.SMA.netConn) window.SMA.netConn.send(msg); }
         }
     });
     bindBtn('btn-hub-back', function () { location.reload(); });
@@ -4411,11 +4565,19 @@ window.onload = function () {
                     }
                 }
             }
-            if (window.SMA.netConn && window.SMA.netConn.open) { if (k === 'jump') window.SMA.netConn.send({ type: 'input', keys: { ...window.SMA.myKeys, triggerJump: true } }); if (k === 'attack') window.SMA.netConn.send({ type: 'input', keys: { ...window.SMA.myKeys, triggerStartCharge: true } }); if (k === 'grab') window.SMA.netConn.send({ type: 'input', keys: { ...window.SMA.myKeys, triggerGrab: true } }); }
+            if (window.SMA.isGravity && window.SMA.gravityUsePeerInMatch) {
+                if (k === 'jump') window.SMA.sendGravityInput({ ...window.SMA.myKeys, triggerJump: true });
+                if (k === 'attack') window.SMA.sendGravityInput({ ...window.SMA.myKeys, triggerStartCharge: true });
+                if (k === 'grab') window.SMA.sendGravityInput({ ...window.SMA.myKeys, triggerGrab: true });
+            } else if (window.SMA.netConn && window.SMA.netConn.open) {
+                if (k === 'jump') window.SMA.netConn.send({ type: 'input', keys: { ...window.SMA.myKeys, triggerJump: true } });
+                if (k === 'attack') window.SMA.netConn.send({ type: 'input', keys: { ...window.SMA.myKeys, triggerStartCharge: true } });
+                if (k === 'grab') window.SMA.netConn.send({ type: 'input', keys: { ...window.SMA.myKeys, triggerGrab: true } });
+            }
         };
         var u = function (e) {
             if (window.SMA.isEditingLayout || window.SMA.myRole === 'spec') return;
-            try { if (e.cancelable) e.preventDefault(); } catch (err) { } window.SMA.myKeys[k] = false; var type = 'NEUTRAL'; if (window.SMA.myKeys.up) type = 'UP'; else if (window.SMA.myKeys.down) type = 'DOWN'; else if (window.SMA.myKeys.left || window.SMA.myKeys.right) type = 'SIDE'; if (window.SMA.gameRunning && window.SMA.isHost && window.SMA.pOne) { if (k === 'attack') window.SMA.pOne.releaseAttack(type); } if (k === 'attack' && window.SMA.netConn && window.SMA.netConn.open) window.SMA.netConn.send({ type: 'input', keys: { ...window.SMA.myKeys, triggerReleaseAttack: true, attackType: type } });
+            try { if (e.cancelable) e.preventDefault(); } catch (err) { } window.SMA.myKeys[k] = false; var type = 'NEUTRAL'; if (window.SMA.myKeys.up) type = 'UP'; else if (window.SMA.myKeys.down) type = 'DOWN'; else if (window.SMA.myKeys.left || window.SMA.myKeys.right) type = 'SIDE'; if (window.SMA.gameRunning && window.SMA.isHost && window.SMA.pOne) { if (k === 'attack') window.SMA.pOne.releaseAttack(type); } if (k === 'attack') { if (window.SMA.isGravity && window.SMA.gravityUsePeerInMatch) window.SMA.sendGravityInput({ ...window.SMA.myKeys, triggerReleaseAttack: true, attackType: type }); else if (window.SMA.netConn && window.SMA.netConn.open) window.SMA.netConn.send({ type: 'input', keys: { ...window.SMA.myKeys, triggerReleaseAttack: true, attackType: type } }); }
         };
         try { el.addEventListener('touchstart', d, { passive: false }); } catch (e) { el.addEventListener('touchstart', d); }
         try { el.addEventListener('touchend', u, { passive: false }); } catch (e) { el.addEventListener('touchend', u); }
