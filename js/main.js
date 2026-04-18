@@ -3290,29 +3290,31 @@ window.SMA.Fighter.prototype.draw = function (ctx) {
                         // 弓本体（前方に向ける）— 溜め中は白発光
                         var bowColor = isCharging ? '#fff' : '#c89b3c';
                         if (isCharging) { ctx.shadowBlur = 12; ctx.shadowColor = '#fff'; }
+                        var bowJx = isCharging ? (Math.random() - 0.5) * 2.5 : 0;
+                        var bowJy = isCharging ? (Math.random() - 0.5) * 2.5 : 0;
                         ctx.strokeStyle = bowColor; ctx.lineWidth = 2.5;
-                        ctx.beginPath(); ctx.arc(cx + dir * 20, this.y + 25, 18, dir > 0 ? -1.2 : Math.PI - 1.2, dir > 0 ? 1.2 : Math.PI + 1.2); ctx.stroke();
+                        ctx.beginPath(); ctx.arc(cx + dir * 20 + bowJx, this.y + 25 + bowJy, 18, dir > 0 ? -1.2 : Math.PI - 1.2, dir > 0 ? 1.2 : Math.PI + 1.2); ctx.stroke();
                         // 弦
                         var pullBack = isCharging ? Math.min(this.chargePower * 5, 10) : 3;
                         ctx.strokeStyle = isCharging ? '#fff' : '#ddd'; ctx.lineWidth = isCharging ? 1.5 : 1;
-                        ctx.beginPath(); ctx.moveTo(cx + dir * (20 + 18 * Math.cos(-1.2)), this.y + 25 + 18 * Math.sin(-1.2));
-                        ctx.lineTo(cx + dir * (20 - pullBack), this.y + 25);
-                        ctx.lineTo(cx + dir * (20 + 18 * Math.cos(1.2)), this.y + 25 + 18 * Math.sin(1.2)); ctx.stroke();
+                        ctx.beginPath(); ctx.moveTo(cx + dir * (20 + 18 * Math.cos(-1.2)) + bowJx, this.y + 25 + 18 * Math.sin(-1.2) + bowJy);
+                        ctx.lineTo(cx + dir * (20 - pullBack) + bowJx, this.y + 25 + bowJy);
+                        ctx.lineTo(cx + dir * (20 + 18 * Math.cos(1.2)) + bowJx, this.y + 25 + 18 * Math.sin(1.2) + bowJy); ctx.stroke();
                         // 矢（弦の上）
                         if (isCharging || (isArrowShot && this.stateTimer < 6)) {
                             ctx.fillStyle = '#ffe066';
                             ctx.shadowBlur = 5; ctx.shadowColor = '#ffe066';
                             ctx.beginPath();
-                            ctx.moveTo(cx + dir * (25), this.y + 25);
-                            ctx.lineTo(cx + dir * (20 - pullBack - 2), this.y + 22);
-                            ctx.lineTo(cx + dir * (20 - pullBack - 2), this.y + 28);
+                            ctx.moveTo(cx + dir * (25) + bowJx, this.y + 25 + bowJy);
+                            ctx.lineTo(cx + dir * (20 - pullBack - 2) + bowJx, this.y + 22 + bowJy);
+                            ctx.lineTo(cx + dir * (20 - pullBack - 2) + bowJx, this.y + 28 + bowJy);
                             ctx.closePath(); ctx.fill();
                             ctx.shadowBlur = 0;
                         }
                         // 腕（後ろ手で弦を引く）
                         ctx.strokeStyle = sc; ctx.lineWidth = 3;
-                        ctx.beginPath(); ctx.moveTo(cx, this.y + 25); ctx.lineTo(cx + dir * 18, this.y + 24); ctx.stroke();
-                        ctx.beginPath(); ctx.moveTo(cx, this.y + 25); ctx.lineTo(cx + dir * (20 - pullBack), this.y + 25); ctx.stroke();
+                        ctx.beginPath(); ctx.moveTo(cx, this.y + 25); ctx.lineTo(cx + dir * 18 + bowJx * 0.6, this.y + 24 + bowJy * 0.6); ctx.stroke();
+                        ctx.beginPath(); ctx.moveTo(cx, this.y + 25); ctx.lineTo(cx + dir * (20 - pullBack) + bowJx, this.y + 25 + bowJy); ctx.stroke();
                     } else {
                         // 通常: 弓を下げ持ち
                         ctx.strokeStyle = '#c89b3c'; ctx.lineWidth = 2;
