@@ -70,6 +70,9 @@ window.SMA.lastGravityFallbackSyncAt = 0;
 window.SMA.lastGravitySpecSyncAt = 0;
 window.SMA.gravitySpecSyncIntervalMs = 500;
 window.SMA.lastGravityRtSyncAt = 0;
+window.SMA.gravityRtStaleMs = 800;
+window.SMA.lastGravitySyncRequestAt = 0;
+window.SMA.gravityForceSdkSyncUntil = 0;
 
 window.SMA.makeGravityHostPeerId = function (roomId) {
     var rid = String(roomId || '').replace(/[^a-zA-Z0-9_-]/g, '');
@@ -198,7 +201,8 @@ window.SMA.sendGravitySync = function (pkt) {
     }
 
     var hasSpec = window.SMA.connections.some(function (x) { return x.role === 'spec'; });
-    var needFallbackForPlayers = (rtSendOkCount === 0);
+    var forceSdkForPlayers = now < (window.SMA.gravityForceSdkSyncUntil || 0);
+    var needFallbackForPlayers = (rtSendOkCount === 0) || forceSdkForPlayers;
     var needFallbackForSpecs = hasSpec && (now - window.SMA.lastGravitySpecSyncAt >= window.SMA.gravitySpecSyncIntervalMs);
     var needFallback = needFallbackForPlayers || needFallbackForSpecs;
     if (!needFallback) return;
@@ -331,6 +335,10 @@ window.addEventListener('message', function (event) {
                 }
 
                 // Host-side input handling
+                if (parsed.type === 'rt_sync_request' && window.SMA.isHost) {
+                    window.SMA.gravityForceSdkSyncUntil = Date.now() + 2000;
+                    return;
+                }
                 if (parsed.type === 'input' && window.SMA.isHost) {
                     var role = parsed.senderRole || 'p2';
                     window.SMA.remoteKeysMap[role] = parsed.keys;
@@ -372,6 +380,8 @@ window.addEventListener('message', function (event) {
                         window.SMA.remoteLastInputTime = Date.now();
                         if (parsedL.keys.triggerJump) window.SMA.remoteEvents.push(parsedL.keys);
                     }
+                } else if (parsedL.type === 'rt_sync_request' && window.SMA.isHost) {
+                    window.SMA.gravityForceSdkSyncUntil = Date.now() + 2000;
                 } else {
                     window.SMA.handleClient(parsedL);
                 }
@@ -1422,7 +1432,7 @@ window.SMA.handleClient = async function (d) {
     }
     if (d.type === 'sync') {
         // 試合中はPeerJS同期を優先し、SDKの低頻度フォールバック同期は重複適用しない
-        var rtHealthy = (Date.now() - (window.SMA.lastGravityRtSyncAt || 0)) < 1500;
+        var rtHealthy = (Date.now() - (window.SMA.lastGravityRtSyncAt || 0)) < ((window.SMA.gravityRtStaleMs || 800) + 300);
         if (window.SMA.isGravity && !window.SMA.isHost && window.SMA.myRole !== 'spec' && window.SMA.gravityRtConn && window.SMA.gravityRtConn.open && rtHealthy) return;
         if (!window.SMA.gameRunning) { window.SMA.selectedStage = d.stg || 'battlefield'; window.SMA.bootGame(); }
         window.SMA.applySync(d);
@@ -1792,6 +1802,18 @@ window.SMA.gameLoop = function () {
                 // Gravity入力送信
                 if (window.SMA.isGravity && !window.SMA.isHost) {
                     window.SMA.sendGravityInput(window.SMA.myKeys);
+                    if (window.SMA.myRole !== 'spec') {
+                        var nowReq = Date.now();
+                        var rtStale = (nowReq - (window.SMA.lastGravityRtSyncAt || 0)) > (window.SMA.gravityRtStaleMs || 800);
+                        if (rtStale && (nowReq - (window.SMA.lastGravitySyncRequestAt || 0)) > 1000) {
+                            window.SMA.lastGravitySyncRequestAt = nowReq;
+                            window.parent.postMessage({
+                                type: "API",
+                                action: "AgentSDK.room.sendMessage",
+                                params: { message: JSON.stringify({ type: 'rt_sync_request', senderRole: window.SMA.myRole }) }
+                            }, "*");
+                        }
+                    }
                 }
                 window.SMA.players.forEach(function (p) { if (p && p.actionState !== 'DEAD') { p.animScale.x += (1.0 - p.animScale.x) * 0.2; p.animScale.y += (1.0 - p.animScale.y) * 0.2; if (p.actionState !== 'LEDGE_ROLL') p.rotation = 0; } });
             }
