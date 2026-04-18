@@ -2154,6 +2154,30 @@ function reportError(e) {
                     THROW_UP: { dmg: 6, kb: 7.2, scale: 0.06, angle: -90 },
                     THROW_DN: { dmg: 6, kb: 8.4, scale: 0.06, angle: 45 }
                 }
+            },
+            angel: {
+                jumpMult: 0.85, speed: 1.0, kbMult: 1.2, maxJumps: 3,
+                attacks: {
+                    // NA: 光の弓矢を前方に射出（射程750px = WORLD_W/2）。チャージで3本（直進/斜め上/斜め下）
+                    NEUTRAL: { type:'arrow_shot', spawnFrame: 6, dmg: 5, kb: 2.0, scale: 0.06, speed: 14, radius: 8, frames: 18, lag: 6, stun: 3, range: 750, color: '#ffe066' },
+                    // 横A: 羽ばたき攻撃。空中時は自己後方ノックバック
+                    SIDE:    { type:'wing_flap', dmg: 13, kb: 2.8, scale: 0.1, angle: -25, frames: 22, lag: 18, stun: 8, color: '#fff' },
+                    // 上A: 飛翔攻撃（攻撃判定付き上昇）
+                    UP:      { type:'wing_rise', dmg: 11, kb: 2.2, scale: 0.1, angle: -85, frames: 30, lag: 20, stun: 6, color: '#ffe066' },
+                    // 下A: 円形衝撃波（固定吹っ飛ばし、撃墜不可）。空中で滞空
+                    DOWN:    { type:'shockwave', dmg: 8, kb: 4.0, scale: 0, angle: -45, frames: 35, lag: 25, stun: 10, shockRadius: 200, color: '#ffe066' },
+                    AIR_NEUTRAL: { type:'arrow_shot', spawnFrame: 6, dmg: 5, kb: 2.0, scale: 0.06, speed: 14, radius: 8, frames: 18, lag: 6, stun: 3, range: 750, color: '#ffe066' },
+                    AIR_SIDE:{ type:'wing_flap', dmg: 12, kb: 2.5, scale: 0.1, angle: -30, frames: 22, lag: 18, stun: 7, color: '#fff', airKnockback: true },
+                    AIR_UP:  { type:'wing_rise', dmg: 10, kb: 2.0, scale: 0.1, angle: -90, frames: 28, lag: 18, stun: 5, color: '#ffe066' },
+                    AIR_DOWN:{ type:'shockwave', dmg: 7, kb: 4.0, scale: 0, angle: -45, frames: 35, lag: 25, stun: 10, shockRadius: 200, color: '#ffe066', hover: true },
+                    LEDGE_ATK: { dmg: 7, kb: 10.0, scale: 0.01, angle: -45, frames: 30, lag: 10, stun: 10 }
+                },
+                throws: {
+                    THROW_FW: { dmg: 7, kb: 7.0, scale: 0.07, angle: -30 },
+                    THROW_BK: { dmg: 7, kb: 7.0, scale: 0.07, angle: -150 },
+                    THROW_UP: { dmg: 7, kb: 7.0, scale: 0.07, angle: -90 },
+                    THROW_DN: { dmg: 7, kb: 7.0, scale: 0.07, angle: 45 }
+                }
             }
         };
 
@@ -2312,7 +2336,7 @@ function reportError(e) {
         window.SMA.Fighter.prototype.performThrow = function(typeStr) { var S=window.SMA; var vic = this.grabbedTarget; if (!vic) return; this.actionState = 'THROWING'; this.stateTimer = 15; var data = S.CHAR_DATA[this.charId].throws[typeStr]; vic.percent += data.dmg; var rad = data.angle * (Math.PI/180); var force = data.kb + (vic.percent * data.scale); var vx = Math.cos(rad) * force; var vy = Math.sin(rad) * force; if (!this.facingRight) vx *= -1; vic.vx = vx; vic.vy = vy; vic.enterState('STUN', 40); vic.grabInvincible = 60; vic.chargePower = 1.0; this.grabbedTarget = null; S.createParticles(vic.x+15, vic.y+30, 15, '#fff'); S.shake = 10; S.updateHud(); S.playSound('hit'); };
         window.SMA.Fighter.prototype.die = function(direction, dx, dy) { var S=window.SMA; this.stocks--; if (this.charId === 'mirror') { this.mirror = null; this.mirrorClone = null; this.mirrorCooldown = 300; } S.updateHud(); this.chargePower = 1.0; this.hitbox.active = false; S.playSound('hit'); S.triggerComet(dx, dy, direction, this.color); S.freezeFrame = 10; this.actionState = 'DEAD'; this.percent = 0; if (this.stocks > 0) { this.actionState = 'RESPAWN'; this.respawnTimer = 90; this.x = -9999; } else { S.checkGameSet(); } };
         window.SMA.Fighter.prototype.respawn = function() { var S=window.SMA; this.actionState = 'IDLE'; this.x = S.WORLD_W/2 - this.w/2; this.y = (S.WORLD_H * 0.7) - 300; this.vx = 0; this.vy = 0; this.percent = 0; this.shieldHP = 100; this.chargePower = 1.0; this.invincible = 180; this.isGrounded = false; this.hitbox.active = false; };
-        window.SMA.Fighter.prototype.triggerJump = function(keys) { var S=window.SMA; if (this.actionState === 'LEDGE') return; if(keys && keys.down && this.isGrounded) { if (this.currentPlatform && this.currentPlatform.type === 'main') { this.vy = S.JUMP_FORCE * 0.6; this.jumps++; this.animScale.x = 0.7; this.animScale.y = 1.3; S.playSound('jump'); return; } else { this.dropThrough = true; this.isGrounded = false; this.y += 1; return; } } if(this.actionState === 'IDLE' && this.jumps < 2) { var force = keys && keys.down ? S.JUMP_FORCE * 0.6 : S.JUMP_FORCE; var jm = S.CHAR_DATA[this.charId].jumpMult || 1.0; this.vy = force * jm; this.jumps++; this.animScale.x = 0.7; this.animScale.y = 1.3; if (this.jumps === 2) { this.vx *= 0.8; S.createParticles(this.x+this.w/2, this.y+this.h, 10, '#fff'); } S.playSound('jump'); } };
+        window.SMA.Fighter.prototype.triggerJump = function(keys) { var S=window.SMA; if (this.actionState === 'LEDGE') return; if(keys && keys.down && this.isGrounded) { if (this.currentPlatform && this.currentPlatform.type === 'main') { this.vy = S.JUMP_FORCE * 0.6; this.jumps++; this.animScale.x = 0.7; this.animScale.y = 1.3; S.playSound('jump'); return; } else { this.dropThrough = true; this.isGrounded = false; this.y += 1; return; } } var maxJ = (window.SMA.CHAR_DATA[this.charId] && window.SMA.CHAR_DATA[this.charId].maxJumps) || 2; if(this.actionState === 'IDLE' && this.jumps < maxJ) { var force = keys && keys.down ? S.JUMP_FORCE * 0.6 : S.JUMP_FORCE; var jm = S.CHAR_DATA[this.charId].jumpMult || 1.0; this.vy = force * jm; this.jumps++; this.animScale.x = 0.7; this.animScale.y = 1.3; if (this.jumps === 2) { this.vx *= 0.8; S.createParticles(this.x+this.w/2, this.y+this.h, 10, '#fff'); } S.playSound('jump'); } };
         window.SMA.Fighter.prototype.startCharge = function() {
             if (this.actionState === 'IDLE' || this.actionState === 'CHARGE') {
                 // 鏡キャラ: ↓入力中なら即座にmirror_placeを発動（長押し距離調整のため）
@@ -2339,7 +2363,7 @@ function reportError(e) {
                 if(this.chargePower === 1.0) this.chargePower = 1.0;
             }
         };
-        window.SMA.Fighter.prototype.releaseAttack = function(typeStr) { var S=window.SMA; if (this.actionState === 'CHARGE' || this.actionState === 'IDLE') { var power = this.chargePower; if (this.actionState === 'IDLE') power = 1.0; this.actionState = 'ATTACK'; if (!this.isGrounded) { if (typeStr === 'DOWN') typeStr = 'AIR_DOWN'; else if (typeStr === 'SIDE') typeStr = 'AIR_SIDE'; else if (typeStr === 'NEUTRAL') typeStr = 'AIR_NEUTRAL'; if(this.charId==='spear' && typeStr==='AIR_UP' && this.hasUpSpecial) return; } var set = S.CHAR_DATA[this.charId].attacks; if(set[typeStr]) this.currentAttack = set[typeStr]; else this.currentAttack = null; this.currentAttackType = typeStr; this.chargePower = power; this.hasHit = false; this.mirrorHasHit = false; this.stateTimer = 0; if(this.currentAttack) { if(this.currentAttack.type === 'shot') S.playSound('magic'); else if(this.currentAttack.type === 'fire_shot') S.playSound('magic'); else if(this.currentAttack.type === 'up_rush') S.playSound('jump'); else if(this.currentAttack.type === 'ground_shock') {} else if(this.currentAttack.type === 'boomerang' || this.currentAttack.type === 'boomerang_up') S.playSound('sword'); else if(this.currentAttackType === 'UP' && this.charId === 'mage') S.playSound('spin'); else S.playSound('sword'); } } };
+        window.SMA.Fighter.prototype.releaseAttack = function(typeStr) { var S=window.SMA; if (this.actionState === 'CHARGE' || this.actionState === 'IDLE') { var power = this.chargePower; if (this.actionState === 'IDLE') power = 1.0; this.actionState = 'ATTACK'; if (!this.isGrounded) { if (typeStr === 'DOWN') typeStr = 'AIR_DOWN'; else if (typeStr === 'SIDE') typeStr = 'AIR_SIDE'; else if (typeStr === 'NEUTRAL') typeStr = 'AIR_NEUTRAL'; if(this.charId==='spear' && typeStr==='AIR_UP' && this.hasUpSpecial) return; } var set = S.CHAR_DATA[this.charId].attacks; if(set[typeStr]) this.currentAttack = set[typeStr]; else this.currentAttack = null; this.currentAttackType = typeStr; this.chargePower = power; this.hasHit = false; this.mirrorHasHit = false; this.stateTimer = 0; if(this.currentAttack) { if(this.currentAttack.type === 'arrow_shot') S.playSound('magic'); else if(this.currentAttack.type === 'shot') S.playSound('magic'); else if(this.currentAttack.type === 'fire_shot') S.playSound('magic'); else if(this.currentAttack.type === 'up_rush') S.playSound('jump'); else if(this.currentAttack.type === 'ground_shock') {} else if(this.currentAttack.type === 'boomerang' || this.currentAttack.type === 'boomerang_up') S.playSound('sword'); else if(this.currentAttackType === 'UP' && this.charId === 'mage') S.playSound('spin'); else S.playSound('sword'); } } };
         window.SMA.Fighter.prototype.handleAttackFrame = function() { 
             var S=window.SMA; this.stateTimer++; var atk = this.currentAttack; if(!atk) return; 
             
@@ -2355,6 +2379,119 @@ function reportError(e) {
                 else this.superArmor = false;
             }
 
+
+            // *** エンジェル攻撃処理 ***
+            if (atk.type === 'arrow_shot') {
+                if (this.stateTimer === (atk.spawnFrame || 6)) {
+                    var dir = this.facingRight ? 1 : -1;
+                    var sx = this.x + this.w/2 + dir * 20;
+                    var sy = this.y + this.h * 0.35;
+                    var spd = atk.speed || 14;
+                    var r = atk.radius || 8;
+                    var maxDist = atk.range || 750;
+                    // メイン弾（まっすぐ）
+                    S.projectiles.push({ x:sx, y:sy, vx:spd*dir, vy:0, r:r, dmg:Math.round(atk.dmg * this.chargePower), kb:atk.kb * this.chargePower, scale:atk.scale, angle:atk.angle || -30, owner:this, color:atk.color || '#ffe066', life:Math.ceil(maxDist/spd), stun:atk.stun || 3 });
+                    // チャージ時: 斜め上・斜め下にも発射
+                    if (this.chargePower > 1.3) {
+                        var angUp = -25 * Math.PI / 180;
+                        var angDn = 25 * Math.PI / 180;
+                        S.projectiles.push({ x:sx, y:sy, vx:spd*dir*Math.cos(angUp), vy:spd*Math.sin(angUp), r:r*0.8, dmg:Math.round(atk.dmg * this.chargePower * 0.8), kb:atk.kb * this.chargePower * 0.8, scale:atk.scale, angle:atk.angle || -30, owner:this, color:'#fff5ba', life:Math.ceil(maxDist/spd), stun:atk.stun || 3 });
+                        S.projectiles.push({ x:sx, y:sy, vx:spd*dir*Math.cos(angDn), vy:spd*Math.sin(angDn), r:r*0.8, dmg:Math.round(atk.dmg * this.chargePower * 0.8), kb:atk.kb * this.chargePower * 0.8, scale:atk.scale, angle:atk.angle || -30, owner:this, color:'#fff5ba', life:Math.ceil(maxDist/spd), stun:atk.stun || 3 });
+                    }
+                    S.playSound('magic');
+                }
+                if (this.stateTimer >= atk.frames) { this.actionState = 'LAG'; this.stateTimer = atk.lag; this.currentAttack = null; this.chargePower = 1.0; }
+                return;
+            }
+            if (atk.type === 'wing_flap') {
+                // 横A: 羽ばたき攻撃
+                var hitStart = 8; var hitEnd = 14;
+                if (this.stateTimer >= hitStart && this.stateTimer <= hitEnd && !this.hasHit) {
+                    var dir = this.facingRight ? 1 : -1;
+                    var hx = this.x + this.w/2 + dir * 40;
+                    var hy = this.y + this.h * 0.4;
+                    var range = 55;
+                    for (var pi = 0; pi < S.players.length; pi++) {
+                        var t = S.players[pi];
+                        if (t === this || t.stocks <= 0 || t.actionState === 'DEAD' || t.invincible > 0) continue;
+                        var tcx = t.x + t.w/2; var tcy = t.y + t.h/2;
+                        if (Math.abs(tcx - hx) < range && Math.abs(tcy - hy) < range) {
+                            var dmg = Math.round(atk.dmg * this.chargePower);
+                            t.takeDamage(dmg, atk.kb * this.chargePower, atk.scale, (atk.angle || -25) * (this.facingRight ? 1 : -1), this);
+                            this.hasHit = true;
+                            S.createParticles(tcx, tcy, 12, '#fff');
+                            S.playSound('hit');
+                            break;
+                        }
+                    }
+                }
+                // 空中横Aの自己後方ノックバック
+                if (atk.airKnockback && !this.isGrounded && this.stateTimer === hitEnd) {
+                    var dir = this.facingRight ? 1 : -1;
+                    this.vx = -dir * 6; // 後方にノックバック
+                    this.vy = -2; // 一瞬滞空
+                }
+                if (this.stateTimer >= atk.frames) { this.actionState = 'LAG'; this.stateTimer = atk.lag; this.currentAttack = null; this.chargePower = 1.0; }
+                return;
+            }
+            if (atk.type === 'wing_rise') {
+                // 上A: 飛翔攻撃
+                var riseStart = 6; var riseEnd = 20;
+                if (this.stateTimer >= riseStart && this.stateTimer <= riseEnd) {
+                    this.vy = -8; // 真上に急上昇
+                    this.vx *= 0.5;
+                    // 攻撃判定
+                    if (!this.hasHit) {
+                        var hx = this.x + this.w/2;
+                        var hy = this.y;
+                        for (var pi = 0; pi < S.players.length; pi++) {
+                            var t = S.players[pi];
+                            if (t === this || t.stocks <= 0 || t.actionState === 'DEAD' || t.invincible > 0) continue;
+                            var tcx = t.x + t.w/2; var tcy = t.y + t.h/2;
+                            if (Math.abs(tcx - hx) < 40 && Math.abs(tcy - hy) < 60) {
+                                var dmg = Math.round(atk.dmg * this.chargePower);
+                                t.takeDamage(dmg, atk.kb * this.chargePower, atk.scale, -90, this);
+                                this.hasHit = true;
+                                S.createParticles(tcx, tcy, 15, '#ffe066');
+                                S.playSound('hit');
+                                break;
+                            }
+                        }
+                    }
+                }
+                if (this.stateTimer >= atk.frames) { this.actionState = 'LAG'; this.stateTimer = atk.lag; this.currentAttack = null; this.chargePower = 1.0; }
+                return;
+            }
+            if (atk.type === 'shockwave') {
+                // 下A: 円形衝撃波
+                // 空中で使用時は滞空
+                if (atk.hover && !this.isGrounded) {
+                    this.vy = 0; this.vx *= 0.8;
+                }
+                var shockFrame = 15;
+                if (this.stateTimer === shockFrame && !this.hasHit) {
+                    var cx = this.x + this.w/2;
+                    var cy = this.y + this.h/2;
+                    var sr = atk.shockRadius || 200;
+                    for (var pi = 0; pi < S.players.length; pi++) {
+                        var t = S.players[pi];
+                        if (t === this || t.stocks <= 0 || t.actionState === 'DEAD' || t.invincible > 0) continue;
+                        var tcx = t.x + t.w/2; var tcy = t.y + t.h/2;
+                        var dist = Math.sqrt((tcx - cx) * (tcx - cx) + (tcy - cy) * (tcy - cy));
+                        if (dist < sr) {
+                            // 固定吹っ飛ばし（scale=0なので蓄積ダメージに関係なく一定KBのはず）
+                            var angle = Math.atan2(tcy - cy, tcx - cx);
+                            t.takeDamage(atk.dmg, atk.kb, 0, angle * 180 / Math.PI, this);
+                            S.createParticles(tcx, tcy, 8, '#ffe066');
+                        }
+                    }
+                    this.hasHit = true;
+                    S.createParticles(cx, cy, 25, '#ffe066');
+                    S.playSound('magic');
+                }
+                if (this.stateTimer >= atk.frames) { this.actionState = 'LAG'; this.stateTimer = atk.lag; this.currentAttack = null; this.chargePower = 1.0; }
+                return;
+            }
 
             // *** 鏡キャラ攻撃処理 ***
             if (atk.type === 'mirror_place') {
@@ -2853,7 +2990,18 @@ function reportError(e) {
             ctx.fill();
             ctx.restore();
         };
-        window.SMA.Fighter.prototype.drawSword = function(ctx, cx, cy, angleDeg) { if(this.charId === 'mage') { ctx.save(); ctx.translate(cx, cy); ctx.rotate(angleDeg * Math.PI/180); ctx.fillStyle = "#8e44ad"; ctx.fillRect(-2, -5, 4, 15); var orbColor = this.chargePower > 1.2 ? '#fff' : "#a29bfe"; if(this.chargePower > 1.2) { ctx.shadowBlur = 10; ctx.shadowColor = "#fff"; } ctx.fillStyle = orbColor; ctx.beginPath(); ctx.arc(0, -60, 8, 0, Math.PI*2); ctx.fill(); ctx.shadowBlur = 0; ctx.fillStyle = "#555"; ctx.fillRect(-2, -55, 4, 50); ctx.restore(); } else if(this.charId === 'brawler') { } else { ctx.save(); ctx.translate(cx, cy); ctx.rotate(angleDeg * Math.PI/180); var s = 0.8 * (1 + (this.chargePower - 1)*0.5); ctx.scale(0.8, s); var bladeColor = this.chargePower > 1.2 ? '#fff' : (this.isP2 ? "#74b9ff" : "#ff7675"); var glow = this.chargePower > 1.2 ? 10 : 0; ctx.fillStyle = "#333"; ctx.fillRect(-2, -5, 4, 15); ctx.fillStyle = "#ffd700"; ctx.fillRect(-8, -5, 16, 4); ctx.fillStyle = bladeColor; if(glow) { ctx.shadowBlur = glow; ctx.shadowColor = bladeColor; } ctx.beginPath(); ctx.moveTo(-3, -5); ctx.lineTo(-3, -60); ctx.lineTo(0, -70); ctx.lineTo(3, -60); ctx.lineTo(3, -5); ctx.fill(); ctx.restore(); 
+        window.SMA.Fighter.prototype.drawSword = function(ctx, cx, cy, angleDeg) { if(this.charId === 'mage') { ctx.save(); ctx.translate(cx, cy); ctx.rotate(angleDeg * Math.PI/180); ctx.fillStyle = "#8e44ad"; ctx.fillRect(-2, -5, 4, 15); var orbColor = this.chargePower > 1.2 ? '#fff' : "#a29bfe"; if(this.chargePower > 1.2) { ctx.shadowBlur = 10; ctx.shadowColor = "#fff"; } ctx.fillStyle = orbColor; ctx.beginPath(); ctx.arc(0, -60, 8, 0, Math.PI*2); ctx.fill(); ctx.shadowBlur = 0; ctx.fillStyle = "#555"; ctx.fillRect(-2, -55, 4, 50); ctx.restore(); } else if(this.charId === 'angel') {
+        // エンジェル: 弓の描画
+        ctx.save(); ctx.translate(cx, cy);
+        ctx.rotate(angleDeg * Math.PI/180);
+        ctx.strokeStyle = '#c89b3c'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(0, -30, 25, -0.8, 0.8); ctx.stroke();
+        ctx.fillStyle = this.chargePower > 1.2 ? '#fff' : '#ffe066';
+        if(this.chargePower > 1.2) { ctx.shadowBlur = 8; ctx.shadowColor = '#ffe066'; }
+        ctx.fillRect(-1, -55, 2, 50); // 弦
+        ctx.shadowBlur = 0;
+        ctx.restore();
+    } else if(this.charId === 'brawler') { } else { ctx.save(); ctx.translate(cx, cy); ctx.rotate(angleDeg * Math.PI/180); var s = 0.8 * (1 + (this.chargePower - 1)*0.5); ctx.scale(0.8, s); var bladeColor = this.chargePower > 1.2 ? '#fff' : (this.isP2 ? "#74b9ff" : "#ff7675"); var glow = this.chargePower > 1.2 ? 10 : 0; ctx.fillStyle = "#333"; ctx.fillRect(-2, -5, 4, 15); ctx.fillStyle = "#ffd700"; ctx.fillRect(-8, -5, 16, 4); ctx.fillStyle = bladeColor; if(glow) { ctx.shadowBlur = glow; ctx.shadowColor = bladeColor; } ctx.beginPath(); ctx.moveTo(-3, -5); ctx.lineTo(-3, -60); ctx.lineTo(0, -70); ctx.lineTo(3, -60); ctx.lineTo(3, -5); ctx.fill(); ctx.restore(); 
     } };
         window.SMA.Fighter.prototype.draw = function(ctx) { 
             if (this.stocks <= 0 || this.actionState === 'DEAD' || this.actionState === 'RESPAWN') return; 
@@ -2959,6 +3107,74 @@ function reportError(e) {
                         ctx.strokeStyle = this.color; ctx.lineWidth = 4; ctx.lineCap = "round"; ctx.lineJoin = "round"; 
                         if (this.actionState === 'STUN') ctx.strokeStyle = "#ffeaa7"; if (this.actionState === 'LAG') ctx.strokeStyle = "#b2bec3"; if (this.actionState === 'GRABBED') ctx.strokeStyle = "#a29bfe"; 
                         if(this.charId === 'mage') { ctx.fillStyle = "#a29bfe"; ctx.beginPath(); ctx.moveTo(cx-15, this.y+5); ctx.lineTo(cx+15, this.y+5); ctx.lineTo(cx, this.y-25); ctx.fill(); } else if(this.charId === 'brawler') { ctx.save(); ctx.strokeStyle = "#e67e22"; ctx.lineWidth=3; var hbX = cx + (this.facingRight?-10:10); var hbY = this.y + 10; ctx.beginPath(); ctx.moveTo(hbX, hbY); ctx.quadraticCurveTo(hbX + (this.facingRight?-20:20), hbY-5, hbX + (this.facingRight?-40:40) + this.vx*2, hbY+10 + Math.sin(Date.now()/100)*5); ctx.stroke(); ctx.restore(); } 
+                        else if (this.charId === 'angel') {
+                            // エンジェルの描画: 天使の羽 + 体
+                            ctx.save();
+                            ctx.strokeStyle = this.color;
+                            ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+                            if (this.actionState === 'STUN') ctx.strokeStyle = '#ffeaa7';
+                            if (this.actionState === 'LAG') ctx.strokeStyle = '#b2bec3';
+                            if (this.actionState === 'GRABBED') ctx.strokeStyle = '#a29bfe';
+                            // 頭
+                            ctx.beginPath(); ctx.arc(cx, this.y+10, 8, 0, Math.PI*2); ctx.stroke();
+                            // 光輪（ヘイロー）
+                            ctx.strokeStyle = '#ffe066'; ctx.lineWidth = 2;
+                            ctx.beginPath(); ctx.ellipse(cx, this.y, 10, 3, 0, 0, Math.PI*2); ctx.stroke();
+                            ctx.strokeStyle = this.color; ctx.lineWidth = 4;
+                            if (this.actionState === 'STUN') ctx.strokeStyle = '#ffeaa7';
+                            if (this.actionState === 'LAG') ctx.strokeStyle = '#b2bec3';
+                            // 体
+                            ctx.beginPath(); ctx.moveTo(cx, this.y+18); ctx.lineTo(cx, this.y+42); ctx.stroke();
+                            // 両脚
+                            ctx.beginPath(); ctx.moveTo(cx, this.y+42); ctx.lineTo(cx-10, this.y+58); ctx.stroke();
+                            ctx.beginPath(); ctx.moveTo(cx, this.y+42); ctx.lineTo(cx+10, this.y+58); ctx.stroke();
+                            // 翼（白い羽）
+                            var wingFlap = Math.sin(Date.now()/200) * 5; // 常にふわふわ
+                            if (this.actionState === 'ATTACK' && this.currentAttack && this.currentAttack.type === 'wing_flap') {
+                                wingFlap = (this.stateTimer < 14) ? (this.stateTimer * 3) : -20; // 羽ばたきモーション
+                            }
+                            if (this.actionState === 'ATTACK' && this.currentAttack && this.currentAttack.type === 'wing_rise') {
+                                wingFlap = -25 + Math.sin(this.stateTimer * 0.5) * 10; // 飛翔時は翼を広げる
+                            }
+                            ctx.fillStyle = 'rgba(255,255,255,0.85)';
+                            ctx.strokeStyle = '#ddd'; ctx.lineWidth = 1.5;
+                            // 左翼
+                            ctx.beginPath();
+                            ctx.moveTo(cx-3, this.y+22);
+                            ctx.quadraticCurveTo(cx-30, this.y+10+wingFlap, cx-35, this.y+25+wingFlap);
+                            ctx.quadraticCurveTo(cx-25, this.y+22+wingFlap*0.5, cx-20, this.y+30);
+                            ctx.quadraticCurveTo(cx-10, this.y+25, cx-3, this.y+22);
+                            ctx.fill(); ctx.stroke();
+                            // 右翼
+                            ctx.beginPath();
+                            ctx.moveTo(cx+3, this.y+22);
+                            ctx.quadraticCurveTo(cx+30, this.y+10+wingFlap, cx+35, this.y+25+wingFlap);
+                            ctx.quadraticCurveTo(cx+25, this.y+22+wingFlap*0.5, cx+20, this.y+30);
+                            ctx.quadraticCurveTo(cx+10, this.y+25, cx+3, this.y+22);
+                            ctx.fill(); ctx.stroke();
+                            // 腕（弓を構えるポーズ）
+                            ctx.strokeStyle = this.color; ctx.lineWidth = 3;
+                            if (this.actionState === 'STUN') ctx.strokeStyle = '#ffeaa7';
+                            if (this.actionState === 'LAG') ctx.strokeStyle = '#b2bec3';
+                            var armDir = this.facingRight ? 1 : -1;
+                            ctx.beginPath(); ctx.moveTo(cx, this.y+25); ctx.lineTo(cx + armDir*15, this.y+30); ctx.stroke();
+                            ctx.beginPath(); ctx.moveTo(cx, this.y+25); ctx.lineTo(cx - armDir*8, this.y+32); ctx.stroke();
+                            // 衝撃波エフェクト
+                            if (this.actionState === 'ATTACK' && this.currentAttack && this.currentAttack.type === 'shockwave') {
+                                var prog = this.stateTimer / 35;
+                                if (this.stateTimer <= 20) {
+                                    var alpha = 1.0 - prog * 2;
+                                    if (alpha > 0) {
+                                        ctx.strokeStyle = 'rgba(255,224,102,' + alpha + ')';
+                                        ctx.lineWidth = 3;
+                                        var rad = (this.currentAttack.shockRadius || 200) * Math.min(1, this.stateTimer / 15);
+                                        ctx.beginPath(); ctx.arc(cx, this.y + this.h/2, rad, 0, Math.PI*2); ctx.stroke();
+                                    }
+                                }
+                            }
+                            ctx.restore();
+                            drawn = true;
+                        }
                         else if (this.charId === 'spear') {
                             ctx.save(); 
                             ctx.strokeStyle = this.color; // Use Player Color
@@ -3679,6 +3895,7 @@ function reportError(e) {
             bindChar('card-spear', 'spear');
             bindChar('card-hammer', 'hammer');
             bindChar('card-mirror', 'mirror');
+            bindChar('card-angel', 'angel');
 
             // BATTLE HUB BUTTONS
             bindBtn('btn-hub-start', function() { 
