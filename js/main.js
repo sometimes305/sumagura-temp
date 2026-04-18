@@ -2336,7 +2336,7 @@ window.SMA.Fighter.prototype.update = function (inputKeys, opponent) {
     // 空中N着地硬直 (sword, brawler, hammer, mirror)
     if (!preGrounded && this.isGrounded) {
         if (this.actionState === 'ATTACK' && this.currentAttackType === 'AIR_NEUTRAL') {
-            if (this.charId === 'sword' || this.charId === 'brawler' || this.charId === 'mirror') {
+            if (this.charId === 'sword' || this.charId === 'mirror') {
                 this.actionState = 'LAG';
                 this.stateTimer = 5; // 5F landing lag
                 this.currentAttack = null;
@@ -2345,6 +2345,12 @@ window.SMA.Fighter.prototype.update = function (inputKeys, opponent) {
             } else if (this.charId === 'hammer') {
                 this.actionState = 'LAG';
                 this.stateTimer = 9; // 9F landing lag
+                this.currentAttack = null;
+                this.hitbox.active = false;
+                this.rotation = 0;
+            } else if (this.charId === 'brawler') {
+                this.actionState = 'LAG';
+                this.stateTimer = 3; // 3F landing lag
                 this.currentAttack = null;
                 this.hitbox.active = false;
                 this.rotation = 0;
