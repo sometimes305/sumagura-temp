@@ -2143,11 +2143,11 @@ window.SMA.CHAR_DATA = {
     spear: {
         jumpMult: 0.9, kbMult: 0.85, speed: 0.9,
         attacks: {
-            NEUTRAL: { type: 'poke', range: 120, dmg: 5, kb: 1.46, scale: 0.1, angle: -20, frames: 18, lag: 8, color: '#00b894' },
+            NEUTRAL: { type: 'poke', range: 120, dmg: 5, kb: 1.46, scale: 0.1, angle: -20, frames: 18, lag: 10, color: '#00b894' },
             SIDE: { type: 'boomerang', dmg: 8, kb: 1.17, scale: 0.08, angle: -30, frames: 30, lag: 22, color: '#00b894' }, // lag 20 -> 22 (v398 nerf)
             UP: { type: 'boomerang_up', range: 100, dmg: 7, kb: 1.28, scale: 0.08, angle: -80, frames: 30, lag: 22, color: '#00b894' }, // lag 20 -> 22 (v398 nerf)
             DOWN: { type: 'ground_shock', range: 130, dmg: 9, kb: 1.46, scale: 0.08, angle: -45, frames: 35, lag: 20, color: '#00b894' },
-            AIR_NEUTRAL: { type: 'poke', range: 100, dmg: 8, kb: 1.62, scale: 0.1, angle: -30, frames: 20, lag: 8, color: '#00b894' },
+            AIR_NEUTRAL: { type: 'poke', range: 100, dmg: 8, kb: 1.62, scale: 0.1, angle: -30, frames: 20, lag: 10, color: '#00b894' },
             AIR_SIDE: { type: 'boomerang', dmg: 8, kb: 1.46, scale: 0.08, angle: -25, frames: 30, lag: 22, color: '#00b894' }, // lag 20 -> 22 (v398 nerf)
             AIR_UP: { type: 'up_rush', dmg: 9, kb: 1.63, scale: 0.08, angle: -90, frames: 40, lag: 32, color: '#00cec9', limit: true }, // lag 30 -> 32 (v398 nerf)
             AIR_DOWN: { type: 'boomerang_down', dmg: 11, kb: 1.46, scale: 0.08, angle: 90, frames: 30, lag: 20, color: '#00b894' },
@@ -2159,16 +2159,16 @@ window.SMA.CHAR_DATA = {
         }
     },
     hammer: {
-        kbMult: 0.7, speed: 0.8, jumpMult: 0.9,
+        kbMult: 0.85, speed: 0.8, jumpMult: 0.9,
         attacks: {
-            NEUTRAL: { dmg: 16, kb: 5.6, scale: 0.15, angle: -45, frames: 45, lag: 10, stun: 15, color: '#b2bec3' },
-            SIDE: { type: 'spin_hammer', dmg: 13, kb: 3.5, scale: 0.15, angle: -30, frames: 50, lag: 25, stun: 10, color: '#636e72' },
-            UP: { dmg: 15, kb: 4.4, scale: 0.15, angle: -90, frames: 40, lag: 15, stun: 12, color: '#b2bec3' },
-            DOWN: { type: 'tornado', dmg: 1.7, kb: 0.2, scale: 0.05, angle: -45, frames: 90, lag: 30, stun: 30, hitstun: 30, color: '#dfe6e9' },
-            AIR_NEUTRAL: { type: 'hammer_spin_air', dmg: 13, kb: 3.0, scale: 0.15, angle: -45, frames: 40, lag: 15, stun: 8, color: '#b2bec3' },
-            AIR_SIDE: { dmg: 16, kb: 3.6, scale: 0.15, angle: -60, frames: 18, lag: 12, stun: 12, color: '#636e72' },
-            AIR_UP: { dmg: 14, kb: 3.2, scale: 0.12, angle: -90, frames: 40, lag: 20, stun: 8, color: '#b2bec3' },
-            AIR_DOWN: { type: 'tornado', dmg: 1.7, kb: 0.2, scale: 0.05, angle: -45, frames: 90, lag: 30, stun: 30, hitstun: 30, color: '#dfe6e9' },
+            NEUTRAL: { dmg: 14, kb: 5.6, scale: 0.15, angle: -45, frames: 45, lag: 10, stun: 15, color: '#b2bec3' },
+            SIDE: { type: 'spin_hammer', dmg: 12, kb: 3.5, scale: 0.15, angle: -30, frames: 50, lag: 25, stun: 10, color: '#636e72' },
+            UP: { dmg: 13, kb: 4.4, scale: 0.15, angle: -90, frames: 40, lag: 15, stun: 12, color: '#b2bec3' },
+            DOWN: { type: 'tornado', dmg: 1.6, kb: 0.2, scale: 0.05, angle: -45, frames: 90, lag: 30, stun: 30, hitstun: 30, color: '#dfe6e9' },
+            AIR_NEUTRAL: { type: 'hammer_spin_air', dmg: 12, kb: 3.0, scale: 0.15, angle: -45, frames: 40, lag: 15, stun: 8, color: '#b2bec3' },
+            AIR_SIDE: { dmg: 15, kb: 3.6, scale: 0.15, angle: -60, frames: 18, lag: 12, stun: 12, color: '#636e72' },
+            AIR_UP: { dmg: 13, kb: 3.2, scale: 0.12, angle: -90, frames: 40, lag: 20, stun: 8, color: '#b2bec3' },
+            AIR_DOWN: { type: 'tornado', dmg: 1.6, kb: 0.2, scale: 0.05, angle: -45, frames: 90, lag: 30, stun: 30, hitstun: 30, color: '#dfe6e9' },
             LEDGE_ATK: { dmg: 11, kb: 3.0, scale: 0.1, angle: -45, frames: 40, lag: 20, stun: 10 }
         },
         throws: {
@@ -2179,7 +2179,7 @@ window.SMA.CHAR_DATA = {
         }
     },
     mirror: {
-        jumpMult: 1.1, speed: 1.035, kbMult: 1.5,
+        jumpMult: 1.1, speed: 1.035, kbMult: 1.1,
         attacks: {
             NEUTRAL: { type: 'mirror_slash', range: 50, dmg: 4, kb: 1.44, scale: 0.06, angle: -30, frames: 10, lag: 6, stun: 3, color: '#81ecec' },
             SIDE: { type: 'mirror_throw', dmg: 8, kb: 1.8, scale: 0.06, angle: -20, frames: 22, lag: 12, stun: 5, color: '#81ecec' },
