@@ -3215,9 +3215,13 @@ window.SMA.Fighter.prototype.handleAttackFrame = function () {
         } return;
     }
     if (atk.type === 'hammer_spin_air') {
-        // Now single hit (5-35)
+        // Single hit (5-35): shrink area to 25% (120x120 -> 60x60) and shift center slightly downward.
         if (this.stateTimer >= 5 && this.stateTimer <= 35) {
-            this.hitbox.active = true; this.hitbox.w = 120; this.hitbox.h = 120; this.hitbox.x = this.x + this.w / 2 - 60; this.hitbox.y = this.y + this.h / 2 - 60;
+            this.hitbox.active = true;
+            this.hitbox.w = 60;
+            this.hitbox.h = 60;
+            this.hitbox.x = this.x + this.w / 2 - 30;
+            this.hitbox.y = this.y + this.h / 2 - 20;
             // No hasHit reset (single hit)
         } else { this.hitbox.active = false; }
 
@@ -3348,24 +3352,6 @@ window.SMA.Fighter.prototype.handleAttackFrame = function () {
                 this.superArmor = true;
             } else { this.hitbox.active = false; }
             return; // Skip default box logic
-        } else if (this.charId === 'hammer' && this.currentAttackType === 'AIR_NEUTRAL') {
-            if (this.currentAttack.type === 'spin_hammer') {
-                if (this.stateTimer % 10 === 0) { // Pulse
-                    this.hitbox.active = true; this.hitbox.w = 140; this.hitbox.h = 60;
-                    this.hitbox.x = this.x + this.w / 2 - 70; this.hitbox.y = this.y + 20;
-                    this.hasHit = false; // Multi hit reset
-                    S.playSound('sword');
-                }
-                return;
-            } else if (this.currentAttack.type === 'hammer_spin_air') {
-                // Hitbox for the "broken" air spin
-                if (this.stateTimer % 8 === 0) {
-                    this.hitbox.active = true; this.hitbox.w = 120; this.hitbox.h = 120; this.hitbox.x = this.x + this.w / 2 - 60; this.hitbox.y = this.y + this.h / 2 - 60;
-                    this.hasHit = false;
-                    S.playSound('sword');
-                }
-                return;
-            }
         } else if (this.charId === 'hammer' && this.currentAttackType === 'AIR_SIDE') {
             // Vertical Chop
             if (this.stateTimer >= 10 && this.stateTimer <= 14) {
