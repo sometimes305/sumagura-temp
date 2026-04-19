@@ -2462,7 +2462,6 @@ window.SMA.CHAR_DATA = {
             DOWN: { type: 'slide', dmg: 9, kb: 1.6, scale: 0.08, angle: -70, frames: 24, lag: 18, stun: 8, color: '#e17055' },
             AIR_NEUTRAL: { type: 'spin', dmg: 10, kb: 1.6, scale: 0.1, angle: -45, frames: 24, lag: 10, stun: 5, color: '#a29bfe' },
             AIR_SIDE: { dmg: 12, kb: 2.4, scale: 0.1, angle: -45, frames: 20, lag: 15, stun: 6, color: '#a29bfe' },
-            // v383: FIX Hitbox logic for AIR_DOWN (See handleAttackFrame)
             AIR_DOWN: { type: 'slash_down', dmg: 15, kb: 2.4, scale: 0.1, angle: 90, frames: 25, lag: 12, stun: 10, color: '#d63031' },
             LEDGE_ATK: { dmg: 8, kb: 12.0, scale: 0.01, angle: -45, frames: 30, lag: 10, stun: 10 }
         },
@@ -2473,33 +2472,12 @@ window.SMA.CHAR_DATA = {
     },
     mage: {
         attacks: {
-            // Radius adjusted to half (20 -> 10). Scale with charge.
-            // KB 2.6->3.0 (v374 Buff)
-            // v377: frames 24 -> 21
-            // v376: lag 4 -> 0
-            // dmg 3->2 (v375)
             NEUTRAL: { type: 'shot', spawnFrame: 5, dmg: 3, kb: 3.0, scale: 0, speed: 11.34, radius: 10, frames: 21, lag: 0, stun: 2, hitstun: 15 },
-            // Radius adjusted to half (50 -> 25). Scale with charge.
-            // v378: Max speed 1.5x on charge (logic in handleAttackFrame)
-            // v379: Max speed 1.75x on charge (logic updated in handleAttackFrame)
-            // spawnFrame 10 -> 12
             SIDE: { type: 'shot', spawnFrame: 12, dmg: 12, kb: 3.0, scale: 0.1, speed: 3.5, radius: 25, frames: 25, lag: 35, stun: 10 },
             UP: { dmg: 10, kb: 1.6, scale: 0.1, angle: -90, frames: 25, lag: 20, stun: 5 },
-            // Radius adjusted 15 -> 10 (v370). Speed adjusted 9.5 -> 8.5 (0.75x of NA 11.34 is 8.5)
-            // v373: lag 15 -> 18
-            // spawnFrame 8 -> 10
             DOWN: { type: 'fire_shot', spawnFrame: 10, dmg: 8, kb: 1.5, scale: 0.08, angle: -45, frames: 25, lag: 18, stun: 5, radius: 10 },
-            // AIR NA Buffed 2.6->3.0
-            // v377: frames 24 -> 21
-            // v376: lag 4 -> 0
-            AIR_NEUTRAL: { type: 'shot', spawnFrame: 5, dmg: 2, kb: 3.0, scale: 0, speed: 11.34, radius: 10, frames: 21, lag: 0, stun: 2, hitstun: 15 },
-            // v378: Max speed 1.5x on charge
-            // v379: Max speed 1.75x on charge
-            // spawnFrame 10 -> 12
+            AIR_NEUTRAL: { type: 'shot', spawnFrame: 5, dmg: 3, kb: 3.0, scale: 0, speed: 11.34, radius: 10, frames: 21, lag: 0, stun: 2, hitstun: 15 },
             AIR_SIDE: { type: 'shot', spawnFrame: 12, dmg: 12, kb: 3.0, scale: 0.1, speed: 3.5, radius: 25, frames: 25, lag: 35, stun: 10 },
-            // Radius adjusted 15 -> 10 (v370). Speed adjusted.
-            // v373: lag 15 -> 18
-            // spawnFrame 8 -> 10
             AIR_DOWN: { type: 'fire_shot', spawnFrame: 10, dmg: 8, kb: 1.5, scale: 0.08, angle: -45, frames: 25, lag: 18, stun: 5, radius: 10 },
             LEDGE_ATK: { dmg: 8, kb: 12.0, scale: 0.01, angle: -45, frames: 30, lag: 10, stun: 10 }
         },
@@ -2517,8 +2495,6 @@ window.SMA.CHAR_DATA = {
             UP: { type: 'shoryu', dmg: 12, kb: 3.0, scale: 0.1, angle: -90, frames: 35, lag: 25, stun: 8, color: '#e74c3c' },
             DOWN: { type: 'low_kick', dmg: 6, kb: 3.0, scale: 0.01, angle: -90, frames: 15, lag: 6, stun: 8, hitstun: 45, color: '#d35400' },
             AIR_NEUTRAL: { type: 'sex_kick', dmg: 6, kb: 1.0, scale: 0.05, angle: -45, frames: 25, lag: 1, stun: 5, hitstun: 33, color: '#f39c12' },
-            // v389: Faster motion. Hitbox 12-18 (was 14-20). Frames 40.
-            // v390: A bit too fast. Slow down 1F -> Hitbox 13-19. Draw 13, 16.
             AIR_SIDE: { type: 'axe', dmg: 18, kb: 16.0, scale: 0.2, angle: 90, frames: 40, lag: 16, stun: 12, color: '#c0392b' },
             AIR_UP: { dmg: 10, kb: 2.5, scale: 0.1, angle: -90, frames: 20, lag: 15, stun: 8, color: '#e74c3c' },
             AIR_DOWN: { type: 'dive', dmg: 15, kb: 3.0, scale: 0.1, angle: 90, frames: 999, lag: 30, stun: 10, color: '#c0392b' },
@@ -2527,7 +2503,7 @@ window.SMA.CHAR_DATA = {
         },
         throws: {
             THROW_FW: { dmg: 8, kb: 15.0, scale: 0.01, angle: -30 }, THROW_BK: { dmg: 8, kb: 15.0, scale: 0.01, angle: -150 },
-            THROW_UP: { dmg: 8, kb: 7.5, scale: 0.01, angle: -90 }, // kb 15.0 -> 7.5
+            THROW_UP: { dmg: 8, kb: 7.5, scale: 0.01, angle: -90 }, 
             THROW_DN: { dmg: 8, kb: 15.0, scale: 0.01, angle: 45 }
         }
     },
@@ -2535,12 +2511,12 @@ window.SMA.CHAR_DATA = {
         jumpMult: 0.9, kbMult: 0.85, speed: 0.9,
         attacks: {
             NEUTRAL: { type: 'poke', range: 120, dmg: 5, kb: 1.46, scale: 0.1, angle: -20, frames: 18, lag: 10, color: '#00b894' },
-            SIDE: { type: 'boomerang', dmg: 8, kb: 1.17, scale: 0.08, angle: -30, frames: 30, lag: 22, color: '#00b894' }, // lag 20 -> 22 (v398 nerf)
-            UP: { type: 'boomerang_up', range: 100, dmg: 7, kb: 1.28, scale: 0.08, angle: -80, frames: 30, lag: 22, color: '#00b894' }, // lag 20 -> 22 (v398 nerf)
+            SIDE: { type: 'boomerang', dmg: 8, kb: 1.17, scale: 0.08, angle: -30, frames: 30, lag: 22, color: '#00b894' }, 
+            UP: { type: 'boomerang_up', range: 100, dmg: 7, kb: 1.28, scale: 0.08, angle: -80, frames: 30, lag: 22, color: '#00b894' }, 
             DOWN: { type: 'ground_shock', range: 130, dmg: 9, kb: 1.46, scale: 0.08, angle: -45, frames: 35, lag: 20, color: '#00b894' },
             AIR_NEUTRAL: { type: 'poke', range: 100, dmg: 8, kb: 1.62, scale: 0.1, angle: -30, frames: 20, lag: 10, color: '#00b894' },
-            AIR_SIDE: { type: 'boomerang', dmg: 8, kb: 1.46, scale: 0.08, angle: -25, frames: 30, lag: 22, color: '#00b894' }, // lag 20 -> 22 (v398 nerf)
-            AIR_UP: { type: 'up_rush', dmg: 9, kb: 1.63, scale: 0.08, angle: -90, frames: 40, lag: 32, color: '#00cec9', limit: true }, // lag 30 -> 32 (v398 nerf)
+            AIR_SIDE: { type: 'boomerang', dmg: 8, kb: 1.46, scale: 0.08, angle: -25, frames: 30, lag: 22, color: '#00b894' }, 
+            AIR_UP: { type: 'up_rush', dmg: 9, kb: 1.63, scale: 0.08, angle: -90, frames: 40, lag: 32, color: '#00cec9', limit: true }, 
             AIR_DOWN: { type: 'boomerang_down', dmg: 11, kb: 1.46, scale: 0.08, angle: 90, frames: 30, lag: 20, color: '#00b894' },
             LEDGE_ATK: { dmg: 6, kb: 9.7, scale: 0.01, angle: -45, frames: 30, lag: 10, stun: 10 }
         },
@@ -2563,10 +2539,10 @@ window.SMA.CHAR_DATA = {
             LEDGE_ATK: { dmg: 11, kb: 3.0, scale: 0.1, angle: -45, frames: 40, lag: 20, stun: 10 }
         },
         throws: {
-            THROW_FW: { dmg: 11, kb: 6.0, scale: 0.1, angle: -30 },
-            THROW_BK: { dmg: 11, kb: 6.0, scale: 0.1, angle: -150 },
-            THROW_UP: { dmg: 11, kb: 6.0, scale: 0.1, angle: -90 },
-            THROW_DN: { dmg: 11, kb: 8.0, scale: 0.1, angle: 45 }
+            THROW_FW: { dmg: 10, kb: 6.0, scale: 0.1, angle: -30 },
+            THROW_BK: { dmg: 10, kb: 6.0, scale: 0.1, angle: -150 },
+            THROW_UP: { dmg: 10, kb: 6.0, scale: 0.1, angle: -90 },
+            THROW_DN: { dmg: 10, kb: 8.0, scale: 0.1, angle: 45 }
         }
     },
     mirror: {
