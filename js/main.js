@@ -3221,7 +3221,7 @@ window.SMA.Fighter.prototype.handleAttackFrame = function () {
             this.hitbox.w = 60;
             this.hitbox.h = 60;
             this.hitbox.x = this.x + this.w / 2 - 30;
-            this.hitbox.y = this.y + this.h / 2 - 20;
+            this.hitbox.y = this.y + this.h / 2 - 10;
             // No hasHit reset (single hit)
         } else { this.hitbox.active = false; }
 
