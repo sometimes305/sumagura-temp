@@ -75,7 +75,7 @@ window.SMA.handleGravityPeerHostMessage = function (c, d) {
             existingEntry.name = d.name;
             c._rtRole = assignedRole;
             try { c.send({ type: 'assign_role', role: assignedRole }); } catch (e) { }
-            window.SMA.showNotification(assignedRole.toUpperCase() + "縺悟・謗･邯壹＠縺ｾ縺励◆", 2000);
+            window.SMA.showNotification(assignedRole.toUpperCase() + "が再接続しました", 2000);
         } else if (d.role === 'join') {
             var p2 = window.SMA.connections.find(function (x) { return x.role === 'p2'; });
             var p3 = window.SMA.connections.find(function (x) { return x.role === 'p3'; });
@@ -101,7 +101,7 @@ window.SMA.handleGravityPeerHostMessage = function (c, d) {
             c._rtRole = newRole;
             try { c.send({ type: 'assign_role', role: newRole }); } catch (e) { }
             window.SMA.broadcastLobby();
-            window.SMA.showNotification(newRole.toUpperCase() + "縺悟・螳､縺励∪縺励◆・・, 2000);
+            window.SMA.showNotification(newRole.toUpperCase() + "が入室しました！", 2000);
         } else {
             var existingSpec = window.SMA.connections.find(function (x) { return x.role === 'spec' && x.name === d.name; });
             if (existingSpec) {
@@ -199,7 +199,7 @@ window.SMA.startGravityRealtimeHost = function (roomId) {
                         window.SMA.connections.splice(idx, 1);
                         window.SMA.broadcastLobby();
                     } else {
-                        window.SMA.showNotification(window.SMA.connections[idx].role.toUpperCase() + "縺悟・譁ｭ縺輔ｌ縺ｾ縺励◆", 2000);
+                        window.SMA.showNotification(window.SMA.connections[idx].role.toUpperCase() + "が切断されました", 2000);
                     }
                 }
             });
@@ -298,7 +298,7 @@ window.SMA.callGravityRoomSDK = function (action, params) {
     return new Promise(function (resolve, reject) {
         var reqId = action + "_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
         window.SMA.gravityRoomRequests[reqId] = { resolve: resolve, reject: reject };
-        var msg = { action: action, actionId: reqId, actionld: reqId }; // 繝ｭ繝ｼ繝繝ｼ蛛ｴ縺ｮ險倩ｼ峨ヶ繝ｬ(OCR隱､蟄礼ｭ・縺ｫ蟇ｾ蠢・
+        var msg = { action: action, actionId: reqId, actionld: reqId }; // ローダー側の記載ブレ(OCR誤字等)に対応
         if (params) Object.assign(msg, params);
         window.parent.postMessage(msg, "*");
     });
@@ -343,7 +343,7 @@ window.addEventListener('message', function (event) {
         var pType = payload.type;
         if (pType === 'aitools_game_joinroom' || pType === 'aitoolsgamejoinroom') {
             console.log("Joined: ", payload);
-            window.SMA.showNotification((payload.data && payload.data.user_name ? payload.data.user_name : "繝励Ξ繧､繝､繝ｼ") + "縺悟・螳､縺励∪縺励◆", 2000);
+            window.SMA.showNotification((payload.data && payload.data.user_name ? payload.data.user_name : "プレイヤー") + "が入室しました", 2000);
         } else if (pType === 'aitools_game_exitroom' || pType === 'aitoolsgameexitroom') {
             console.log("Exited: ", payload);
         } else if (pType === 'aitools_game_sendmsg' || pType === 'aitoolsgamesendmsg') {
@@ -368,7 +368,7 @@ window.addEventListener('message', function (event) {
                     }
                     if (existingEntry) {
                         window.SMA.broadcast({ type: 'assign_role', role: assignedRole, alignTo: parsed.name });
-                        window.SMA.showNotification(assignedRole.toUpperCase() + "縺悟・謗･邯壹＠縺ｾ縺励◆", 2000);
+                        window.SMA.showNotification(assignedRole.toUpperCase() + "が再接続しました", 2000);
                     } else if (parsed.role === 'join') {
                         var p2 = window.SMA.connections.find(function (x) { return x.role === 'p2'; });
                         var p3 = window.SMA.connections.find(function (x) { return x.role === 'p3'; });
@@ -383,7 +383,7 @@ window.addEventListener('message', function (event) {
                         window.SMA.connections.push({ conn: mockConn, role: newRole, name: parsed.name, icon: parsed.icon });
                         window.SMA.broadcast({ type: 'assign_role', role: newRole, alignTo: parsed.name });
                         window.SMA.broadcastLobby();
-                        window.SMA.showNotification(newRole.toUpperCase() + "縺悟・螳､縺励∪縺励◆・・, 2000);
+                        window.SMA.showNotification(newRole.toUpperCase() + "が入室しました！", 2000);
                     } else if (parsed.role === 'spec') {
                         var existingSpec = window.SMA.connections.find(function (x) { return x.role === 'spec' && x.name === parsed.name; });
                         if (existingSpec) {
@@ -456,7 +456,7 @@ window.addEventListener('message', function (event) {
 window.SMA.initGravity = async function () {
     if (!window.SMA.isGravity && !new URLSearchParams(window.location.search).has('username')) return;
 
-    // 1. URL繝代Λ繝｡繝ｼ繧ｿ縺九ｉ縺ｮ蜿門ｾ暦ｼ医Ο繝ｼ繝繝ｼ邨檎罰蟇ｾ遲厄ｼ・
+    // 1. URLパラメータからの取得（ローダー経由対策）
     try {
         var urlParams = new URLSearchParams(window.location.search);
         var urlName = urlParams.get('username');
@@ -488,11 +488,11 @@ window.SMA.initGravity = async function () {
             }
             if (typeof window.SMA.saveSettings === 'function') window.SMA.saveSettings();
             console.log("[SMA] Gravity User Loaded from URL:", urlName, "rawIcon:", rawIcon, "decodedIcon:", urlIcon, "fullURL:", window.location.href);
-            return; // URL縺九ｉ蜿門ｾ励〒縺阪◆蝣ｴ蜷医・SDK蜻ｼ縺ｳ蜃ｺ縺励ｒ繧ｹ繧ｭ繝・・
+            return; // URLから取得できた場合はSDK呼び出しをスキップ
         }
     } catch (e) { }
 
-    // 2. SDK縺九ｉ縺ｮ蜿門ｾ暦ｼ育峩謗･蝓九ａ霎ｼ縺ｿ遲峨・繝輔か繝ｼ繝ｫ繝舌ャ繧ｯ・・
+    // 2. SDKからの取得（直接埋め込み等のフォールバック）
     try {
         var user = await window.SMA.callGravitySDK("AgentSDK.user.getMyUserInfo");
         console.log("[SMA] getMyUserInfo result:", JSON.stringify(user));
@@ -502,7 +502,7 @@ window.SMA.initGravity = async function () {
             window.SMA.localPlayerName = uName;
             var dispName = document.getElementById('display-username');
             if (dispName) dispName.innerText = uName;
-            // 繧｢繧､繧ｳ繝ｳ縺ｯ隍・焚縺ｮ繝輔ぅ繝ｼ繝ｫ繝牙錐繧定ｩｦ陦・
+            // アイコンは複数のフィールド名を試行
             var uIcon = user.portrait || user.avatar || user.icon || user.head_img || user.headimgurl || user.profile_image;
             if (uIcon) {
                 window.SMA.localPlayerIcon = uIcon;
@@ -538,7 +538,7 @@ window.SMA.enterSoloMode = function () {
     window.SMA.showHubSelectPanel();
     window.SMA.isSolo = true;
     window.SMA.localPlayerName = document.getElementById('username').value || "Player";
-    // 繝・ヵ繧ｩ繝ｫ繝磯∈謚槭ｒ螟画焚縺ｫ蜿肴丐
+    // デフォルト選択を変数に反映
     window.SMA.myStageId = 'battlefield';
     window.SMA.myCharId = 'sword';
 };
@@ -562,7 +562,7 @@ window.SMA.showCreateRoom = function () {
     window.SMA.saveSettings();
     window.SMA.myRole = 'host';
     if (window.SMA.netPeer) { try { window.SMA.netPeer.destroy(); } catch (e) { } window.SMA.netPeer = null; } window.SMA.netConn = null; window.SMA.connections = []; window.SMA.localPlayerName = document.getElementById('username').value || "Host"; window.SMA.isHost = true; window.SMA.isOnline = true; document.getElementById('menu-screen').classList.add('hidden'); document.getElementById('online-menu-screen').classList.add('hidden'); var _hub = document.getElementById('battle-hub-screen'); _hub.classList.remove('hidden'); _hub.style.display = 'flex'; window.SMA.showHubRoomPanel(); var rid = Math.floor(1000 + Math.random() * 9000); document.getElementById('room-id-display').innerText = rid;
-    // P1繝ｭ繝薙・繧ｫ繝ｼ繝峨ｒ豁｣縺励￥譖ｴ譁ｰ
+    // P1ロビーカードを正しく更新
     var nameEl1 = document.getElementById('lobby-name-p1');
     if (nameEl1) nameEl1.innerText = window.SMA.localPlayerName;
     var iconEl1 = document.getElementById('lobby-icon-p1');
@@ -572,20 +572,20 @@ window.SMA.showCreateRoom = function () {
         iconEl1.style.backgroundPosition = 'center';
         iconEl1.innerText = '';
     }
-    // 譛螟ｧ莠ｺ謨ｰ縺ｫ蠢懊§縺溘き繝ｼ繝芽｡ｨ遉ｺ
+    // 最大人数に応じたカード表示
     var maxP = parseInt(document.getElementById('room-capacity').value || 2);
     window.SMA.showPlayerSlots(maxP); try {
         window.SMA.netPeer = new Peer(window.SMA.ID_PREFIX + rid); window.SMA.netPeer.on('connection', function (c) { window.SMA.handleConn(c); }); window.SMA.netPeer.on('error', function (e) {
             if (e.type === 'peer-unavailable') { reportError("Peer Error: " + e); }
             else if (e.type === 'network' || e.message.includes('Lost connection')) {
-                window.SMA.showNotification("謗･邯壹お繝ｩ繝ｼ縲ょ・謗･邯壹ｒ隧ｦ縺ｿ縺ｾ縺・..", 2000);
+                window.SMA.showNotification("接続エラー。再接続を試みます...", 2000);
                 window.SMA.netPeer.reconnect();
             } else {
                 reportError("Peer Error: " + e);
             }
         });
         window.SMA.netPeer.on('disconnected', function () {
-            window.SMA.showNotification("繧ｵ繝ｼ繝舌・縺九ｉ蛻・妙縺輔ｌ縺ｾ縺励◆縲ょ・謗･邯壻ｸｭ...", 2000);
+            window.SMA.showNotification("サーバーから切断されました。再接続中...", 2000);
             window.SMA.netPeer.reconnect();
         });
     } catch (e) { reportError("Peer Init Error: " + e); }
@@ -600,7 +600,7 @@ window.SMA.showGravityCreateRoom = async function () {
     document.getElementById('menu-screen').classList.add('hidden');
     var _oms2 = document.getElementById('online-menu-screen'); _oms2.classList.add('hidden'); _oms2.style.display = 'none';
     var _hub2 = document.getElementById('battle-hub-screen'); _hub2.classList.remove('hidden'); _hub2.style.display = 'flex'; window.SMA.showHubRoomPanel();
-    document.getElementById('room-id-display').innerText = "逕滓・荳ｭ...";
+    document.getElementById('room-id-display').innerText = "生成中...";
 
     // Fix: properly update the new lobby-card UI without destroying it
     var nameEl = document.getElementById('lobby-name-p1');
@@ -616,7 +616,7 @@ window.SMA.showGravityCreateRoom = async function () {
     try {
         var maxP = parseInt(document.getElementById('room-capacity').value || 4);
         window.SMA.showPlayerSlots(maxP);
-        // room_permission: 0=蜈ｬ髢・ 1=髱槫・髢・(繝ｭ繝ｼ繝繝ｼ蛛ｴ縺ｮ繝ｭ繧ｸ繝・け縺ｨ蜷医ｏ縺帙ｋ)
+        // room_permission: 0=公開, 1=非公開 (ローダー側のロジックと合わせる)
         var createParams = { room_type: 'aitools_game_room', max_players: maxP, maxplayers: maxP, room_permission: 0, permission: 0 };
         console.log("[SMA] create_room params:", JSON.stringify(createParams));
         var res = await window.SMA.callGravityRoomSDK('create_room', createParams);
@@ -625,31 +625,31 @@ window.SMA.showGravityCreateRoom = async function () {
         window.SMA.gravityRoomId = (roomData && (roomData.room_id || roomData.roomId)) || "0000";
         document.getElementById('room-id-display').innerText = window.SMA.gravityRoomId.slice(-5);
         window.SMA.startGravityRealtimeHost(window.SMA.gravityRoomId);
-        window.SMA.showNotification("驛ｨ螻九ｒ菴懈・縺励∪縺励◆", 2000);
+        window.SMA.showNotification("部屋を作成しました", 2000);
     } catch (e) {
         console.error("[SMA] Create Error:", e);
-        reportError("驛ｨ螻倶ｽ懈・縺ｫ螟ｱ謨励＠縺ｾ縺励◆: " + e);
+        reportError("部屋作成に失敗しました: " + e);
     }
 };
 
 window.SMA.showRoomList = function () {
-    // 邨ｱ蜷医Γ繝九Η繝ｼ蜀・・繝ｫ繝ｼ繝荳隕ｧ繧呈峩譁ｰ
+    // 統合メニュー内のルーム一覧を更新
     window.SMA.fetchRoomList();
 };
 
 window.SMA.fetchRoomList = async function () {
     var container = document.getElementById('room-list-container');
-    container.innerHTML = '<div class="room-list-loading">隱ｭ縺ｿ霎ｼ縺ｿ荳ｭ...</div>';
+    container.innerHTML = '<div class="room-list-loading">読み込み中...</div>';
 
     if (!window.SMA.isGravity) {
-        container.innerHTML = '<div class="room-list-empty">繝悶Λ繧ｦ繧ｶ迚医〒縺ｯ繝ｫ繝ｼ繝荳隕ｧ繧貞叙蠕励〒縺阪∪縺帙ｓ縲・Gravity蟆ら畑)</div>';
+        container.innerHTML = '<div class="room-list-empty">ブラウザ版ではルーム一覧を取得できません。(Gravity専用)</div>';
         return;
     }
 
     try {
         var res = await window.SMA.callGravityRoomSDK('get_public_rooms', { room_type: 'aitools_game_room', page_num: 1, page_size: 20 });
         console.log("[SMA] fetchRoomList raw response:", JSON.stringify(res));
-        // SDK縺ｮ霑泌唆蠖｢蠑上ｒ隍・焚繝代ち繝ｼ繝ｳ縺ｧ蟇ｾ蠢・
+        // SDKの返却形式を複数パターンで対応
         var rooms = [];
         if (res) {
             if (res.data && res.data.list) rooms = res.data.list;
@@ -660,12 +660,12 @@ window.SMA.fetchRoomList = async function () {
         }
         console.log("[SMA] Parsed room list (" + rooms.length + "):", JSON.stringify(rooms));
 
-        // 10蛻・ｻ･蜀・↓菴懊ｉ繧後◆繝ｫ繝ｼ繝縺ｮ縺ｿ陦ｨ遉ｺ
+        // 10分以内に作られたルームのみ表示
         var now = Date.now();
         var TEN_MIN = 10 * 60 * 1000;
         rooms = rooms.filter(function (room) {
             var ts = room.create_time || room.created_at || room.createTime || room.createdAt;
-            if (!ts) return true; // 繧ｿ繧､繝繧ｹ繧ｿ繝ｳ繝励′縺ｪ縺・ｴ蜷医・陦ｨ遉ｺ
+            if (!ts) return true; // タイムスタンプがない場合は表示
             var d = new Date(ts);
             if (d.getFullYear() < 2000) d = new Date(ts * 1000);
             if (isNaN(d.getTime())) return true;
@@ -674,11 +674,11 @@ window.SMA.fetchRoomList = async function () {
         console.log("[SMA] Rooms after 10-min filter: " + rooms.length);
 
         if (rooms.length === 0) {
-            container.innerHTML = '<div class="room-list-empty">迴ｾ蝨ｨ蜈ｬ髢倶ｸｭ縺ｮ繝ｫ繝ｼ繝縺ｯ縺ゅｊ縺ｾ縺帙ｓ縲・/div>';
+            container.innerHTML = '<div class="room-list-empty">現在公開中のルームはありません。</div>';
             return;
         }
 
-        // 繝ｫ繝ｼ繝繧ｫ繝ｼ繝峨ｒ逕滓・
+        // ルームカードを生成
         container.innerHTML = '';
         rooms.forEach(function (room) {
             var card = document.createElement('div');
@@ -693,16 +693,16 @@ window.SMA.fetchRoomList = async function () {
                 var d = new Date(ts);
                 if (d.getFullYear() < 2000) d = new Date(ts * 1000);
                 if (!isNaN(d.getTime())) {
-                    timeStr = ("0" + d.getHours()).slice(-2) + ":" + ("0" + d.getMinutes()).slice(-2) + " 菴懈・";
+                    timeStr = ("0" + d.getHours()).slice(-2) + ":" + ("0" + d.getMinutes()).slice(-2) + " 作成";
                 }
             }
 
             card.innerHTML = '<div>' +
-                '<div class="room-title">驛ｨ螻紀D: ' + roomId.slice(-5) + ' <span style="font-size:0.8rem; color:#aaa; margin-left:10px;">' + timeStr + '</span></div>' +
-                '<div class="room-host">' + playerCount + '/' + maxPlayers + '莠ｺ</div>' +
+                '<div class="room-title">部屋ID: ' + roomId.slice(-5) + ' <span style="font-size:0.8rem; color:#aaa; margin-left:10px;">' + timeStr + '</span></div>' +
+                '<div class="room-host">' + playerCount + '/' + maxPlayers + '人</div>' +
                 '</div>' +
-                '<div class="room-count">蜈･螳､</div>';
-            card.innerHTML = card.innerHTML.replace(/<div class="room-count">.*?<\/div>/, '<div class="room-actions"><button class="room-action-btn join">蜈･螳､</button><button class="room-action-btn spec">隕ｳ謌ｦ</button></div>');
+                '<div class="room-count">入室</div>';
+            card.innerHTML = card.innerHTML.replace(/<div class="room-count">.*?<\/div>/, '<div class="room-actions"><button class="room-action-btn join">入室</button><button class="room-action-btn spec">観戦</button></div>');
             var btnJoin = card.querySelector('.room-action-btn.join');
             var btnSpec = card.querySelector('.room-action-btn.spec');
             var doJoin = function (rid, role) {
@@ -733,7 +733,7 @@ window.SMA.fetchRoomList = async function () {
         });
     } catch (e) {
         console.error("Room list fetch error:", e);
-        container.innerHTML = '<div class="room-list-empty">繝ｫ繝ｼ繝諠・ｱ縺ｮ蜿門ｾ励↓螟ｱ謨励＠縺ｾ縺励◆縲・/div>';
+        container.innerHTML = '<div class="room-list-empty">ルーム情報の取得に失敗しました。</div>';
     }
 };
 
@@ -754,17 +754,17 @@ window.SMA.showGravityJoinRoom = async function (roomIdParam, joinRole) {
     window.SMA.setJoinLoading(true);
 
     // ================= SHORT ID SEARCH LOGIC =================
-    // 蜈･蜉帙′遏ｭ縺・ｴ蜷医∝・髢九Ν繝ｼ繝荳隕ｧ縺九ｉ譛ｫ蟆ｾ荳閾ｴ縺ｧ讀懃ｴ｢
+    // 入力が短い場合、公開ルーム一覧から末尾一致で検索
     if (rid.length > 0 && rid.length <= 10) {
-        window.SMA.showNotification("驛ｨ螻九ｒ讀懃ｴ｢荳ｭ...", 2000);
+        window.SMA.showNotification("部屋を検索中...", 2000);
         try {
             var foundFullId = null;
-            // 譛螟ｧ3繝壹・繧ｸ讀懃ｴ｢
+            // 最大3ページ検索
             for (var p = 1; p <= 3; p++) {
                 var resSearch = await window.SMA.callGravityRoomSDK('get_public_rooms', { room_type: 'aitools_game_room', page_num: p, page_size: 20 });
                 console.log("[SMA] get_public_rooms page " + p + " raw response:", JSON.stringify(resSearch));
 
-                // SDK縺ｮ霑泌唆蠖｢蠑上ｒ隍・焚繝代ち繝ｼ繝ｳ縺ｧ蟇ｾ蠢・
+                // SDKの返却形式を複数パターンで対応
                 var roomsData = [];
                 if (resSearch) {
                     if (resSearch.data && resSearch.data.list) roomsData = resSearch.data.list;
@@ -785,26 +785,26 @@ window.SMA.showGravityJoinRoom = async function (roomIdParam, joinRole) {
                     }
                 }
                 if (foundFullId) break;
-                if (roomsData.length < 20) break; // 谺｡繝壹・繧ｸ縺ｪ縺・
+                if (roomsData.length < 20) break; // 次ページなし
             }
             if (foundFullId) {
                 rid = foundFullId;
                 console.log("[SMA] Found full room ID:", rid);
             } else {
                 window.SMA.setJoinLoading(false);
-                window.SMA.showNotification("謖・ｮ壹＆繧後◆逡ｪ蜿ｷ縺ｮ驛ｨ螻九′隕九▽縺九ｊ縺ｾ縺帙ｓ", 3000);
+                window.SMA.showNotification("指定された番号の部屋が見つかりません", 3000);
                 return;
             }
         } catch (e) {
             console.error("[SMA] Search Error:", e);
             window.SMA.setJoinLoading(false);
-            window.SMA.showNotification("讀懃ｴ｢繧ｨ繝ｩ繝ｼ: " + e, 3000);
-            return; // 讀懃ｴ｢螟ｱ謨玲凾縺ｯ遒ｺ螳溘↓蛛懈ｭ｢
+            window.SMA.showNotification("検索エラー: " + e, 3000);
+            return; // 検索失敗時は確実に停止
         }
     }
     // =========================================================
 
-    // join_room縺ｧ蜈･螳､
+    // join_roomで入室
     console.log("[SMA] Attempting join_room with room_id:", rid);
     window.SMA.callGravityRoomSDK('join_room', { room_id: rid })
         .then(function (res) {
@@ -813,28 +813,28 @@ window.SMA.showGravityJoinRoom = async function (roomIdParam, joinRole) {
             window.SMA.startGravityRealtimeGuest(window.SMA.gravityRoomId);
             window.SMA.setJoinLoading(false);
 
-            // 繝ｭ繝薙・逕ｻ髱｢縺ｸ驕ｷ遘ｻ
+            // ロビー画面へ遷移
             document.getElementById('join-room-screen').classList.add('hidden');
             document.getElementById('battle-hub-screen').classList.remove('hidden');
             document.getElementById('room-id-display').innerText = rid.slice(-5);
 
-            // 繧ｲ繧ｹ繝医・繝ｭ繝薙・陦ｨ遉ｺ隱ｿ謨ｴ
+            // ゲストのロビー表示調整
             var sssBtn = document.getElementById('btn-goto-sss');
             if (sssBtn) sssBtn.style.display = 'none';
             var cancelBtn = document.getElementById('btn-create-cancel');
-            if (cancelBtn) cancelBtn.innerText = "騾蜃ｺ縺吶ｋ";
+            if (cancelBtn) cancelBtn.innerText = "退出する";
             var header = document.querySelector('#battle-hub-screen h2');
-            if (header) header.innerText = "繝ｭ繝薙・・医ご繧ｹ繝茨ｼ・;
+            if (header) header.innerText = "ロビー（ゲスト）";
             var copyBtn = document.getElementById('btn-copy-room-id');
             if (copyBtn) copyBtn.style.display = 'block';
 
-            // 繧ｲ繧ｹ繝郁・霄ｫ繧・P縺ｨ縺励※陦ｨ遉ｺ・域圻螳壹ゅ・繧ｹ繝医°繧瑛obby縺悟ｱ翫￠縺ｰ荳頑嶌縺阪＆繧後ｋ・・
+            // ゲスト自身を2Pとして表示（暫定。ホストからlobbyが届けば上書きされる）
             if (window.SMA.myRole !== 'spec') {
                 var nameP2 = document.getElementById('lobby-name-p2');
                 if (nameP2) nameP2.innerText = window.SMA.localPlayerName;
             }
             var nameP1 = document.getElementById('lobby-name-p1');
-            if (nameP1) nameP1.innerText = "謗･邯壻ｸｭ...";
+            if (nameP1) nameP1.innerText = "接続中...";
 
             // Mock netConn for Gravity guest
             window.SMA.netConn = {
@@ -844,19 +844,19 @@ window.SMA.showGravityJoinRoom = async function (roomIdParam, joinRole) {
                     window.SMA.broadcast(msg);
                 }
             };
-            window.SMA.showNotification("驛ｨ螻九↓蜈･螳､縺励∪縺励◆", 2000);
+            window.SMA.showNotification("部屋に入室しました", 2000);
 
-            // Handshake騾∽ｿ｡・医Μ繝医Λ繧､莉倥″: assign_role繧貞女縺大叙繧九∪縺ｧ郢ｰ繧願ｿ斐☆・・
+            // Handshake送信（リトライ付き: assign_roleを受け取るまで繰り返す）
             var handshakeMsg = { type: 'handshake', role: window.SMA.myRole, name: window.SMA.localPlayerName, icon: window.SMA.localPlayerIcon, ver: window.SMA.VERSION };
             console.log("[SMA] Broadcasting handshake from guest");
             window.SMA.broadcast(handshakeMsg);
 
-            // 繝帙せ繝医°繧峨・蠢懃ｭ斐′縺ｪ縺・ｴ蜷医・繝ｪ繝医Λ繧､・域怙螟ｧ5蝗槭・遘帝俣髫費ｼ・
+            // ホストからの応答がない場合のリトライ（最大5回、2秒間隔）
             var retryCount = 0;
             window.SMA._handshakeRetry = setInterval(function () {
                 retryCount++;
                 if (window.SMA.myRole !== 'host' && window.SMA.lobbyState && window.SMA.lobbyState.p1) {
-                    // 繝ｭ繝薙・諠・ｱ繧貞女菫｡貂医∩竊偵Μ繝医Λ繧､蛛懈ｭ｢
+                    // ロビー情報を受信済み→リトライ停止
                     console.log("[SMA] Lobby state received, stopping handshake retry");
                     clearInterval(window.SMA._handshakeRetry);
                     return;
@@ -872,7 +872,7 @@ window.SMA.showGravityJoinRoom = async function (roomIdParam, joinRole) {
         })
         .catch(function (e) {
             console.error("[SMA] join_room failed:", e);
-            window.SMA.showNotification("蜈･螳､繧ｨ繝ｩ繝ｼ: " + e, 3000);
+            window.SMA.showNotification("入室エラー: " + e, 3000);
             window.SMA.setJoinLoading(false);
         });
 };
@@ -895,11 +895,11 @@ window.SMA.joinRoom = function (role) {
         });
         window.SMA.netPeer.on('error', function (e) {
             if (e.type === 'peer-unavailable') {
-                window.SMA.showNotification("驛ｨ螻九′隕九▽縺九ｊ縺ｾ縺帙ｓ", 2000);
+                window.SMA.showNotification("部屋が見つかりません", 2000);
                 setTimeout(function () { location.reload(); }, 2000);
             }
             else if (e.type === 'network' || e.message.includes('Lost connection')) {
-                window.SMA.showNotification("謗･邯壹お繝ｩ繝ｼ縲ょ・謗･邯壹ｒ隧ｦ縺ｿ縺ｾ縺・..", 2000);
+                window.SMA.showNotification("接続エラー。再接続を試みます...", 2000);
                 window.SMA.netPeer.reconnect();
                 setTimeout(function () {
                     if (!window.SMA.netPeer.disconnected) {
@@ -916,7 +916,7 @@ window.SMA.joinRoom = function (role) {
             }
         });
         window.SMA.netPeer.on('disconnected', function () {
-            window.SMA.showNotification("繧ｵ繝ｼ繝舌・縺九ｉ蛻・妙縺輔ｌ縺ｾ縺励◆縲ょ・謗･邯壻ｸｭ...", 2000);
+            window.SMA.showNotification("サーバーから切断されました。再接続中...", 2000);
             window.SMA.netPeer.reconnect();
         });
     } catch (e) {
@@ -932,13 +932,13 @@ window.SMA.setupClientConn = function (conn, role) {
     conn.on('data', function (d) {
         if (d.type === 'error' && d.msg === 'MATCH_IN_PROGRESS') {
             window.SMA.isExpectedClose = true;
-            window.SMA.showNotification("隧ｦ蜷井ｸｭ縺ｮ縺溘ａ蜈･螳､縺ｧ縺阪∪縺帙ｓ", 3000);
+            window.SMA.showNotification("試合中のため入室できません", 3000);
             setTimeout(function () { location.reload(); }, 3000);
             return;
         }
         if (d.type === 'error' && d.msg === 'ROOM_FULL') {
             window.SMA.isExpectedClose = true;
-            window.SMA.showNotification("蟇ｾ謌ｦ逶ｸ謇九′蝓九∪縺｣縺ｦ縺・∪縺・, 3000);
+            window.SMA.showNotification("対戦相手が埋まっています", 3000);
             setTimeout(function () { location.reload(); }, 3000);
             return;
         }
@@ -946,13 +946,13 @@ window.SMA.setupClientConn = function (conn, role) {
     });
     conn.on('error', function (e) {
         if (window.SMA.isExpectedClose) return;
-        window.SMA.showNotification("謗･邯壹お繝ｩ繝ｼ: " + e, 2000);
+        window.SMA.showNotification("接続エラー: " + e, 2000);
     });
     conn.on('close', function () {
         if (window.SMA.isExpectedClose) return;
         if (window.SMA.gameState === 'GAMEOVER') return;
 
-        window.SMA.showNotification("繝帙せ繝医→縺ｮ謗･邯壹′蛻・ｌ縺ｾ縺励◆縲ょ・謗･邯壹ｒ隧ｦ縺ｿ縺ｾ縺・..", 3000);
+        window.SMA.showNotification("ホストとの接続が切れました。再接続を試みます...", 3000);
         setTimeout(function () {
             if (!window.SMA.netPeer.disconnected) {
                 var nc = window.SMA.netPeer.connect(window.SMA.targetPeerId);
@@ -990,20 +990,20 @@ window.SMA.toggleHubReady = function (isForceReady) {
     var wantsReady = typeof isForceReady === 'boolean' ? isForceReady : !window.SMA.amIReady;
 
     if (wantsReady && (!window.SMA.myStageId || !window.SMA.myCharId)) {
-        window.SMA.showNotification("繧ｹ繝・・繧ｸ縺ｨ繧ｭ繝｣繝ｩ繧ｯ繧ｿ繝ｼ繧帝∈繧薙〒縺上□縺輔＞", 2000);
+        window.SMA.showNotification("ステージとキャラクターを選んでください", 2000);
         return;
     }
     window.SMA.amIReady = wantsReady;
 
     var btn = document.getElementById('btn-hub-ready');
     if (btn) {
-        btn.innerText = window.SMA.amIReady ? "繧ｭ繝｣繝ｳ繧ｻ繝ｫ" : "貅門ｙ螳御ｺ・ｼ・;
+        btn.innerText = window.SMA.amIReady ? "キャンセル" : "準備完了！";
         btn.style.background = window.SMA.amIReady ? "#636e72" : "";
         btn.style.borderColor = window.SMA.amIReady ? "#b2bec3" : "";
     }
 
     if (window.SMA.isOnline) {
-        // 繝帙せ繝医・role縺ｯ'host'縺縺後”ubData縺ｧ縺ｯ'p1'縺ｨ縺励※謇ｱ縺・
+        // ホストのroleは'host'だが、hubDataでは'p1'として扱う
         var hubRole = (window.SMA.myRole === 'host') ? 'p1' : window.SMA.myRole;
         var msg = {
             type: 'hub_ready',
@@ -1020,10 +1020,10 @@ window.SMA.toggleHubReady = function (isForceReady) {
             else if (window.SMA.netConn) window.SMA.netConn.send(msg);
         }
     } else {
-        // 繧ｽ繝ｭ繝｢繝ｼ繝・ READY縺ｫ縺励※UI繧よ峩譁ｰ縺励※縺九ｉ繧ｲ繝ｼ繝髢句ｧ・
+        // ソロモード: READYにしてUIも更新してからゲーム開始
         var btn2 = document.getElementById('btn-hub-ready');
         if (btn2) {
-            btn2.innerText = window.SMA.amIReady ? "繧ｭ繝｣繝ｳ繧ｻ繝ｫ" : "貅門ｙ螳御ｺ・ｼ・;
+            btn2.innerText = window.SMA.amIReady ? "キャンセル" : "準備完了！";
             btn2.style.background = window.SMA.amIReady ? "#636e72" : "";
             btn2.style.borderColor = window.SMA.amIReady ? "#b2bec3" : "";
         }
@@ -1067,7 +1067,7 @@ window.SMA.refreshHubUI = function () {
             statusEl.innerText = 'READY';
         } else {
             var nameEl = document.getElementById('lobby-name-' + r);
-            if (nameEl && nameEl.innerText !== "蠕・ｩ滉ｸｭ...") {
+            if (nameEl && nameEl.innerText !== "待機中...") {
                 slot.classList.add('active', 'selecting');
                 statusEl.style.display = 'block';
                 statusEl.style.background = '#00d2ff';
@@ -1127,22 +1127,22 @@ window.SMA.executeHubFinalStart = function (activeRoles) {
     window.SMA.startGameMulti();
 };
 
-// 蜀肴姶蜃ｦ逅・ 繝励Ξ繧､繝､繝ｼ謗･邯壹ｒ邯ｭ謖√＠縺溘∪縺ｾ繧ｭ繝｣繝ｩ/繧ｹ繝・・繧ｸ驕ｸ謚槭↓謌ｻ繧・
+// 再戦処理: プレイヤー接続を維持したままキャラ/ステージ選択に戻る
 window.SMA.rematch = function () {
-    // 繧ｲ繝ｼ繝繧ｪ繝ｼ繝舌・逕ｻ髱｢繧帝哩縺倥ｋ
+    // ゲームオーバー画面を閉じる
     document.getElementById('game-over-screen').classList.add('hidden');
-    // HUD繝ｻ繧ｳ繝ｳ繝医Ο繝ｼ繝ｩ繝ｼ繧帝撼陦ｨ遉ｺ
+    // HUD・コントローラーを非表示
     document.getElementById('hud-layer').style.display = 'none';
     document.getElementById('controller-area').style.display = 'none';
-    // 繧｢繝九Γ繝ｼ繧ｷ繝ｧ繝ｳ繝輔Ξ繝ｼ繝繧貞●豁｢
+    // アニメーションフレームを停止
     if (window.SMA.animationFrameId) { cancelAnimationFrame(window.SMA.animationFrameId); window.SMA.animationFrameId = null; }
     window.SMA.gameRunning = false;
-    // 繝舌ヨ繝ｫ繝上ヶ逕ｻ髱｢繧貞・陦ｨ遉ｺ
+    // バトルハブ画面を再表示
     var hub = document.getElementById('battle-hub-screen');
     hub.classList.remove('hidden'); hub.style.display = 'flex';
-    // 繧ｭ繝｣繝ｩ/繧ｹ繝・・繧ｸ驕ｸ謚槭ヱ繝阪Ν縺ｸ
+    // キャラ/ステージ選択パネルへ
     window.SMA.showHubSelectPanel();
-    // 繧ｲ繧ｹ繝医↓rematch騾夂衍繧帝√ｋ
+    // ゲストにrematch通知を送る
     if (window.SMA.isHost) {
         window.SMA.broadcast({ type: 'rematch' });
     }
@@ -1155,7 +1155,7 @@ window.SMA.showHubSelectPanel = function () {
     if (selectPanel) { selectPanel.classList.add('active'); selectPanel.style.display = 'flex'; }
     var actionBar = document.getElementById('hub-action-bar');
     if (actionBar) actionBar.style.display = 'flex';
-    // 繝舌げ5: 縲後せ繝・・繧ｸ驕ｸ謚槭∈騾ｲ繧縲阪・繧ｿ繝ｳ繧帝撼陦ｨ遉ｺ縺ｫ縺吶ｋ
+    // バグ5: 「ステージ選択へ進む」ボタンを非表示にする
     var gotoBtn = document.getElementById('btn-goto-sss');
     if (gotoBtn) gotoBtn.style.display = 'none';
 
@@ -1163,17 +1163,17 @@ window.SMA.showHubSelectPanel = function () {
     window.SMA.hubData = { p1: {}, p2: {}, p3: {}, p4: {} };
     window.SMA.refreshHubUI();
 
-    // 繝・ヵ繧ｩ繝ｫ繝磯∈謚樒憾諷九ｒ螟画焚縺ｫ險ｭ螳夲ｼ・attlefield縺ｨsword縺悟・譛殱elected・・
+    // デフォルト選択状態を変数に設定（battlefieldとswordが初期selected）
     window.SMA.myStageId = 'battlefield';
     window.SMA.myCharId = 'sword';
-    // 蛻晄悄驕ｸ謚槭・繧ｫ繝ｼ繝峨↓selected繧ｯ繝ｩ繧ｹ繧剃ｻ倥￠繧・
+    // 初期選択のカードにselectedクラスを付ける
     document.querySelectorAll('.stage-card, .char-card').forEach(function (c) { c.classList.remove('selected'); });
     var defStage = document.getElementById('stage-battlefield');
     var defChar = document.getElementById('card-sword');
     if (defStage) defStage.classList.add('selected');
     if (defChar) defChar.classList.add('selected');
     var btn = document.getElementById('btn-hub-ready');
-    if (btn) { btn.innerText = "貅門ｙ螳御ｺ・ｼ・; btn.style.background = ""; btn.style.borderColor = ""; }
+    if (btn) { btn.innerText = "準備完了！"; btn.style.background = ""; btn.style.borderColor = ""; }
     var btnSt = document.getElementById('hub-start-overlay');
     if (btnSt) btnSt.style.display = 'none';
 };
@@ -1236,12 +1236,12 @@ window.SMA.broadcastLobby = function () {
                         if (iconEl.tagName.toLowerCase() === 'img') { iconEl.src = pIcon; iconEl.style.display = 'inline-block'; }
                         else { iconEl.innerText = ''; iconEl.style.backgroundImage = 'url(' + pIcon + ')'; iconEl.style.backgroundSize = 'cover'; }
                     }
-                    else { if (iconEl.tagName.toLowerCase() !== 'img') iconEl.innerText = '側'; }
+                    else { if (iconEl.tagName.toLowerCase() !== 'img') iconEl.innerText = '👤'; }
                 }
             } else {
                 cardEl.classList.add('waiting');
-                if (nameEl) nameEl.innerText = "蠕・ｩ滉ｸｭ...";
-                if (iconEl && iconEl.tagName.toLowerCase() !== 'img') { iconEl.innerText = '側'; iconEl.style.backgroundImage = 'none'; }
+                if (nameEl) nameEl.innerText = "待機中...";
+                if (iconEl && iconEl.tagName.toLowerCase() !== 'img') { iconEl.innerText = '👤'; iconEl.style.backgroundImage = 'none'; }
             }
         }
     };
@@ -1253,7 +1253,7 @@ window.SMA.broadcastLobby = function () {
 
     var specListEl = document.getElementById('spec-list');
     var specCountEl = document.getElementById('spec-count');
-    if (specListEl) specListEl.innerText = specs.join(', ') || "縺ｪ縺・;
+    if (specListEl) specListEl.innerText = specs.join(', ') || "なし";
     if (specCountEl) specCountEl.innerText = specs.length;
 
     var gotoSssBtn = document.getElementById('btn-goto-sss');
@@ -1331,16 +1331,16 @@ window.SMA.handleClient = async function (d) {
                             if (iconEl.tagName.toLowerCase() === 'img') { iconEl.src = pIcon; iconEl.style.display = 'inline-block'; }
                             else { iconEl.innerText = ''; iconEl.style.backgroundImage = 'url(' + pIcon + ')'; iconEl.style.backgroundSize = 'cover'; }
                         }
-                        else { if (iconEl.tagName.toLowerCase() !== 'img') { iconEl.innerText = '側'; iconEl.style.backgroundImage = 'none'; } }
+                        else { if (iconEl.tagName.toLowerCase() !== 'img') { iconEl.innerText = '👤'; iconEl.style.backgroundImage = 'none'; } }
                     }
                 } else {
                     cardEl.classList.add('waiting');
-                    if (nameEl) nameEl.innerText = "蠕・ｩ滉ｸｭ...";
-                    if (iconEl && iconEl.tagName.toLowerCase() !== 'img') { iconEl.innerText = '側'; iconEl.style.backgroundImage = 'none'; }
+                    if (nameEl) nameEl.innerText = "待機中...";
+                    if (iconEl && iconEl.tagName.toLowerCase() !== 'img') { iconEl.innerText = '👤'; iconEl.style.backgroundImage = 'none'; }
                 }
             }
         };
-        // 譛螟ｧ莠ｺ謨ｰ縺ｫ蠢懊§縺溘せ繝ｭ繝・ヨ陦ｨ遉ｺ・医ご繧ｹ繝亥・・・
+        // 最大人数に応じたスロット表示（ゲスト側）
         if (d.maxPlayers) window.SMA.showPlayerSlots(d.maxPlayers);
 
         updateSlot(1, d.p1, d.p1Icon);
@@ -1351,14 +1351,14 @@ window.SMA.handleClient = async function (d) {
 
         var specListEl = document.getElementById('spec-list');
         var specCountEl = document.getElementById('spec-count');
-        if (specListEl) specListEl.innerText = (d.specs && d.specs.length > 0) ? d.specs.join(', ') : "縺ｪ縺・;
+        if (specListEl) specListEl.innerText = (d.specs && d.specs.length > 0) ? d.specs.join(', ') : "なし";
         if (specCountEl) specCountEl.innerText = (d.specs && d.specs.length) || 0;
 
         window.SMA.refreshHubUI();
 
         if (!window.SMA.hasJoined) {
             window.SMA.hasJoined = true;
-            window.SMA.showNotification("蜈･螳､縺励∪縺励◆・・, 2000);
+            window.SMA.showNotification("入室しました！", 2000);
         }
     }
     if (d.type === 'assign_role') {
@@ -1382,7 +1382,7 @@ window.SMA.handleClient = async function (d) {
         window.SMA.startGameMulti();
     }
     if (d.type === 'sync') {
-        // Gravity隧ｦ蜷井ｸｭ縺ｯP2P蜷梧悄縺ｮ縺ｿ繧剃ｽｿ逕ｨ・・DK sync縺ｯ辟｡隕厄ｼ・
+        // Gravity試合中はP2P同期のみを使用（SDK syncは無視）
         if (window.SMA.isGravity && !window.SMA.isHost && window.SMA.gravityUsePeerInMatch) return;
         if (!window.SMA.gameRunning) { window.SMA.selectedStage = d.stg || 'battlefield'; window.SMA.bootGame(); }
         window.SMA.applySync(d);
@@ -1392,12 +1392,12 @@ window.SMA.handleConn = function (c) {
     c.on('data', function (d) {
         if (d.ver && d.ver !== window.SMA.VERSION) { if (window.SMA.isHost) c.send({ type: 'error', msg: 'VERSION MISMATCH' }); document.getElementById('overlay-msg').innerText = "VERSION MISMATCH\nP2 has diff ver"; return; }
         if (d.type === 'handshake') {
-            // 繝励Ξ繧､繝､繝ｼ繝ｭ繝ｼ繝ｫ縺ｮ讀懃ｴ｢・亥・謗･邯壹メ繧ｧ繝・け蜷ｫ繧・・
+            // プレイヤーロールの検索（再接続チェック含む）
             var existingEntry = null;
             var assignedRole = null;
 
             if (d.role === 'join') {
-                // 縺ｾ縺壽里蟄倥・繝励Ξ繧､繝､繝ｼ繧呈､懃ｴ｢・亥・謗･邯壼愛螳夲ｼ・
+                // まず既存のプレイヤーを検索（再接続判定）
                 var roles = ['p2', 'p3', 'p4'];
                 for (var ri = 0; ri < roles.length; ri++) {
                     var entry = window.SMA.connections.find(function (x) { return x.role === roles[ri]; });
@@ -1411,7 +1411,7 @@ window.SMA.handleConn = function (c) {
 
             var isLocked = window.SMA.gameRunning || window.SMA.isInCSS;
 
-            // 繝ｭ繝・け荳ｭ縺ｯ繧ｹ繝壹け繝・う繧ｿ繝ｼ縺ｮ縺ｿ險ｱ蜿ｯ・亥・謗･邯壹・髯､螟厄ｼ・
+            // ロック中はスペクテイターのみ許可（再接続は除外）
             if (isLocked && d.role !== 'spec') {
                 if (!existingEntry) {
                     c.send({ type: 'error', msg: 'MATCH_IN_PROGRESS' });
@@ -1420,17 +1420,17 @@ window.SMA.handleConn = function (c) {
                 }
             }
 
-            // 蜀肴磁邯壼・逅・
+            // 再接続処理
             if (existingEntry) {
                 existingEntry.conn = c;
                 existingEntry.name = d.name;
                 c.send({ type: 'assign_role', role: assignedRole });
-                window.SMA.showNotification(assignedRole.toUpperCase() + "縺悟・謗･邯壹＠縺ｾ縺励◆", 2000);
+                window.SMA.showNotification(assignedRole.toUpperCase() + "が再接続しました", 2000);
                 if (window.SMA.gameRunning) {
-                    // 繧ｲ繝ｼ繝荳ｭ縺ｮ蜀肴磁邯壼酔譛溘・譌｢蟄倥・sync縺ｧ陦後ｏ繧後ｋ
+                    // ゲーム中の再接続同期は既存のsyncで行われる
                 }
             } else if (d.role === 'join') {
-                // 譁ｰ隕上・繝ｬ繧､繝､繝ｼ縺ｮ繝ｭ繝ｼ繝ｫ蜑ｲ繧雁ｽ薙※・・2竊恥3竊恥4縺ｮ鬆・ｼ・
+                // 新規プレイヤーのロール割り当て（p2→p3→p4の順）
                 var p2 = window.SMA.connections.find(function (x) { return x.role === 'p2'; });
                 var p3 = window.SMA.connections.find(function (x) { return x.role === 'p3'; });
                 var p4 = window.SMA.connections.find(function (x) { return x.role === 'p4'; });
@@ -1441,13 +1441,13 @@ window.SMA.handleConn = function (c) {
                 else if (!p4 || !p4.conn.open) newRole = 'p4';
 
                 if (!newRole) {
-                    // 4莠ｺ蝓九∪縺｣縺ｦ縺・ｋ竊呈ｺ螳､
+                    // 4人埋まっている→満室
                     c.send({ type: 'error', msg: 'ROOM_FULL' });
                     setTimeout(function () { c.close(); }, 500);
                     return;
                 }
 
-                // 譌｢蟄倥・disconnected entry縺後≠繧句ｴ蜷医・荳頑嶌縺・
+                // 既存のdisconnected entryがある場合は上書き
                 var existing = window.SMA.connections.find(function (x) { return x.role === newRole; });
                 if (existing) {
                     existing.conn = c;
@@ -1457,9 +1457,9 @@ window.SMA.handleConn = function (c) {
                 }
                 c.send({ type: 'assign_role', role: newRole });
                 window.SMA.broadcastLobby();
-                window.SMA.showNotification(newRole.toUpperCase() + "縺悟・螳､縺励∪縺励◆・・, 2000);
+                window.SMA.showNotification(newRole.toUpperCase() + "が入室しました！", 2000);
             } else {
-                // 隕ｳ謌ｦ閠・
+                // 観戦者
                 var existingSpec = window.SMA.connections.find(function (x) { return x.role === 'spec' && x.name === d.name; });
                 if (existingSpec) {
                     existingSpec.conn = c;
@@ -1469,9 +1469,9 @@ window.SMA.handleConn = function (c) {
                 }
                 window.SMA.broadcastLobby();
 
-                // 驕・ｻｶ蜿ょ刈縺ｮ蜷梧悄
+                // 遅延参加の同期
                 if (window.SMA.gameRunning) {
-                    // 繧ｲ繝ｼ繝荳ｭ縺ｮ繧ｹ繝壹け繝・う繧ｿ繝ｼ蜷梧悄縺ｯsync繝ｫ繝ｼ繝励〒陦後ｏ繧後ｋ
+                    // ゲーム中のスペクテイター同期はsyncループで行われる
                 } else if (!document.getElementById('battle-hub-screen').classList.contains('hidden')) {
                     c.send({ type: 'goto_css' });
                     c.send({ type: 'char_update', role: 'p1', charId: window.SMA.p1CharId });
@@ -1495,7 +1495,7 @@ window.SMA.handleConn = function (c) {
                 }
             }
         }
-        // 繧ｹ繝・・繧ｸ繝ｻ繧ｭ繝｣繝ｩ繝ｻ貅門ｙ迥ｶ諷九・譖ｴ譁ｰ・亥・繝ｭ繝ｼ繝ｫ蟇ｾ蠢懶ｼ・
+        // ステージ・キャラ・準備状態の更新（全ロール対応）
         if (d.type === 'stage_update') {
             if (d.role === 'p2') window.SMA.p2Stage = d.stageId;
             if (d.role === 'p3') window.SMA.p3Stage = d.stageId;
@@ -1530,7 +1530,7 @@ window.SMA.handleConn = function (c) {
                     if (!window.SMA.remoteEventsMap[role]) window.SMA.remoteEventsMap[role] = [];
                     window.SMA.remoteEventsMap[role].push(d.keys);
                 }
-                // 蠕梧婿莠呈鋤: p2縺ｮ蜈･蜉帙・remoteKeys縺ｫ繧ょ・繧後ｋ
+                // 後方互換: p2の入力はremoteKeysにも入れる
                 if (role === 'p2') {
                     window.SMA.remoteKeys = d.keys;
                     window.SMA.remoteLastInputTime = Date.now();
@@ -1540,7 +1540,7 @@ window.SMA.handleConn = function (c) {
         }
     });
 
-    // 蛻・妙譎ゅ・蜃ｦ逅・
+    // 切断時の処理
     c.on('close', function () {
         var idx = window.SMA.connections.findIndex(function (x) { return x.conn === c; });
         if (idx !== -1) {
@@ -1548,9 +1548,9 @@ window.SMA.handleConn = function (c) {
                 window.SMA.connections.splice(idx, 1);
                 window.SMA.broadcastLobby();
             } else {
-                // 繝励Ξ繧､繝､繝ｼ縺悟・譁ｭ縺輔ｌ縺・
+                // プレイヤーが切断された
                 var role = window.SMA.connections[idx].role;
-                window.SMA.showNotification(role.toUpperCase() + "縺悟・譁ｭ縺輔ｌ縺ｾ縺励◆", 2000);
+                window.SMA.showNotification(role.toUpperCase() + "が切断されました", 2000);
             }
         }
     });

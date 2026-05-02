@@ -35,16 +35,16 @@ window.SMA.setJoinLoading = function (loading) {
     var b1 = document.getElementById('btn-join-action');
     var b2 = document.getElementById('btn-spec-action');
     if (loading) {
-        if (b1) { b1.disabled = true; b1.classList.add('disabled'); b1.innerText = "謗･邯壻ｸｭ..."; }
+        if (b1) { b1.disabled = true; b1.classList.add('disabled'); b1.innerText = "接続中..."; }
         if (b2) { b2.disabled = true; b2.classList.add('disabled'); }
     } else {
-        if (b1) { b1.disabled = false; b1.classList.remove('disabled'); b1.innerText = "蟇ｾ謌ｦ縺ｫ蜿ょ刈"; }
+        if (b1) { b1.disabled = false; b1.classList.remove('disabled'); b1.innerText = "対戦に参加"; }
         if (b2) { b2.disabled = false; b2.classList.remove('disabled'); }
     }
 };
 
 
-// --- 譛螟ｧ莠ｺ謨ｰ縺ｫ蠢懊§縺ｦ繝励Ξ繧､繝､繝ｼ繧ｫ繝ｼ繝峨せ繝ｭ繝・ヨ繧定｡ｨ遉ｺ ---
+// --- 最大人数に応じてプレイヤーカードスロットを表示 ---
 window.SMA.showPlayerSlots = function (maxPlayers) {
     var s3 = document.getElementById('slot-p3');
     var s4 = document.getElementById('slot-p4');
@@ -74,7 +74,7 @@ window.SMA.renderSpectatorStrip = function (specs) {
         }
         var el = document.createElement('div');
         el.className = 'spectator-icon';
-        el.title = name || '隕ｳ謌ｦ閠・;
+        el.title = name || '観戦者';
         if (icon) {
             el.style.backgroundImage = 'url(' + icon + ')';
             el.textContent = '';
@@ -91,7 +91,7 @@ window.SMA.renderSpectatorStrip = function (specs) {
 window.SMA.showHelp = function () { document.getElementById('menu-screen').classList.add('hidden'); document.getElementById('help-screen').classList.remove('hidden'); };
 window.SMA.hideHelp = function () { document.getElementById('help-screen').classList.add('hidden'); document.getElementById('menu-screen').classList.remove('hidden'); };
 
-// --- 繝舌ヨ繝ｫ繝上ヶ 繝代ロ繝ｫ蛻・ｊ譖ｿ縺・---
+// --- バトルハブ パネル切り替え ---
 window.SMA.showHubSelectPanel = function () {
     var rp = document.getElementById('hub-room-panel');
     var sp = document.getElementById('hub-select-panel');
@@ -99,7 +99,7 @@ window.SMA.showHubSelectPanel = function () {
     if (rp) { rp.classList.remove('active'); rp.style.display = 'none'; }
     if (sp) { sp.classList.add('active'); sp.style.display = 'flex'; }
     if (ab) { ab.style.display = 'flex'; }
-    // 繝舌げ5: 繧ｹ繝・・繧ｸ驕ｸ謚樒判髱｢縺ｫ蜈･縺｣縺溘ｉ縲後せ繝・・繧ｸ驕ｸ謚槭∈騾ｲ繧縲阪・繧ｿ繝ｳ繧帝撼陦ｨ遉ｺ
+    // バグ5: ステージ選択画面に入ったら「ステージ選択へ進む」ボタンを非表示
     var gotoBtn = document.getElementById('btn-goto-sss');
     if (gotoBtn) gotoBtn.style.display = 'none';
 };
@@ -112,4 +112,4 @@ window.SMA.showHubRoomPanel = function () {
     if (ab) { ab.style.display = 'none'; }
 };
 
-// --- 繧ｽ繝ｭ繝｢繝ｼ繝・---
+// --- ソロモード ---

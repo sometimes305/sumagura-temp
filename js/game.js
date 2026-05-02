@@ -79,11 +79,11 @@ window.SMA.bootGame = function () {
         for (var i = 0; i < 200; i++) { window.SMA.stars.push({ x: Math.random() * (window.SMA.WORLD_W + 1000) - 500, y: Math.random() * (window.SMA.WORLD_H + 500) - 500, s: Math.random() * 2 + 1, type: 'star' }); }
     }
 
-    // 繝励Ξ繧､繝､繝ｼ蛻晄悄蛹厄ｼ・莠ｺ蟇ｾ蠢懶ｼ・
+    // プレイヤー初期化（4人対応）
     var charIds = [window.SMA.p1CharId, window.SMA.p2CharId, window.SMA.p3CharId, window.SMA.p4CharId];
     var colors = window.SMA.PLAYER_COLORS;
     var pc = window.SMA.playerCount || 2;
-    // 蛻晄悄菴咲ｽｮ繧貞插遲峨↓蛻・淵
+    // 初期位置を均等に分散
     var spawnPositions = [];
     var mainPlat = window.SMA.platforms[0];
     for (var pi = 0; pi < pc; pi++) {
@@ -97,11 +97,11 @@ window.SMA.bootGame = function () {
         f.playerRole = window.SMA.PLAYER_ROLES[pi];
         window.SMA.players.push(f);
     }
-    // 莠呈鋤繧ｨ繧､繝ｪ繧｢繧ｹ
+    // 互換エイリアス
     window.SMA.pOne = window.SMA.players[0];
     window.SMA.pTwo = window.SMA.players[1];
     window.SMA.projectiles = [];
-    // HUD蜷榊燕險ｭ螳・
+    // HUD名前設定
     if (window.SMA.isHost) {
         document.getElementById('p1-name').innerText = window.SMA.localPlayerName;
         for (var pi = 1; pi < pc; pi++) {
@@ -110,7 +110,7 @@ window.SMA.bootGame = function () {
             if (hudName) hudName.innerText = window.SMA.isOnline && pObj ? pObj.name : "CPU";
         }
     }
-    // HUD陦ｨ遉ｺ蛻ｶ蠕｡
+    // HUD表示制御
     for (var pi = 0; pi < 4; pi++) {
         var hud = document.getElementById('p' + (pi + 1) + '-hud');
         if (hud) hud.style.display = (pi < pc) ? '' : 'none';
@@ -118,7 +118,7 @@ window.SMA.bootGame = function () {
     window.SMA.camera.x = mainPlat.x + mainPlat.w / 2; window.SMA.camera.y = mainPlat.y - 200; window.SMA.gameLoop();
 };
 window.SMA.updateCPU = function (cpu, targets) {
-    // 譛繧りｿ代＞謨ｵ繧偵ち繝ｼ繧ｲ繝・ヨ縺ｫ
+    // 最も近い敵をターゲットに
     var target = targets[0];
     var minDist = Infinity;
     for (var ti = 0; ti < targets.length; ti++) {
@@ -141,11 +141,11 @@ window.SMA.gameLoop = function () {
                     var allPlayers = S.players;
                     var pc = allPlayers.length;
 
-                    // 蜷・・繝ｬ繧､繝､繝ｼ縺ｮ蜈･蜉帛・逅・→update
+                    // 各プレイヤーの入力処理とupdate
                     for (var pi = 0; pi < pc; pi++) {
                         var player = allPlayers[pi];
                         var role = S.PLAYER_ROLES[pi];
-                        // 蟇ｾ謌ｦ逶ｸ謇九ｒ蜿門ｾ暦ｼ域怙繧りｿ代＞謨ｵ・・
+                        // 対戦相手を取得（最も近い敵）
                         var nearestEnemy = null;
                         var minEnemyDist = Infinity;
                         for (var ej = 0; ej < pc; ej++) {
@@ -156,16 +156,16 @@ window.SMA.gameLoop = function () {
                         if (!nearestEnemy) nearestEnemy = allPlayers[(pi + 1) % pc];
 
                         if (pi === 0) {
-                            // 1P: 繝帙せ繝医・蜈･蜉・
+                            // 1P: ホストの入力
                             player.update(S.myKeys, nearestEnemy);
                         } else if (S.isOnline) {
-                            // 繧ｪ繝ｳ繝ｩ繧､繝ｳ: 繝ｪ繝｢繝ｼ繝亥・蜉・
+                            // オンライン: リモート入力
                             var rKeys = S.remoteKeysMap[role] || {};
-                            // 蜈･蜉帙ヵ繝ｪ繝ｼ繧ｺ繝√ぉ繝・け
+                            // 入力フリーズチェック
                             if (S.remoteLastInputTimeMap[role] > 0 && (Date.now() - S.remoteLastInputTimeMap[role] > 1000)) {
                                 rKeys = { left: false, right: false, up: false, down: false, shield: false };
                             }
-                            // 繧､繝吶Φ繝亥・逅・
+                            // イベント処理
                             var events = S.remoteEventsMap[role] || [];
                             while (events.length > 0) {
                                 var ev = events.shift();
@@ -176,12 +176,12 @@ window.SMA.gameLoop = function () {
                             }
                             player.update(rKeys, nearestEnemy);
                         } else {
-                            // 繧ｽ繝ｭ繝｢繝ｼ繝・ CPU
+                            // ソロモード: CPU
                             S.updateCPU(player, allPlayers);
                         }
                     }
 
-                    // 繧ｹ繝昴・繝ｳ荳ｭ縺ｮ菫晁ｭｷ
+                    // スポーン中の保護
                     allPlayers.forEach(function (p) {
                         if (p.invincible > 120) {
                             p.percent = 0;
@@ -195,7 +195,7 @@ window.SMA.gameLoop = function () {
                             p.life--; if (p.type === 'spear_throw') {
                                 if (p.life === 30) { p.dmg *= 0.5; p.kb *= 0.5; p.scale *= 0.5; }
                                 if (p.life > 30) { p.vx *= 0.9; p.vy *= 0.9; } else {
-                                    // 謇譛芽・ｒ讀懃ｴ｢
+                                    // 所有者を検索
                                     var owner = null;
                                     for (var oi = 0; oi < allPlayers.length; oi++) {
                                         if (allPlayers[oi].playerRole === p.ownerRole) { owner = allPlayers[oi]; break; }
@@ -205,7 +205,7 @@ window.SMA.gameLoop = function () {
                             } p.x += p.vx; p.y += p.vy;
                         } else { p.x += p.vx; p.y += p.vy; p.life--; if (p.type === 'fire') { for (var j = 0; j < window.SMA.platforms.length; j++) { var plat = window.SMA.platforms[j]; if (p.y > plat.y && p.y < plat.y + plat.h && p.x > plat.x && p.x < plat.x + plat.w) { p.type = 'fire_trap'; p.vx = 0; p.vy = 0; p.y = plat.y - 10; p.life = 60; p.w = 60; p.h = 40; window.SMA.playSound('special'); window.SMA.createParticles(p.x, p.y, 10, '#e17055'); break; } } } } if (p.life <= 0) window.SMA.projectiles.splice(i, 1);
                     }
-                    // 繝偵ャ繝亥愛螳・ 蜈ｨ繝励Ξ繧､繝､繝ｼ縺ｮ邨・∩蜷医ｏ縺・
+                    // ヒット判定: 全プレイヤーの組み合わせ
                     for (var ai = 0; ai < pc; ai++) {
                         for (var bi = ai + 1; bi < pc; bi++) {
                             window.SMA.checkHit(allPlayers[ai], allPlayers[bi]);
@@ -215,15 +215,15 @@ window.SMA.gameLoop = function () {
                         }
                     }
                     window.SMA.checkGameSet();
-                    // 繝阪ャ繝医Ρ繝ｼ繧ｯ蜷梧悄
+                    // ネットワーク同期
                     if (window.SMA.isOnline) {
                         var pkt = { type: 'sync', stg: window.SMA.selectedStage, gState: window.SMA.gameState, cd: window.SMA.countdownTimer, playerCount: pc, events: window.SMA.syncEvents, projs: window.SMA.projectiles.map(function (p) { return { x: p.x, y: p.y, vx: p.vx, vy: p.vy, type: p.type, w: p.w, h: p.h, color: p.color, angle: p.angle || 0 }; }), win: (window.SMA.gameState === 'GAMEOVER' ? document.getElementById('result-text').innerText : null) };
-                        // 蜷・・繝ｬ繧､繝､繝ｼ縺ｮ迥ｶ諷九ｒ霑ｽ蜉
+                        // 各プレイヤーの状態を追加
                         for (var si = 0; si < pc; si++) {
                             pkt['p' + (si + 1)] = allPlayers[si].serialize();
                         }
                         if (!window.SMA.isGravity) window.SMA.connections.forEach(function (c) { if (c.conn.open) try { c.conn.send({ type: 'sync', data: JSON.stringify(pkt) }); } catch (e) { } });
-                        // Gravity縺ｯ隧ｦ蜷井ｸｭPeerJS蜆ｪ蜈医ょｿ・ｦ∵凾縺ｮ縺ｿSDK縺ｸ菴朱ｻ蠎ｦ繝輔か繝ｼ繝ｫ繝舌ャ繧ｯ縲・
+                        // Gravityは試合中PeerJS優先。必要時のみSDKへ低頻度フォールバック。
                         if (window.SMA.isGravity) window.SMA.sendGravitySync(pkt);
                         window.SMA.syncEvents = [];
                     }
@@ -232,7 +232,7 @@ window.SMA.gameLoop = function () {
                 if (window.SMA.netConn && window.SMA.netConn.open && !(window.SMA.isGravity && window.SMA.gravityUsePeerInMatch)) {
                     window.SMA.netConn.send({ type: 'input', keys: window.SMA.myKeys });
                 }
-                // Gravity蜈･蜉幃∽ｿ｡
+                // Gravity入力送信
                 if (window.SMA.isGravity && !window.SMA.isHost) {
                     window.SMA.sendGravityInput(window.SMA.myKeys);
                 }
@@ -244,11 +244,11 @@ window.SMA.gameLoop = function () {
         for (var i = window.SMA.comets.length - 1; i >= 0; i--) { var c = window.SMA.comets[i]; c.x += c.vx; c.y += c.vy; c.l--; if (c.l <= 0) window.SMA.comets.splice(i, 1); }
         for (var i = window.SMA.particles.length - 1; i >= 0; i--) { var p = window.SMA.particles[i]; p.x += p.vx; p.y += p.vy; p.life--; if (p.life <= 0) window.SMA.particles.splice(i, 1); }
 
-        // 繧ｫ繝｡繝ｩ: 蜈ｨ逕溷ｭ倥・繝ｬ繧､繝､繝ｼ繧定ｿｽ蠕・
+        // カメラ: 全生存プレイヤーを追従
         var targets = [];
         window.SMA.players.forEach(function (p) { if (p.stocks > 0) targets.push(p); });
         if (window.SMA.gameState === 'GAMEOVER') {
-            // 蜍晁・↓繝輔か繝ｼ繧ｫ繧ｹ
+            // 勝者にフォーカス
             var winner = null;
             window.SMA.players.forEach(function (p) { if (p.stocks > 0) winner = p; });
             if (winner) targets = [winner];
@@ -278,13 +278,13 @@ window.SMA.gameLoop = function () {
                     window.SMA.ctx.beginPath(); window.SMA.ctx.arc(s.x, s.y, s.s, 0, Math.PI * 2); window.SMA.ctx.fill();
                 }
             } if (window.SMA.platforms.length > 0) { var m = window.SMA.platforms[0]; window.SMA.ctx.fillStyle = "#3e2723"; window.SMA.ctx.beginPath(); window.SMA.ctx.moveTo(m.x, m.y); window.SMA.ctx.lineTo(m.x + m.w, m.y); window.SMA.ctx.lineTo(m.x + m.w / 2, m.y + 200); window.SMA.ctx.fill(); for (var i = 0; i < window.SMA.platforms.length; i++) { var p = window.SMA.platforms[i]; window.SMA.ctx.fillStyle = "#3e2723"; window.SMA.ctx.fillRect(p.x, p.y, p.w, p.h); window.SMA.ctx.fillStyle = "#a1887f"; window.SMA.ctx.fillRect(p.x, p.y, p.w, 5); } }
-            // 蜈ｨ繝励Ξ繧､繝､繝ｼ謠冗判
+            // 全プレイヤー描画
             window.SMA.players.forEach(function (p) { try { if (p) p.draw(window.SMA.ctx); } catch (e) { } });
-            // 髀｡繧ｪ繝悶ず繧ｧ繧ｯ繝医→髀｡蜒上・謠冗判
+            // 鏡オブジェクトと鏡像の描画
             try {
                 window.SMA.players.forEach(function (fighter) {
                     if (!fighter || fighter.charId !== 'mirror') return;
-                    // 髀｡險ｭ鄂ｮ荳ｭ: 繝励Ξ繝薙Η繝ｼ陦ｨ遉ｺ
+                    // 鏡設置中: プレビュー表示
                     if (!fighter.mirror && fighter.actionState === 'ATTACK' && fighter.currentAttack && fighter.currentAttack.type === 'mirror_place') {
                         var ctx = window.SMA.ctx;
                         ctx.save();
@@ -298,30 +298,30 @@ window.SMA.gameLoop = function () {
                         ctx.setLineDash([]);
                         ctx.restore();
                     }
-                    // 髀｡繧ｪ繝悶ず繧ｧ繧ｯ繝医・謠冗判
+                    // 鏡オブジェクトの描画
                     if (fighter.mirror) {
                         var mx = fighter.mirror.x;
                         var my = fighter.mirror.y;
                         var ctx = window.SMA.ctx;
                         ctx.save();
-                        // 髀｡譛ｬ菴難ｼ育ｴｰ縺・ｸｦ髟ｷ縺ｮ遏ｩ蠖｢・・
+                        // 鏡本体（細い縦長の矩形）
                         var grad = ctx.createLinearGradient(mx - 3, my - 50, mx + 3, my);
                         grad.addColorStop(0, 'rgba(129, 236, 236, 0.9)');
                         grad.addColorStop(0.5, 'rgba(255, 255, 255, 0.95)');
                         grad.addColorStop(1, 'rgba(129, 236, 236, 0.9)');
                         ctx.fillStyle = grad;
                         ctx.fillRect(mx - 3, my - 55, 6, 55);
-                        // 蜈峨・繧ｨ繝輔ぉ繧ｯ繝・
+                        // 光のエフェクト
                         ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
                         ctx.lineWidth = 1;
                         ctx.strokeRect(mx - 4, my - 56, 8, 57);
-                        // 繧ｿ繧､繝槭・陦ｨ遉ｺ・域ｮ九ｊ譎る俣繝舌・・・
+                        // タイマー表示（残り時間バー）
                         var ratio = fighter.mirror.timer / 480;
                         ctx.fillStyle = 'rgba(129, 236, 236, ' + (0.3 + ratio * 0.5) + ')';
                         ctx.fillRect(mx - 10, my + 2, 20 * ratio, 3);
                         ctx.restore();
                     }
-                    // 髀｡蜒上・謠冗判・域判謦・Δ繝ｼ繧ｷ繝ｧ繝ｳ蜿肴丐・・
+                    // 鏡像の描画（攻撃モーション反映）
                     if (fighter.mirrorClone && fighter.mirror) {
                         var ctx = window.SMA.ctx;
                         ctx.save();
@@ -334,11 +334,11 @@ window.SMA.gameLoop = function () {
                         ctx.lineCap = 'round';
                         ctx.lineJoin = 'round';
                         var fr = fighter.mirrorClone.facingRight;
-                        // 鬆ｭ
+                        // 頭
                         ctx.beginPath(); ctx.arc(cx, cY + 10, 10, 0, Math.PI * 2); ctx.stroke();
-                        // 菴・
+                        // 体
                         ctx.beginPath(); ctx.moveTo(cx, cY + 10); ctx.lineTo(cx, cY + 40); ctx.stroke();
-                        // 雜ｳ・郁ｵｰ繧翫Δ繝ｼ繧ｷ繝ｧ繝ｳ讓｡蛟｣・・
+                        // 足（走りモーション模倣）
                         if (fighter.actionState === 'IDLE' && (fighter.vx > 1 || fighter.vx < -1)) {
                             var legPhase = Math.sin(Date.now() * 0.015) * 12;
                             ctx.beginPath(); ctx.moveTo(cx, cY + 40); ctx.lineTo(cx + legPhase, cY + 60); ctx.stroke();
@@ -347,17 +347,17 @@ window.SMA.gameLoop = function () {
                             ctx.beginPath(); ctx.moveTo(cx, cY + 40); ctx.lineTo(cx - 10, cY + 60); ctx.stroke();
                             ctx.beginPath(); ctx.moveTo(cx, cY + 40); ctx.lineTo(cx + 10, cY + 60); ctx.stroke();
                         }
-                        // 豬ｮ驕企升縺ｮ蝓ｺ譛ｬ蠎ｧ讓・
+                        // 浮遊鏡の基本座標
                         var hoverY = Math.sin(Date.now() / 200) * 5;
                         var baseY = cY + 20 + hoverY;
                         var baseX = cx + (fr ? 30 : -30);
 
-                        // 閻包ｼ郁・辟ｶ縺ｫ荳九ｍ縺呻ｼ・
+                        // 腕（自然に下ろす）
                         ctx.strokeStyle = '#00cec9';
                         ctx.lineWidth = 3;
                         ctx.beginPath(); ctx.moveTo(cx, cY + 20); ctx.lineTo(cx + (fr ? 5 : -5), cY + 35); ctx.stroke();
 
-                        // 豬ｮ驕企升縺ｮ繧｢繝九Γ繝ｼ繧ｷ繝ｧ繝ｳ
+                        // 浮遊鏡のアニメーション
                         var mirX = baseX;
                         var mirY = baseY;
                         var mirScale = 1.0;
@@ -399,7 +399,7 @@ window.SMA.gameLoop = function () {
                             }
                         }
 
-                        // 髀｡蜒上・髀｡縺ｮ謠冗判・育峡遶具ｼ・
+                        // 鏡像の鏡の描画（独立）
                         ctx.save();
                         ctx.translate(mirX, mirY);
                         ctx.rotate(mirAngle);
@@ -418,14 +418,14 @@ window.SMA.gameLoop = function () {
             } catch (e) { }
             for (var i = 0; i < window.SMA.projectiles.length; i++) {
                 var p = window.SMA.projectiles[i]; if (p.type === 'fire_trap') { window.SMA.ctx.save(); for (var k = 0; k < 3; k++) { window.SMA.ctx.fillStyle = "rgba(255, " + (Math.floor(Math.random() * 150) + 50) + ", 0, " + (0.5 + Math.random() * 0.5) + ")"; var w = p.w * (0.8 + Math.random() * 0.4); var h = p.h * (1.0 + Math.random() * 0.5); var fx = p.x + (Math.random() - 0.5) * 20; window.SMA.ctx.beginPath(); window.SMA.ctx.moveTo(fx - w / 2, p.y + 40); window.SMA.ctx.lineTo(fx + w / 2, p.y + 40); window.SMA.ctx.lineTo(fx, p.y - h); window.SMA.ctx.fill(); } window.SMA.ctx.restore(); } else if (p.type === 'spear_throw') { try { window.SMA.ctx.save(); window.SMA.ctx.translate(p.x, p.y); window.SMA.ctx.rotate(p.angle); window.SMA.ctx.translate(-35, 0); window.SMA.drawTrident(window.SMA.ctx, 0, 0, 0, p.color); window.SMA.ctx.restore(); } catch (e) { } } else if (p.type === 'shockwave') { window.SMA.ctx.fillStyle = "#ffeaa7"; window.SMA.ctx.beginPath(); window.SMA.ctx.arc(p.x, p.y, p.w / 2, 0, Math.PI, true); window.SMA.ctx.fill(); } else if (p.type === 'angel_arrow') {
-                    // 繧ｨ繝ｳ繧ｸ繧ｧ繝ｫ蠑鍋泙: 遏｢縺ｮ蠖｢縺ｧ謠冗判
+                    // エンジェル弓矢: 矢の形で描画
                     window.SMA.ctx.save();
                     window.SMA.ctx.translate(p.x, p.y);
                     var arrowAngle = Math.atan2(p.vy, p.vx);
                     window.SMA.ctx.rotate(arrowAngle);
-                    // 遏｢縺ｮ蜈峨お繝輔ぉ繧ｯ繝・
+                    // 矢の光エフェクト
                     window.SMA.ctx.shadowBlur = 8; window.SMA.ctx.shadowColor = p.color;
-                    // 遏｢縺倥ｊ・井ｸ芽ｧ貞ｽ｢・・
+                    // 矢じり（三角形）
                     window.SMA.ctx.fillStyle = p.color;
                     window.SMA.ctx.beginPath();
                     window.SMA.ctx.moveTo(12, 0);
@@ -433,13 +433,13 @@ window.SMA.gameLoop = function () {
                     window.SMA.ctx.lineTo(-4, 5);
                     window.SMA.ctx.closePath();
                     window.SMA.ctx.fill();
-                    // 遏｢縺ｮ譽・
+                    // 矢の棒
                     window.SMA.ctx.strokeStyle = '#c89b3c'; window.SMA.ctx.lineWidth = 2;
                     window.SMA.ctx.beginPath();
                     window.SMA.ctx.moveTo(-4, 0);
                     window.SMA.ctx.lineTo(-22, 0);
                     window.SMA.ctx.stroke();
-                    // 鄒ｽ譬ｹ・育泙縺ｮ蠕後ｍ・・
+                    // 羽根（矢の後ろ）
                     window.SMA.ctx.strokeStyle = '#fff'; window.SMA.ctx.lineWidth = 1;
                     window.SMA.ctx.beginPath(); window.SMA.ctx.moveTo(-20, 0); window.SMA.ctx.lineTo(-25, -4); window.SMA.ctx.stroke();
                     window.SMA.ctx.beginPath(); window.SMA.ctx.moveTo(-20, 0); window.SMA.ctx.lineTo(-25, 4); window.SMA.ctx.stroke();
@@ -468,7 +468,7 @@ window.SMA.checkHit = function (atk, vic) {
             }
             if (vic.actionState === 'SHIELD') {
                 var shieldDmg = 15 * atk.chargePower;
-                // 繝上Φ繝槭・荳帰・育ｫ懷ｷｻ・峨・繧ｷ繝ｼ繝ｫ繝牙炎繧雁鴨0
+                // ハンマー下A（竜巻）はシールド削り力0
                 if (atk.currentAttack && atk.currentAttack.type === 'tornado') shieldDmg = 0;
                 vic.shieldHP -= shieldDmg; vic.vx = (atk.facingRight ? 1 : -1) * 2; window.SMA.createParticles(vic.x + vic.w / 2, vic.y + vic.h / 2, 5, '#0984e3'); if (vic.shieldHP <= 0) { vic.shieldHP = 0; vic.enterState('STUN', 120); } return;
             }
@@ -539,17 +539,17 @@ window.SMA.checkHit = function (atk, vic) {
     }
 };
 
-// 髀｡蜒上・繝偵ャ繝医・繝・け繧ｹ繝√ぉ繝・け
+// 鏡像のヒットボックスチェック
 window.SMA.checkMirrorHit = function (atk, vic) {
     if (!atk.mirrorClone || !atk.mirror) return;
     if (vic.invincible > 0 || vic.actionState === 'RESPAWN' || vic.actionState === 'DEAD') return;
     if (!atk.hitbox.active || atk.actionState !== 'ATTACK') return;
     if (vic.stocks <= 0) return;
-    // 髀｡蜒冗畑縺ｮ迢ｬ遶九＠縺殄asHit繝輔Λ繧ｰ
+    // 鏡像用の独立したhasHitフラグ
     if (atk.mirrorHasHit) return;
 
-    // 髀｡蜒上・繝偵ャ繝医・繝・け繧ｹ菴咲ｽｮ繧定ｨ育ｮ・
-    // 髀｡蜒上・譌｢縺ｫ髀｡縺ｮ蜿榊ｯｾ蛛ｴ縺ｫ縺・ｋ縺ｮ縺ｧ縲∵判謦・婿蜷代ｒ蟾ｦ蜿ｳ蜿崎ｻ｢縺吶ｋ縺縺・
+    // 鏡像のヒットボックス位置を計算
+    // 鏡像は既に鏡の反対側にいるので、攻撃方向を左右反転するだけ
     var cloneCx = atk.mirrorClone.x + atk.w / 2;
     var offset = atk.hitbox.x - (atk.x + atk.w / 2);
     var cloneHb = {
@@ -577,14 +577,14 @@ window.SMA.checkMirrorHit = function (atk, vic) {
             if (vic.shieldHP <= 0) { vic.shieldHP = 0; vic.enterState('STUN', 120); }
             return;
         }
-        // 繝繝｡繝ｼ繧ｸ0.5蛟阪∝聖縺｣鬟帙・縺励・繝ｦ繝ｼ繧ｶ繝ｼ險ｭ螳夐壹ｊ縺ｮ2.0蛟・
+        // ダメージ0.5倍、吹っ飛ばしはユーザー設定通りの2.0倍
         if (data.dmg) vic.percent += data.dmg * p * 0.5;
         var atkScale = (data.scale !== undefined) ? data.scale : 0.1;
         var kbMult = window.SMA.CHAR_DATA[vic.charId].kbMult || 1.0;
-        // 繝舌・繧ｹ繝亥鴨繧呈悽菴薙・ 1.75 蛟阪↓隱ｿ謨ｴ・・.5 -> 1.75・・
+        // バースト力を本体の 1.75 倍に調整（1.5 -> 1.75）
         var kb = (data.kb * p + (Math.pow(vic.percent, 1.2) * atkScale * p * 0.5)) * kbMult * 1.75;
         var r = data.angle * (Math.PI / 180);
-        // 髀｡蜒上・蜷代″縺ｧ蜷ｹ縺｣鬟帙・縺玲婿蜷代ｒ豎ｺ螳・
+        // 鏡像の向きで吹っ飛ばし方向を決定
         var cloneFR = atk.mirrorClone.facingRight;
         vic.vx = Math.cos(r) * kb * 2.5 * (cloneFR ? 1 : -1);
         vic.vy = Math.sin(r) * kb * 2.5;
@@ -601,7 +601,7 @@ window.SMA.renderResultWinnerIcon = function (icon) {
     var v = (icon == null) ? '' : String(icon).trim();
     iconEl.style.backgroundImage = 'none';
     if (!v) {
-        iconEl.innerText = '醇';
+        iconEl.innerText = '🏆';
         return;
     }
     var isImg = /^(https?:\/\/|data:image\/|blob:|\/)/i.test(v);
@@ -702,7 +702,7 @@ window.SMA.getHudStyleWinnerIcon = function (winnerIndex) {
     return '';
 };
 window.SMA.checkGameSet = function () {
-    // 逕溷ｭ倩・き繧ｦ繝ｳ繝・
+    // 生存者カウント
     var alive = [];
     window.SMA.players.forEach(function (p, i) { if (p.stocks > 0) alive.push(i); });
     if (alive.length <= 1) {
@@ -731,7 +731,7 @@ window.SMA.checkGameSet = function () {
         }
         var resultText = win + ' WINS!';
         window.SMA.showGameOverResult(resultText, winIcon);
-        // 繝帙せ繝医°縺､繧ｪ繝ｳ繝ｩ繧､繝ｳ縺ｪ繧牙・謌ｦ繝懊ち繝ｳ陦ｨ遉ｺ
+        // ホストかつオンラインなら再戦ボタン表示
         var btnRematch = document.getElementById('btn-rematch');
         if (btnRematch) btnRematch.style.display = (window.SMA.isOnline && window.SMA.isHost) ? 'block' : 'none';
         window.SMA.playSound('win');
@@ -745,20 +745,20 @@ window.SMA.checkGameSet = function () {
 };
 window.SMA.updateHud = function () {
     var getStockIcon = function (id) {
-        if (id === 'sword') return '笞費ｸ・;
-        if (id === 'mage') return 'ｪ・;
-        if (id === 'brawler') return '相';
-        if (id === 'spear') return '罰';
-        if (id === 'hammer') return '畑';
-        if (id === 'mirror') return 'ｪ・;
-        if (id === 'angel') return '他';
-        return '側';
+        if (id === 'sword') return '⚔️';
+        if (id === 'mage') return '🪄';
+        if (id === 'brawler') return '👊';
+        if (id === 'spear') return '🔱';
+        if (id === 'hammer') return '🔨';
+        if (id === 'mirror') return '🪞';
+        if (id === 'angel') return '👼';
+        return '👤';
     };
     var getDamageColor = function (pct, pIndex) {
-        if (pct >= 100) return '#c0392b'; // 豼・＞襍､
-        if (pct >= 70) return '#e67e22'; // 繧ｪ繝ｬ繝ｳ繧ｸ
-        if (pct >= 30) return '#f1c40f'; // 鮟・牡
-        // 30%譛ｪ貅縺ｯ蜈・・繝・・繝槭き繝ｩ繝ｼ縺ｫ縺吶ｋ・育區縺ｧ繧ょ庄縺ｧ縺吶′譁・ｭ苓牡縺ｨ縺励※縺ｮ蜿ｯ隱ｭ諤ｧ繧剃ｿ晄戟・・
+        if (pct >= 100) return '#c0392b'; // 濃い赤
+        if (pct >= 70) return '#e67e22'; // オレンジ
+        if (pct >= 30) return '#f1c40f'; // 黄色
+        // 30%未満は元のテーマカラーにする（白でも可ですが文字色としての可読性を保持）
         return window.SMA.PLAYER_COLORS[pIndex] || '#fff';
     };
 
@@ -771,7 +771,7 @@ window.SMA.updateHud = function () {
         if (pctEl) {
             pctEl.innerText = Math.floor(player.percent) + '%';
             pctEl.style.color = getDamageColor(player.percent, hi);
-            // 100%莉･荳翫・繝悶Ν繝悶Ν・育ｰ｡譏薙す繧ｧ繧､繧ｯ・芽｡ｨ迴ｾ
+            // 100%以上のブルブル（簡易シェイク）表現
             if (player.percent >= 100) {
                 pctEl.style.transform = 'translate(' + (Math.random() * 2 - 1) + 'px, ' + (Math.random() * 2 - 1) + 'px)';
             } else {
@@ -784,20 +784,20 @@ window.SMA.updateHud = function () {
                 pIconUrl = window.SMA.lobbyState['p' + (hi + 1) + 'Icon'];
             }
             if (pIconUrl) {
-                // 繝励Ξ繧､繝､繝ｼ繧｢繧､繧ｳ繝ｳ逕ｻ蜒上〒繧ｹ繝医ャ繧ｯ陦ｨ遉ｺ
+                // プレイヤーアイコン画像でストック表示
                 var stockHtml = '';
                 for (var si = 0; si < Math.max(0, player.stocks); si++) {
                     stockHtml += '<img src="' + pIconUrl + '" style="width:16px;height:16px;border-radius:50%;margin:0 1px;vertical-align:middle;">';
                 }
                 stkEl.innerHTML = stockHtml;
             } else {
-                // 繧｢繧､繧ｳ繝ｳ縺ｪ縺玲凾縺ｯ繧ｭ繝｣繝ｩ邨ｵ譁・ｭ励↓繝輔か繝ｼ繝ｫ繝舌ャ繧ｯ
+                // アイコンなし時はキャラ絵文字にフォールバック
                 var icon = getStockIcon(player.charId);
                 stkEl.innerText = icon.repeat(Math.max(0, player.stocks));
             }
         }
 
-        // 繧｢繧､繧ｳ繝ｳ縺ｯ繧ｹ繝医ャ繧ｯ陦ｨ遉ｺ縺ｫ邨ｱ蜷医＠縺溘◆繧√”ud-icon隕∫ｴ縺ｯ髱櫁｡ｨ遉ｺ縺ｮ縺ｾ縺ｾ
+        // アイコンはストック表示に統合したため、hud-icon要素は非表示のまま
         if (iconEl) iconEl.style.display = 'none';
     }
     var elOvlMsg = document.getElementById('overlay-msg'); var elTxtOvl = document.getElementById('text-overlay');
@@ -807,7 +807,7 @@ window.SMA.updateHud = function () {
 window.SMA.applySync = function (d) {
     if (d.data) { try { d = JSON.parse(d.data); } catch (e) { return; } }
     window.SMA.gameState = d.gState; window.SMA.countdownTimer = d.cd;
-    // 蜈ｨ繝励Ξ繧､繝､繝ｼ縺ｮ迥ｶ諷九ｒ蜿肴丐
+    // 全プレイヤーの状態を反映
     var pc = d.playerCount || 2;
     for (var si = 0; si < pc && si < window.SMA.players.length; si++) {
         var pData = d['p' + (si + 1)];
@@ -824,7 +824,7 @@ window.SMA.applySync = function (d) {
         window.SMA.showGameOverResult(txt, icon);
     }
 };
-// rematch蜿嶺ｿ｡蜃ｦ逅・ｼ医ご繧ｹ繝亥・・・
+// rematch受信処理（ゲスト側）
 var origHandleClient = window.SMA.handleClient;
 window.SMA.handleClient = function (d) {
     if (d.type === 'rematch') {
@@ -847,7 +847,7 @@ window.SMA.Fighter = function (x, y, color, isP2, charId) {
     this.vx = 0; this.vy = 0; this.isGrounded = false; this.jumps = 0;
     this.percent = 0; this.stocks = 3; this.isP2 = !!isP2; this.facingRight = !isP2;
     this.role = isP2 ? 'p2' : 'p1';
-    this.playerRole = this.role; // players[]縺九ｉ荳頑嶌縺阪＆繧後ｋ
+    this.playerRole = this.role; // players[]から上書きされる
     this.actionState = 'IDLE'; this.stateTimer = 0; this.respawnTimer = 0;
     this.currentAttack = null; this.currentAttackType = null;
     this.hitbox = { active: false, shape: 'box', x: 0, y: 0, w: 0, h: 0, radius: 0 };
@@ -860,13 +860,13 @@ window.SMA.Fighter = function (x, y, color, isP2, charId) {
     this.hasAirDodged = false;
     this.hasUpSpecial = false;
     this.superArmor = false;
-    // 髀｡繧ｭ繝｣繝ｩ逕ｨ繝励Ο繝代ユ繧｣
-    this.mirror = null;       // {x, y, timer} 險ｭ鄂ｮ荳ｭ縺ｮ髀｡
-    this.mirrorClone = null;  // {x, y, facingRight} 髀｡蜒上・菴咲ｽｮ
+    // 鏡キャラ用プロパティ
+    this.mirror = null;       // {x, y, timer} 設置中の鏡
+    this.mirrorClone = null;  // {x, y, facingRight} 鏡像の位置
     this.mirrorPlaceRange = 0;
     this.mirrorHasHit = false;
-    this.mirrorCooldown = 0; // 髀｡縺ｮ繧ｯ繝ｼ繝ｫ繧ｿ繧､繝・医ヵ繝ｬ繝ｼ繝謨ｰ, 300=5遘抵ｼ・
-    // 髟ｷ謚ｼ縺玲凾縺ｮ險ｭ鄂ｮ霍晞屬
+    this.mirrorCooldown = 0; // 鏡のクールタイム（フレーム数, 300=5秒）
+    // 長押し時の設置距離
 };
 
 // 6. CHAR DATA
@@ -1003,13 +1003,13 @@ window.SMA.CHAR_DATA = {
         kbMult: 1.2,
         maxJumps: 3,
         attacks: {
-            // NA: 蜈峨・蠑鍋泙繧貞燕譁ｹ縺ｫ蟆・・・亥ｰ・ｨ・50px = WORLD_W/2・峨ゅメ繝｣繝ｼ繧ｸ縺ｧ3譛ｬ・育峩騾ｲ/譁懊ａ荳・譁懊ａ荳具ｼ・
+            // NA: 光の弓矢を前方に射出（射程750px = WORLD_W/2）。チャージで3本（直進/斜め上/斜め下）
             NEUTRAL: { type: 'arrow_shot', spawnFrame: 6, dmg: 3, kb: 0.75, scale: 0.06, speed: 8, radius: 8, frames: 18, lag: 12, stun: 3, range: 750, color: '#ffe066' },
-            // 讓ｪA: 鄒ｽ縺ｰ縺溘″謾ｻ謦・らｩｺ荳ｭ譎ゅ・閾ｪ蟾ｱ蠕梧婿繝弱ャ繧ｯ繝舌ャ繧ｯ
+            // 横A: 羽ばたき攻撃。空中時は自己後方ノックバック
             SIDE: { type: 'wing_flap', dmg: 13, kb: 3, scale: 0.1, angle: -25, frames: 22, lag: 18, stun: 8, color: '#fff' },
-            // 荳晦: 鬟帷ｿ疲判謦・ｼ域判謦・愛螳壻ｻ倥″荳頑・・・
+            // 上A: 飛翔攻撃（攻撃判定付き上昇）
             UP: { type: 'wing_rise', dmg: 11, kb: 3, scale: 0.1, angle: -85, frames: 30, lag: 20, stun: 6, color: '#ffe066', limit: true },
-            // 荳帰: 蜀・ｽ｢陦晄茶豕｢・亥崋螳壼聖縺｣鬟帙・縺励∵茶蠅應ｸ榊庄・峨らｩｺ荳ｭ縺ｧ貊樒ｩｺ
+            // 下A: 円形衝撃波（固定吹っ飛ばし、撃墜不可）。空中で滞空
             DOWN: { type: 'shockwave', dmg: 6, kb: 8.0, scale: 0, angle: -45, frames: 35, lag: 35, stun: 10, shockRadius: 140, color: '#ffe066' },
             AIR_NEUTRAL: { type: 'arrow_shot', spawnFrame: 6, dmg: 3, kb: 0.75, scale: 0.06, speed: 8, radius: 8, frames: 18, lag: 12, stun: 3, range: 750, color: '#ffe066' },
             AIR_SIDE: { type: 'wing_flap', dmg: 12, kb: 3, scale: 0.1, angle: -30, frames: 22, lag: 18, stun: 7, color: '#fff', airKnockback: true },
@@ -1065,14 +1065,14 @@ window.SMA.Fighter.prototype.update = function (inputKeys, opponent) {
             this.stateTimer++;
             this.vx *= 0.6;
             this.applyPhysics();
-            // 7繝輔Ξ繝ｼ繝逶ｮ・郁・縺梧怙螟ｧ縺ｫ莨ｸ縺ｳ縺滓凾轤ｹ・峨〒蠖薙◆繧雁愛螳・
+            // 7フレーム目（腕が最大に伸びた時点）で当たり判定
             if (this.stateTimer === 7) {
                 var opp = this.grabTarget;
                 if (opp) {
                     var dist = Math.sqrt(Math.pow(opp.x - this.x, 2) + Math.pow(opp.y - this.y, 2));
                     var isForward = this.facingRight ? (opp.x + opp.w / 2 > this.x + this.w / 2 - 10) : (opp.x + opp.w / 2 < this.x + this.w / 2 + 10);
                     if (dist < 65 && isForward && opp.invincible === 0 && opp.grabInvincible <= 0 && opp.actionState !== 'DEAD' && opp.actionState !== 'RESPAWN' && opp.actionState !== 'DODGE') {
-                        // 縺､縺九∩謌仙粥
+                        // つかみ成功
                         this.actionState = 'GRABBING'; this.grabbedTarget = opp; this.stateTimer = 120;
                         opp.chargePower = 1.0; opp.actionState = 'GRABBED'; opp.isShielding = false;
                         window.SMA.createParticles(opp.x + 15, opp.y + 30, 5, '#a29bfe');
@@ -1080,7 +1080,7 @@ window.SMA.Fighter.prototype.update = function (inputKeys, opponent) {
                     }
                 }
             }
-            // 15繝輔Ξ繝ｼ繝縺ｧ繝｢繝ｼ繧ｷ繝ｧ繝ｳ邨ゆｺ・竊・縺､縺九ａ縺ｦ縺・↑縺代ｌ縺ｰLAG
+            // 15フレームでモーション終了 → つかめていなければLAG
             if (this.stateTimer >= 15 && this.actionState === 'GRAB_ATTEMPT') {
                 this.grabTarget = null;
                 this.enterState('LAG', 18);
@@ -1114,7 +1114,7 @@ window.SMA.Fighter.prototype.update = function (inputKeys, opponent) {
             if (this.vx > 7) this.vx = 7; if (this.vx < -7) this.vx = -7; this.applyPhysics(); break;
     }
 
-    // 髀｡繧ｭ繝｣繝ｩ: 髀｡繧ｿ繧､繝槭・譖ｴ譁ｰ縺ｨ髀｡蜒丞ｺｧ讓呵ｨ育ｮ・
+    // 鏡キャラ: 鏡タイマー更新と鏡像座標計算
     if (this.charId === 'mirror') {
         if (this.mirrorCooldown > 0) this.mirrorCooldown--;
         if (this.mirror) {
@@ -1128,13 +1128,13 @@ window.SMA.Fighter.prototype.update = function (inputKeys, opponent) {
                     facingRight: !this.facingRight
                 };
             }
-        } // mirror蟄伜惠繝√ぉ繝・け
+        } // mirror存在チェック
     }
     if (this.isGrounded) { this.hasAirDodged = false; this.hasUpSpecial = false; this._wingRiseUsed = false; }
     var preGrounded = this.isGrounded;
     this.checkPlatforms(inputKeys); this.checkLedgeGrab(); this.checkSolids(); this.checkBounds();
 
-    // 遨ｺ荳ｭN逹蝨ｰ遑ｬ逶ｴ (sword, brawler, hammer, mirror)
+    // 空中N着地硬直 (sword, brawler, hammer, mirror)
     if (!preGrounded && this.isGrounded) {
         if (this.actionState === 'ATTACK' && this.currentAttackType === 'AIR_NEUTRAL') {
             if (this.charId === 'sword' || this.charId === 'mirror') {
@@ -1188,10 +1188,10 @@ window.SMA.Fighter.prototype.performDodge = function (inputKeys) { var S = windo
 window.SMA.Fighter.prototype.tryGrab = function (opponent) {
     var S = window.SMA;
     if (this.actionState !== 'IDLE' || !this.isGrounded) return;
-    // 縺､縺九∩隧ｦ縺ｿ繝｢繝ｼ繧ｷ繝ｧ繝ｳ繧帝幕蟋具ｼ・5繝輔Ξ繝ｼ繝・・
+    // つかみ試みモーションを開始（15フレーム）
     this.actionState = 'GRAB_ATTEMPT';
     this.stateTimer = 0;
-    this.grabTarget = opponent; // 繝｢繝ｼ繧ｷ繝ｧ繝ｳ邨ゆｺ・ｾ後↓蛻､螳壹☆繧九◆繧∽ｿ晄戟
+    this.grabTarget = opponent; // モーション終了後に判定するため保持
     this.vx *= 0.3;
 };
 window.SMA.Fighter.prototype.handleGrabbing = function (inputKeys) { if (!this.grabbedTarget) { this.actionState = 'IDLE'; return; } this.grabbedTarget.x = this.x + (this.facingRight ? 25 : -25); this.grabbedTarget.y = this.y - 5; this.stateTimer--; if (this.stateTimer > 108) return; var throwType = null; if (inputKeys.left) throwType = this.facingRight ? 'THROW_BK' : 'THROW_FW'; else if (inputKeys.right) throwType = this.facingRight ? 'THROW_FW' : 'THROW_BK'; else if (inputKeys.up) throwType = 'THROW_UP'; else if (inputKeys.down) throwType = 'THROW_DN'; else if (this.stateTimer <= 0) throwType = 'THROW_FW'; if (throwType) this.performThrow(throwType); };
@@ -1201,7 +1201,7 @@ window.SMA.Fighter.prototype.respawn = function () { var S = window.SMA; this.ac
 window.SMA.Fighter.prototype.triggerJump = function (keys) { var S = window.SMA; if (this.actionState === 'LEDGE') return; if (keys && keys.down && this.isGrounded) { if (this.currentPlatform && this.currentPlatform.type === 'main') { this.vy = S.JUMP_FORCE * 0.6; this.jumps++; this.animScale.x = 0.7; this.animScale.y = 1.3; S.playSound('jump'); return; } else { this.dropThrough = true; this.isGrounded = false; this.y += 1; return; } } var maxJ = (window.SMA.CHAR_DATA[this.charId] && window.SMA.CHAR_DATA[this.charId].maxJumps) || 2; if (this.actionState === 'IDLE' && this.jumps < maxJ) { var force = keys && keys.down ? S.JUMP_FORCE * 0.6 : S.JUMP_FORCE; var jm = S.CHAR_DATA[this.charId].jumpMult || 1.0; this.vy = force * jm; this.jumps++; this.animScale.x = 0.7; this.animScale.y = 1.3; if (this.jumps === 2) { this.vx *= 0.8; S.createParticles(this.x + this.w / 2, this.y + this.h, 10, '#fff'); } S.playSound('jump'); } };
 window.SMA.Fighter.prototype.startCharge = function () {
     if (this.actionState === 'IDLE' || this.actionState === 'CHARGE') {
-        // 髀｡繧ｭ繝｣繝ｩ: 竊灘・蜉帑ｸｭ縺ｪ繧牙叉蠎ｧ縺ｫmirror_place繧堤匱蜍包ｼ磯聞謚ｼ縺苓ｷ晞屬隱ｿ謨ｴ縺ｮ縺溘ａ・・
+        // 鏡キャラ: ↓入力中なら即座にmirror_placeを発動（長押し距離調整のため）
         if (this.charId === 'mirror') {
             var keys = null;
             if (this.playerRole && this.playerRole !== 'p1') {
@@ -1248,7 +1248,7 @@ window.SMA.Fighter.prototype.handleAttackFrame = function () {
     }
 
 
-    // *** 繧ｨ繝ｳ繧ｸ繧ｧ繝ｫ謾ｻ謦・・逅・***
+    // *** エンジェル攻撃処理 ***
     if (atk.type === 'arrow_shot') {
         if (this.stateTimer === (atk.spawnFrame || 6)) {
             var dir = this.facingRight ? 1 : -1;
@@ -1258,9 +1258,9 @@ window.SMA.Fighter.prototype.handleAttackFrame = function () {
             var r = atk.radius || 8;
             var maxDist = atk.range || 750;
             var atkScale = (atk.scale !== undefined) ? atk.scale : 0.06;
-            // 繝｡繧､繝ｳ蠑ｾ・医∪縺｣縺吶＄・・- ownerRole譁ｹ蠑・
+            // メイン弾（まっすぐ） - ownerRole方式
             S.projectiles.push({ x: sx, y: sy, vx: spd * dir, vy: 0, w: r * 2, h: r * 2, ownerRole: this.playerRole, dmg: Math.round(atk.dmg * this.chargePower), kb: atk.kb * this.chargePower, scale: atkScale, type: 'angel_arrow', life: Math.ceil(maxDist / spd), angle: 0, color: atk.color || '#ffe066' });
-            // 繝√Ε繝ｼ繧ｸ譎・ 譁懊ａ荳翫・譁懊ａ荳九↓繧ら匱蟆・
+            // チャージ時: 斜め上・斜め下にも発射
             if (this.chargePower > 1.3) {
                 var angUp = -25 * Math.PI / 180;
                 var angDn = 25 * Math.PI / 180;
@@ -1273,7 +1273,7 @@ window.SMA.Fighter.prototype.handleAttackFrame = function () {
         return;
     }
     if (atk.type === 'wing_flap') {
-        // 讓ｪA: 荳｡鄙ｼ繧貞燕譁ｹ縺ｧ謇薙■縺､縺代ｋ・育賢縺縺ｾ縺鈴｢ｨ・・
+        // 横A: 両翼を前方で打ちつける（猫だまし風）
         var hitStart = 8; var hitEnd = 14;
         if (this.stateTimer >= hitStart && this.stateTimer <= hitEnd) {
             var dir = this.facingRight ? 1 : -1;
@@ -1282,7 +1282,7 @@ window.SMA.Fighter.prototype.handleAttackFrame = function () {
             this.hitbox.x = this.x + this.w / 2 + dir * 30 - 60;
             this.hitbox.y = this.y + 5;
         } else { this.hitbox.active = false; }
-        // 遨ｺ荳ｭ讓ｪA縺ｮ閾ｪ蟾ｱ蠕梧婿繝弱ャ繧ｯ繝舌ャ繧ｯ
+        // 空中横Aの自己後方ノックバック
         if (atk.airKnockback && !this.isGrounded && this.stateTimer === hitEnd) {
             var dir = this.facingRight ? 1 : -1;
             this.vx = -dir * 18;
@@ -1292,8 +1292,8 @@ window.SMA.Fighter.prototype.handleAttackFrame = function () {
         return;
     }
     if (atk.type === 'wing_rise') {
-        // 荳晦: 遨ｺ荳ｭ縺ｧ縺ｯ逹蝨ｰ縺ｾ縺ｧ1蝗槭・縺ｿ荳頑・蜿ｯ閭ｽ縲・蝗樒岼縺ｯ萓幃､奇ｼ医Δ繝ｼ繧ｷ繝ｧ繝ｳ縺縺托ｼ・
-        // 蛻晏屓繝輔Ξ繝ｼ繝縺ｧ謌仙粥/螟ｱ謨励ｒ遒ｺ螳壹＆縺帙ｋ・・ngel蟆ら畑繝輔Λ繧ｰ・・
+        // 上A: 空中では着地まで1回のみ上昇可能、2回目は供養（モーションだけ）
+        // 初回フレームで成功/失敗を確定させる（angel専用フラグ）
         if (this.stateTimer === 1) {
             this._wingRiseFail = false;
             if (!this.isGrounded) {
@@ -1307,7 +1307,7 @@ window.SMA.Fighter.prototype.handleAttackFrame = function () {
         var riseStart = 6; var riseEnd = 20;
         if (this.stateTimer >= riseStart && this.stateTimer <= riseEnd) {
             if (!this._wingRiseFail) {
-                // 謌仙粥: 逵滉ｸ翫↓諤･荳頑・ + 謾ｻ謦・愛螳・
+                // 成功: 真上に急上昇 + 攻撃判定
                 this.vy = -9.6;
                 this.vx *= 0.5;
                 this.hitbox.active = true;
@@ -1315,7 +1315,7 @@ window.SMA.Fighter.prototype.handleAttackFrame = function () {
                 this.hitbox.x = this.x + this.w / 2 - 25;
                 this.hitbox.y = this.y - 20;
             } else {
-                // 萓幃､・ 繝｢繝ｼ繧ｷ繝ｧ繝ｳ縺縺大・縺ｦ驥榊鴨關ｽ荳具ｼ域判謦・愛螳壹↑縺暦ｼ・
+                // 供養: モーションだけ出て重力落下（攻撃判定なし）
                 this.vx *= 0.8;
                 this.hitbox.active = false;
             }
@@ -1324,19 +1324,19 @@ window.SMA.Fighter.prototype.handleAttackFrame = function () {
         return;
     }
     if (atk.type === 'shockwave') {
-        // 荳帰: 蜀・ｽ｢陦晄茶豕｢・井ｽ咲ｽｮ萓晏ｭ倥・蜷ｹ縺｣鬟帙・縺玲婿蜷托ｼ・
+        // 下A: 円形衝撃波（位置依存の吹っ飛ばし方向）
         if (atk.hover && !this.isGrounded) {
             this.vy = 0; this.vx *= 0.8;
         }
         var shockFrame = 18;
         if (this.stateTimer === shockFrame) {
-            // 陦晄茶豕｢繝偵ャ繝医ヵ繝ｬ繝ｼ繝・・蝗槭・縺ｿ蛻､螳・
+            // 衝撃波ヒットフレーム：1回のみ判定
             var sr = atk.shockRadius || 200;
             this.hitbox.active = true;
             this.hitbox.w = sr * 2; this.hitbox.h = sr * 2;
             this.hitbox.x = this.x + this.w / 2 - sr;
             this.hitbox.y = this.y + this.h / 2 - sr;
-            // 譛繧りｿ代＞陲ｫ蠑ｾ蛟呵｣懊・菴咲ｽｮ繧偵メ繧ｧ繝・け縺励※facingRight繧貞虚逧・､画峩・亥聖縺｣鬟帙・縺玲婿蜷醍畑・・
+            // 最も近い被弾候補の位置をチェックしてfacingRightを動的変更（吹っ飛ばし方向用）
             var myCx = this.x + this.w / 2;
             for (var si = 0; si < S.players.length; si++) {
                 var sp = S.players[si];
@@ -1357,40 +1357,40 @@ window.SMA.Fighter.prototype.handleAttackFrame = function () {
         return;
     }
 
-    // *** 髀｡繧ｭ繝｣繝ｩ謾ｻ謦・・逅・***
+    // *** 鏡キャラ攻撃処理 ***
     if (atk.type === 'mirror_place') {
         if (this.stateTimer === 1) {
             if (this.mirror && !this.mirror.swapped) {
-                // 蜈･繧梧崛繧上ｊ: 譛ｬ菴薙→髀｡蜒上・菴咲ｽｮ繧剃ｺ､謠幢ｼ・蝗槭・縺ｿ・・
+                // 入れ替わり: 本体と鏡像の位置を交換（1回のみ）
                 var oldX = this.x; var oldY = this.y;
                 if (this.mirrorClone) {
                     this.x = this.mirrorClone.x; this.y = this.mirrorClone.y;
                     this.facingRight = !this.facingRight;
                 }
-                this.mirror.swapped = true; // 莠､謠帶ｸ医∩繝輔Λ繧ｰ繧堤ｫ九※繧・
+                this.mirror.swapped = true; // 交換済みフラグを立てる
                 S.createParticles(oldX + this.w / 2, oldY + this.h / 2, 15, '#81ecec');
                 S.createParticles(this.x + this.w / 2, this.y + this.h / 2, 15, '#81ecec');
                 S.playSound('magic');
                 this.actionState = 'LAG'; this.stateTimer = 18;
                 this.currentAttack = null; this.chargePower = 1.0; return;
             } else if (this.mirror && this.mirror.swapped) {
-                // 譌｢縺ｫ蜈･繧梧崛繧上ｊ貂医∩縺ｮ蝣ｴ蜷医・菴輔ｂ縺励↑縺・ｼ磯升縺梧ｶ医∴繧九∪縺ｧ蠕・ｩ滂ｼ・
+                // 既に入れ替わり済みの場合は何もしない（鏡が消えるまで待機）
                 this.actionState = 'LAG'; this.stateTimer = 18;
                 this.currentAttack = null; this.chargePower = 1.0; return;
             } else {
-                // 髀｡縺檎┌縺・ｴ蜷医・譁ｰ縺励＞髀｡繧定ｨｭ鄂ｮ縺吶ｋ
+                // 鏡が無い場合は新しい鏡を設置する
                 if (this.mirrorCooldown > 0) {
-                    // 繧ｯ繝ｼ繝ｫ繧ｿ繧､繝荳ｭ縺ｯ險ｭ鄂ｮ荳榊庄
+                    // クールタイム中は設置不可
                     this.actionState = 'LAG'; this.stateTimer = 8;
                     this.currentAttack = null; this.chargePower = 1.0; return;
                 }
-                // 髀｡險ｭ鄂ｮ髢句ｧ・ 縺｡繧・ｓ謚ｼ縺・60px
+                // 鏡設置開始: ちょん押し=60px
                 this.mirrorPlaceRange = 60;
             }
         }
-        // 髀｡縺後∪縺辟｡縺・ｴ蜷・ 髟ｷ謚ｼ縺励〒繧ｹ繝ｩ繧､繝・
+        // 鏡がまだ無い場合: 長押しでスライド
         if (!this.mirror && this.stateTimer > 1) {
-            // A繝懊ち繝ｳ縺梧款縺輔ｌ縺ｦ縺・ｋ髢薙∬ｨｭ鄂ｮ霍晞屬縺悟｢怜刈・域怙螟ｧ300px・・
+            // Aボタンが押されている間、設置距離が増加（最大300px）
             var keys = null;
             if (this.playerRole && this.playerRole !== 'p1') {
                 keys = (S.remoteKeysMap && S.remoteKeysMap[this.playerRole]) || S.remoteKeys || {};
@@ -1400,12 +1400,12 @@ window.SMA.Fighter.prototype.handleAttackFrame = function () {
             if (keys.attack) {
                 this.mirrorPlaceRange += 3.83;
                 if (this.mirrorPlaceRange > 750) this.mirrorPlaceRange = 750;
-                // 髟ｷ謚ｼ縺嶺ｸｭ縺ｯ繧ｿ繧､繝槭・繧貞ｻｶ髟ｷ・医・繧ｿ繝ｳ繧帝屬縺吶∪縺ｧ蠕・ｩ滂ｼ・
+                // 長押し中はタイマーを延長（ボタンを離すまで待機）
                 if (this.stateTimer >= atk.frames - 1) this.stateTimer = atk.frames - 2;
             } else {
-                // 繝懊ち繝ｳ繧帝屬縺励◆ 竊・險ｭ鄂ｮ遒ｺ螳・
+                // ボタンを離した → 設置確定
                 var placeX = this.x + this.w / 2 + (this.facingRight ? this.mirrorPlaceRange : -this.mirrorPlaceRange);
-                // 繝励Λ繝・ヨ繝輔か繝ｼ繝縺ｮ鬮倥＆縺ｫ蜷医ｏ縺帙※險ｭ鄂ｮ
+                // プラットフォームの高さに合わせて設置
                 var placeY = this.y + this.h;
                 for (var pi = 0; pi < S.platforms.length; pi++) {
                     var plat = S.platforms[pi];
@@ -1427,7 +1427,7 @@ window.SMA.Fighter.prototype.handleAttackFrame = function () {
             }
         }
         if (this.stateTimer >= atk.frames) {
-            // 繧ｿ繧､繝槭・蛻・ｌ・医・繧ｿ繝ｳ髮｢縺輔★縺ｫ繝輔Ξ繝ｼ繝蛻ｰ驕費ｼ・ 縺昴・縺ｾ縺ｾ險ｭ鄂ｮ
+            // タイマー切れ（ボタン離さずにフレーム到達）: そのまま設置
             if (!this.mirror) {
                 var placeX = this.x + this.w / 2 + (this.facingRight ? this.mirrorPlaceRange : -this.mirrorPlaceRange);
                 var placeY = this.y + this.h;
@@ -1464,7 +1464,7 @@ window.SMA.Fighter.prototype.handleAttackFrame = function () {
         return;
     }
     if (atk.type === 'mirror_throw_up') {
-        // 荳晦: 鬆ｭ荳翫↓髀｡繧呈兜縺偵※蝗櫁ｻ｢・育洒蟆・ｨ九・荳頑婿蜷大愛螳夲ｼ・
+        // 上A: 頭上に鏡を投げて回転（短射程の上方向判定）
         var p = this.chargePower || 1.0;
         var chargeRatio = Math.max(0, (p - 1.0) / 0.7);
         if (this.stateTimer >= 4 && this.stateTimer <= 18) {
@@ -1473,16 +1473,16 @@ window.SMA.Fighter.prototype.handleAttackFrame = function () {
             this.hitbox.x = this.x + this.w / 2 - 22;
             this.hitbox.y = this.y - 45;
 
-            // 縺溘ａ驥上↓蠢懊§縺ｦ霄ｫ髟ｷ縺ｮ蜊雁・縺ｮ霍晞屬繧剃ｸ頑・
+            // ため量に応じて身長の半分の距離を上昇
             var upMove = ((this.h / 2) * chargeRatio) / 15;
             this.y -= upMove;
-            this.vy = 0; // 驥榊鴨縺ｧ關ｽ縺｡縺ｪ縺・ｈ縺・↓逶ｸ谿ｺ
+            this.vy = 0; // 重力で落ちないように相殺
         } else { this.hitbox.active = false; }
         if (this.stateTimer >= atk.frames) { this.actionState = 'LAG'; this.stateTimer = atk.lag; this.chargePower = 1.0; this.hitbox.active = false; this.currentAttack = null; }
         return;
     }
     if (atk.type === 'mirror_throw') {
-        // 讓ｪA: 蜑肴婿縺ｫ髀｡繧呈兜縺偵※蝗櫁ｻ｢・亥愛螳壼ｼｷ蛹・ 蟷・5, 鬮倥＆70・・
+        // 横A: 前方に鏡を投げて回転（判定強化: 幅85, 高さ70）
         var p = this.chargePower || 1.0;
         var chargeRatio = Math.max(0, (p - 1.0) / 0.7);
         var szMult = chargeRatio * 0.2 + 1.0;
@@ -1493,7 +1493,7 @@ window.SMA.Fighter.prototype.handleAttackFrame = function () {
             this.hitbox.x = this.x + (this.facingRight ? -5 : -5 - curW) + this.w / 2;
             this.hitbox.y = this.y - (curH - 70) / 2;
 
-            // 縺溘ａ驥上↓蠢懊§縺ｦ蜑肴婿縺ｫ繧ｭ繝｣繝ｩ荳菴灘・・・his.w・牙燕騾ｲ
+            // ため量に応じて前方にキャラ一体分（this.w）前進
             var fwMove = (this.w * chargeRatio) / 15;
             this.x += this.facingRight ? fwMove : -fwMove;
         } else { this.hitbox.active = false; }
@@ -1648,7 +1648,7 @@ window.SMA.Fighter.prototype.handleAttackFrame = function () {
         } return;
     }
     if (atk.type === 'spin_hammer') {
-        if (this.stateTimer === 1) this.vx = (this.facingRight ? 6.4 : -6.4); // 蜑埼ｲ霍晞屬80%縺ｫ邵ｮ蟆・
+        if (this.stateTimer === 1) this.vx = (this.facingRight ? 6.4 : -6.4); // 前進距離80%に縮小
         if (this.stateTimer % 10 === 0 && this.stateTimer < 40) {
             this.hitbox.active = true; this.hitbox.w = 140; this.hitbox.h = 60; this.hitbox.x = this.x + this.w / 2 - 70; this.hitbox.y = this.y + 20;
             this.hasHit = false; // Multi hit reset
@@ -1852,14 +1852,14 @@ window.SMA.Fighter.prototype.drawTrident = function (ctx, x, y, angleDeg, color,
 };
 window.SMA.Fighter.prototype.drawSword = function (ctx, cx, cy, angleDeg) {
     if (this.charId === 'mage') { ctx.save(); ctx.translate(cx, cy); ctx.rotate(angleDeg * Math.PI / 180); ctx.fillStyle = "#8e44ad"; ctx.fillRect(-2, -5, 4, 15); var orbColor = this.chargePower > 1.2 ? '#fff' : "#a29bfe"; if (this.chargePower > 1.2) { ctx.shadowBlur = 10; ctx.shadowColor = "#fff"; } ctx.fillStyle = orbColor; ctx.beginPath(); ctx.arc(0, -60, 8, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0; ctx.fillStyle = "#555"; ctx.fillRect(-2, -55, 4, 50); ctx.restore(); } else if (this.charId === 'angel') {
-        // 繧ｨ繝ｳ繧ｸ繧ｧ繝ｫ: 蠑薙・謠冗判
+        // エンジェル: 弓の描画
         ctx.save(); ctx.translate(cx, cy);
         ctx.rotate(angleDeg * Math.PI / 180);
         ctx.strokeStyle = '#c89b3c'; ctx.lineWidth = 2;
         ctx.beginPath(); ctx.arc(0, -30, 25, -0.8, 0.8); ctx.stroke();
         ctx.fillStyle = this.chargePower > 1.2 ? '#fff' : '#ffe066';
         if (this.chargePower > 1.2) { ctx.shadowBlur = 8; ctx.shadowColor = '#ffe066'; }
-        ctx.fillRect(-1, -55, 2, 50); // 蠑ｦ
+        ctx.fillRect(-1, -55, 2, 50); // 弦
         ctx.shadowBlur = 0;
         ctx.restore();
     } else if (this.charId === 'brawler') { } else {
@@ -1971,7 +1971,7 @@ window.SMA.Fighter.prototype.draw = function (ctx) {
                 if (this.actionState === 'STUN') ctx.strokeStyle = "#ffeaa7"; if (this.actionState === 'LAG') ctx.strokeStyle = "#b2bec3"; if (this.actionState === 'GRABBED') ctx.strokeStyle = "#a29bfe";
                 if (this.charId === 'mage') { ctx.fillStyle = "#a29bfe"; ctx.beginPath(); ctx.moveTo(cx - 15, this.y + 5); ctx.lineTo(cx + 15, this.y + 5); ctx.lineTo(cx, this.y - 25); ctx.fill(); } else if (this.charId === 'brawler') { ctx.save(); ctx.strokeStyle = "#e67e22"; ctx.lineWidth = 3; var hbX = cx + (this.facingRight ? -10 : 10); var hbY = this.y + 10; ctx.beginPath(); ctx.moveTo(hbX, hbY); ctx.quadraticCurveTo(hbX + (this.facingRight ? -20 : 20), hbY - 5, hbX + (this.facingRight ? -40 : 40) + this.vx * 2, hbY + 10 + Math.sin(Date.now() / 100) * 5); ctx.stroke(); ctx.restore(); }
                 else if (this.charId === 'angel') {
-                    // 繧ｨ繝ｳ繧ｸ繧ｧ繝ｫ謠冗判: 讓ｪ蜷代″蟇ｾ蠢・
+                    // エンジェル描画: 横向き対応
                     ctx.save();
                     var sc = this.color;
                     if (this.actionState === 'STUN') sc = '#ffeaa7';
@@ -1979,18 +1979,18 @@ window.SMA.Fighter.prototype.draw = function (ctx) {
                     if (this.actionState === 'GRABBED') sc = '#a29bfe';
                     ctx.strokeStyle = sc; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
                     var dir = this.facingRight ? 1 : -1;
-                    // 鬆ｭ
+                    // 頭
                     ctx.beginPath(); ctx.arc(cx, this.y + 10, 8, 0, Math.PI * 2); ctx.stroke();
-                    // 蜈芽ｼｪ・医・繧､繝ｭ繝ｼ・・
+                    // 光輪（ヘイロー）
                     ctx.strokeStyle = '#ffe066'; ctx.lineWidth = 2;
                     ctx.beginPath(); ctx.ellipse(cx, this.y, 10, 3, 0, 0, Math.PI * 2); ctx.stroke();
                     ctx.strokeStyle = sc; ctx.lineWidth = 4;
-                    // 菴・
+                    // 体
                     ctx.beginPath(); ctx.moveTo(cx, this.y + 18); ctx.lineTo(cx, this.y + 42); ctx.stroke();
-                    // 荳｡閼・
+                    // 両脚
                     ctx.beginPath(); ctx.moveTo(cx, this.y + 42); ctx.lineTo(cx - 7, this.y + 58); ctx.stroke();
                     ctx.beginPath(); ctx.moveTo(cx, this.y + 42); ctx.lineTo(cx + 7, this.y + 58); ctx.stroke();
-                    // 鄙ｼ・郁レ荳ｭ蛛ｴ = 蜷代＞縺ｦ縺・ｋ譁ｹ蜷代・蜿榊ｯｾ蛛ｴ縺ｫ陦ｨ遉ｺ・・
+                    // 翼（背中側 = 向いている方向の反対側に表示）
                     var wingFlap = Math.sin(Date.now() / 200) * 4;
                     var isWingFlap = this.actionState === 'ATTACK' && this.currentAttack && this.currentAttack.type === 'wing_flap';
                     var isWingRise = this.actionState === 'ATTACK' && this.currentAttack && this.currentAttack.type === 'wing_rise';
@@ -1998,31 +1998,31 @@ window.SMA.Fighter.prototype.draw = function (ctx) {
                     ctx.fillStyle = 'rgba(255,255,255,0.85)';
                     ctx.strokeStyle = '#ddd'; ctx.lineWidth = 1.5;
                     if (isWingFlap && this.stateTimer >= 6 && this.stateTimer <= 16) {
-                        // 讓ｪA: 荳｡鄙ｼ繧貞燕譁ｹ縺ｫ遯√″蜃ｺ縺励※謇薙■縺､縺代ｋ繝｢繝ｼ繧ｷ繝ｧ繝ｳ
+                        // 横A: 両翼を前方に突き出して打ちつけるモーション
                         var flapProg = Math.min(1, (this.stateTimer - 6) / 5);
-                        // 荳顔ｿｼ・亥燕譁ｹ縺ｸ・・ 蛟阪し繧､繧ｺ
+                        // 上翼（前方へ）- 倍サイズ
                         ctx.beginPath();
                         ctx.moveTo(cx, this.y + 10);
                         ctx.quadraticCurveTo(cx + dir * (40 + flapProg * 50), this.y, cx + dir * (70 + flapProg * 30), this.y + 15);
                         ctx.quadraticCurveTo(cx + dir * (40 + flapProg * 20), this.y + 25, cx, this.y + 22);
                         ctx.fill(); ctx.stroke();
-                        // 荳狗ｿｼ・亥燕譁ｹ縺ｸ・・ 蛟阪し繧､繧ｺ
+                        // 下翼（前方へ）- 倍サイズ
                         ctx.beginPath();
                         ctx.moveTo(cx, this.y + 24);
                         ctx.quadraticCurveTo(cx + dir * (40 + flapProg * 50), this.y + 28, cx + dir * (70 + flapProg * 30), this.y + 38);
                         ctx.quadraticCurveTo(cx + dir * (40 + flapProg * 20), this.y + 42, cx, this.y + 34);
                         ctx.fill(); ctx.stroke();
                     } else if (isWingRise) {
-                        // 荳晦: 蟾ｦ蜿ｳ蟇ｾ遘ｰ縺ｫ鄙ｼ繧貞､ｧ縺阪￥蠎・￡縺ｦ鬟帷ｿ・
+                        // 上A: 左右対称に翼を大きく広げて飛翔
                         var riseFlap = Math.sin(this.stateTimer * 0.8) * 5;
-                        // 蟾ｦ鄙ｼ
+                        // 左翼
                         ctx.beginPath();
                         ctx.moveTo(cx - 3, this.y + 18);
                         ctx.quadraticCurveTo(cx - 40, this.y + 2 + riseFlap, cx - 50, this.y + 18 + riseFlap);
                         ctx.quadraticCurveTo(cx - 35, this.y + 22, cx - 20, this.y + 28);
                         ctx.quadraticCurveTo(cx - 8, this.y + 24, cx - 3, this.y + 22);
                         ctx.fill(); ctx.stroke();
-                        // 蜿ｳ鄙ｼ
+                        // 右翼
                         ctx.beginPath();
                         ctx.moveTo(cx + 3, this.y + 18);
                         ctx.quadraticCurveTo(cx + 40, this.y + 2 + riseFlap, cx + 50, this.y + 18 + riseFlap);
@@ -2030,16 +2030,16 @@ window.SMA.Fighter.prototype.draw = function (ctx) {
                         ctx.quadraticCurveTo(cx + 8, this.y + 24, cx + 3, this.y + 22);
                         ctx.fill(); ctx.stroke();
                     } else if (isShockwave) {
-                        // 荳帰: 蟾ｦ蜿ｳ蟇ｾ遘ｰ縺ｫ鄙ｼ繧貞ｺ・￡繧具ｼ郁｡晄茶豕｢繝√Ε繝ｼ繧ｸ・・
+                        // 下A: 左右対称に翼を広げる（衝撃波チャージ）
                         var shockWingFlap = Math.sin(this.stateTimer * 0.6) * 6;
-                        // 蟾ｦ鄙ｼ
+                        // 左翼
                         ctx.beginPath();
                         ctx.moveTo(cx - 3, this.y + 18);
                         ctx.quadraticCurveTo(cx - 35, this.y + 5 + shockWingFlap, cx - 45, this.y + 20 + shockWingFlap);
                         ctx.quadraticCurveTo(cx - 30, this.y + 24, cx - 15, this.y + 28);
                         ctx.quadraticCurveTo(cx - 6, this.y + 24, cx - 3, this.y + 22);
                         ctx.fill(); ctx.stroke();
-                        // 蜿ｳ鄙ｼ
+                        // 右翼
                         ctx.beginPath();
                         ctx.moveTo(cx + 3, this.y + 18);
                         ctx.quadraticCurveTo(cx + 35, this.y + 5 + shockWingFlap, cx + 45, this.y + 20 + shockWingFlap);
@@ -2047,21 +2047,21 @@ window.SMA.Fighter.prototype.draw = function (ctx) {
                         ctx.quadraticCurveTo(cx + 6, this.y + 24, cx + 3, this.y + 22);
                         ctx.fill(); ctx.stroke();
                     } else {
-                        // 騾壼ｸｸ: 閭御ｸｭ蛛ｴ縺ｫ鄙ｼ・亥髄縺・※縺・ｋ譁ｹ蜷代・蜿榊ｯｾ・・
+                        // 通常: 背中側に翼（向いている方向の反対）
                         ctx.beginPath();
                         ctx.moveTo(cx, this.y + 18);
                         ctx.quadraticCurveTo(cx - dir * 25, this.y + 8 + wingFlap, cx - dir * 35, this.y + 20 + wingFlap);
                         ctx.quadraticCurveTo(cx - dir * 22, this.y + 22, cx - dir * 15, this.y + 28);
                         ctx.quadraticCurveTo(cx - dir * 5, this.y + 24, cx, this.y + 22);
                         ctx.fill(); ctx.stroke();
-                        // 荳狗ｿｼ
+                        // 下翼
                         ctx.beginPath();
                         ctx.moveTo(cx, this.y + 24);
                         ctx.quadraticCurveTo(cx - dir * 20, this.y + 22 + wingFlap * 0.7, cx - dir * 28, this.y + 32 + wingFlap * 0.7);
                         ctx.quadraticCurveTo(cx - dir * 15, this.y + 30, cx, this.y + 28);
                         ctx.fill(); ctx.stroke();
                     }
-                    // 閻輔→蠑・
+                    // 腕と弓
                     ctx.strokeStyle = sc; ctx.lineWidth = 3;
                     var isArrowShot = this.actionState === 'ATTACK' && this.currentAttack && this.currentAttack.type === 'arrow_shot';
                     var isCharging = this.actionState === 'CHARGE';
@@ -2082,21 +2082,21 @@ window.SMA.Fighter.prototype.draw = function (ctx) {
                         ctx.beginPath(); ctx.moveTo(cx, this.y + 25); ctx.lineTo(cx + dir * holdLen, this.y + 25); ctx.stroke();
                         ctx.beginPath(); ctx.moveTo(cx, this.y + 25); ctx.lineTo(cx - dir * 5, this.y + 33); ctx.stroke();
                     } else if (isArrowShot || isCharging) {
-                        // NA / 繝√Ε繝ｼ繧ｸ: 蜑肴婿縺ｫ蠑薙ｒ讒九∴縺ｦ蟆・ｋ讒九∴
-                        // 蠑捺悽菴難ｼ亥燕譁ｹ縺ｫ蜷代￠繧具ｼ俄・貅懊ａ荳ｭ縺ｯ逋ｽ逋ｺ蜈・
+                        // NA / チャージ: 前方に弓を構えて射る構え
+                        // 弓本体（前方に向ける）— 溜め中は白発光
                         var bowColor = chargeVisualReady ? '#fff' : '#c89b3c';
                         if (chargeVisualReady) { ctx.shadowBlur = 12; ctx.shadowColor = '#fff'; }
                         var bowJx = chargeVisualReady ? (Math.random() - 0.5) * 2.5 : 0;
                         var bowJy = chargeVisualReady ? (Math.random() - 0.5) * 2.5 : 0;
                         ctx.strokeStyle = bowColor; ctx.lineWidth = 2.5;
                         ctx.beginPath(); ctx.arc(cx + dir * 20 + bowJx, this.y + 25 + bowJy, 18, dir > 0 ? -1.2 : Math.PI - 1.2, dir > 0 ? 1.2 : Math.PI + 1.2); ctx.stroke();
-                        // 蠑ｦ
+                        // 弦
                         var pullBack = isCharging ? (chargeVisualReady ? Math.min(this.chargePower * 5, 10) : 3) : 3;
                         ctx.strokeStyle = chargeVisualReady ? '#fff' : '#ddd'; ctx.lineWidth = chargeVisualReady ? 1.5 : 1;
                         ctx.beginPath(); ctx.moveTo(cx + dir * (20 + 18 * Math.cos(-1.2)) + bowJx, this.y + 25 + 18 * Math.sin(-1.2) + bowJy);
                         ctx.lineTo(cx + dir * (20 - pullBack) + bowJx, this.y + 25 + bowJy);
                         ctx.lineTo(cx + dir * (20 + 18 * Math.cos(1.2)) + bowJx, this.y + 25 + 18 * Math.sin(1.2) + bowJy); ctx.stroke();
-                        // 遏｢・亥ｼｦ縺ｮ荳奇ｼ・
+                        // 矢（弦の上）
                         if (isCharging || (isArrowShot && this.stateTimer < 6)) {
                             ctx.fillStyle = '#ffe066';
                             ctx.shadowBlur = 5; ctx.shadowColor = '#ffe066';
@@ -2107,27 +2107,27 @@ window.SMA.Fighter.prototype.draw = function (ctx) {
                             ctx.closePath(); ctx.fill();
                             ctx.shadowBlur = 0;
                         }
-                        // 閻包ｼ亥ｾ後ｍ謇九〒蠑ｦ繧貞ｼ輔￥・・
+                        // 腕（後ろ手で弦を引く）
                         ctx.strokeStyle = sc; ctx.lineWidth = 3;
                         ctx.beginPath(); ctx.moveTo(cx, this.y + 25); ctx.lineTo(cx + dir * 18 + bowJx * 0.6, this.y + 24 + bowJy * 0.6); ctx.stroke();
                         ctx.beginPath(); ctx.moveTo(cx, this.y + 25); ctx.lineTo(cx + dir * (20 - pullBack) + bowJx, this.y + 25 + bowJy); ctx.stroke();
                     } else {
-                        // 騾壼ｸｸ: 蠑薙ｒ荳九￡謖√■
+                        // 通常: 弓を下げ持ち
                         ctx.strokeStyle = '#c89b3c'; ctx.lineWidth = 2;
                         ctx.beginPath(); ctx.arc(cx + dir * 8, this.y + 35, 12, dir > 0 ? -1.0 : Math.PI - 1.0, dir > 0 ? 1.0 : Math.PI + 1.0); ctx.stroke();
-                        // 蠑ｦ
+                        // 弦
                         ctx.strokeStyle = '#ddd'; ctx.lineWidth = 1;
                         ctx.beginPath();
                         ctx.moveTo(cx + dir * (8 + 12 * Math.cos(-1.0)), this.y + 35 + 12 * Math.sin(-1.0));
                         ctx.lineTo(cx + dir * 8, this.y + 35);
                         ctx.lineTo(cx + dir * (8 + 12 * Math.cos(1.0)), this.y + 35 + 12 * Math.sin(1.0)); ctx.stroke();
-                        // 閻・
+                        // 腕
                         ctx.strokeStyle = sc; ctx.lineWidth = 3;
                         ctx.beginPath(); ctx.moveTo(cx, this.y + 25); ctx.lineTo(cx + dir * 12, this.y + 33); ctx.stroke();
                         ctx.beginPath(); ctx.moveTo(cx, this.y + 25); ctx.lineTo(cx - dir * 5, this.y + 33); ctx.stroke();
                     }
                     if (this.actionState === 'SHIELD') { ctx.save(); ctx.fillStyle = 'rgba(116, 185, 255, ' + (this.shieldHP / 150) + ')'; ctx.strokeStyle = '#0984e3'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(cx, this.y + 30, 45, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.restore(); }
-                    // 陦晄茶豕｢繧ｨ繝輔ぉ繧ｯ繝・
+                    // 衝撃波エフェクト
                     if (this.actionState === 'ATTACK' && this.currentAttack && this.currentAttack.type === 'shockwave') {
                         if (this.stateTimer >= 12 && this.stateTimer <= 22) {
                             var alpha = 1.0 - (this.stateTimer - 12) / 10;
@@ -2425,7 +2425,7 @@ window.SMA.Fighter.prototype.draw = function (ctx) {
                                 var spearAngle = angleDeg + (this.facingRight ? 90 : -90);
                                 window.SMA.drawTrident(ctx, handX, handY, spearAngle, "#00b894");
                             } else if (this.charId === 'mirror') {
-                                // 髀｡繧ｭ繝｣繝ｩ: 蟆上＆縺ｪ髀｡繧呈険繧雁屓縺吝ｴ匁判謦・
+                                // 鏡キャラ: 小さな鏡を振り回す崖攻撃
                                 ctx.save();
                                 ctx.strokeStyle = '#81ecec';
                                 ctx.lineWidth = 2;
@@ -2433,7 +2433,7 @@ window.SMA.Fighter.prototype.draw = function (ctx) {
                                 var mirEndX = handX + Math.sin(mirAngRad) * 23;
                                 var mirEndY = handY - Math.cos(mirAngRad) * 23;
                                 ctx.beginPath(); ctx.moveTo(handX, handY); ctx.lineTo(mirEndX, mirEndY); ctx.stroke();
-                                // 髀｡縺ｮ鬆ｭ驛ｨ蛻・
+                                // 鏡の頭部分
                                 ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
                                 ctx.beginPath(); ctx.arc(mirEndX, mirEndY, 6.5, 0, Math.PI * 2); ctx.fill();
                                 ctx.restore();
@@ -2443,7 +2443,7 @@ window.SMA.Fighter.prototype.draw = function (ctx) {
                         }
                     } else if (this.charId === 'mirror') {
 
-                        // 髀｡繧ｭ繝｣繝ｩ譛ｬ菴捺緒逕ｻ
+                        // 鏡キャラ本体描画
                         ctx.save();
                         ctx.strokeStyle = this.color;
                         if (this.actionState === 'STUN') ctx.strokeStyle = '#ffeaa7';
@@ -2454,12 +2454,12 @@ window.SMA.Fighter.prototype.draw = function (ctx) {
                         }
                         ctx.lineWidth = 3;
 
-                        // 豬ｮ驕企升縺ｮ蝓ｺ譛ｬ蠎ｧ讓・(蟆代＠蜑肴婿)
-                        var hoverY = Math.sin(Date.now() / 200) * 5; // 繝輔Ρ繝輔Ρ荳贋ｸ・
+                        // 浮遊鏡の基本座標 (少し前方)
+                        var hoverY = Math.sin(Date.now() / 200) * 5; // フワフワ上下
                         var baseY = this.y + 20 + hoverY;
                         var baseX = cx + (this.facingRight ? 30 : -30);
 
-                        // 蟠悶▽縺九∪繧贋ｸｭ縺ｮ謠冗判
+                        // 崖つかまり中の描画
                         if (this.actionState === 'LEDGE' || this.actionState === 'LEDGE_UP' || this.actionState === 'LEDGE_ATK') {
                             ctx.beginPath(); ctx.arc(cx, this.y + 10, 8, 0, Math.PI * 2); ctx.stroke();
                             ctx.beginPath(); ctx.moveTo(cx, this.y + 10); ctx.lineTo(cx, this.y + 40); ctx.stroke();
@@ -2481,33 +2481,33 @@ window.SMA.Fighter.prototype.draw = function (ctx) {
                             drawn = true;
                         }
                         if (!drawn) {
-                            // 菴・
+                            // 体
                             ctx.beginPath(); ctx.moveTo(cx, this.y + 10); ctx.lineTo(cx, this.y + 40); ctx.stroke();
-                            // 雜ｳ
+                            // 足
                             ctx.beginPath(); ctx.moveTo(cx, this.y + 40); ctx.lineTo(cx - 10, this.y + 60); ctx.stroke();
                             ctx.beginPath(); ctx.moveTo(cx, this.y + 40); ctx.lineTo(cx + 10, this.y + 60); ctx.stroke();
-                            // 鬆ｭ
+                            // 頭
                             ctx.beginPath(); ctx.arc(cx, this.y + 10, 8, 0, Math.PI * 2); ctx.stroke();
 
-                            // 閻包ｼ・RAB_ATTEMPT縺ｪ繧牙燕縺ｫ莨ｸ縺ｰ縺吶√◎繧御ｻ･螟悶・閾ｪ辟ｶ縺ｫ荳九ｍ縺呻ｼ・
+                            // 腕（GRAB_ATTEMPTなら前に伸ばす、それ以外は自然に下ろす）
                             if (this.actionState === 'GRAB_ATTEMPT') {
                                 var gp = this.stateTimer <= 7 ? this.stateTimer / 7 : 1 - (this.stateTimer - 7) / 8;
                                 var al = Math.round(10 + gp * 35);
                                 ctx.beginPath(); ctx.moveTo(cx, this.y + 20); ctx.lineTo(cx + (this.facingRight ? al : -al), this.y + 22); ctx.stroke();
                                 ctx.beginPath(); ctx.arc(cx + (this.facingRight ? al : -al), this.y + 22, 5, 0, Math.PI * 2); ctx.stroke();
                             } else {
-                                // 閾ｪ辟ｶ縺ｫ荳九ｍ縺・
+                                // 自然に下ろす
                                 ctx.beginPath(); ctx.moveTo(cx, this.y + 20); ctx.lineTo(cx + (this.facingRight ? 5 : -5), this.y + 35); ctx.stroke();
                             }
 
-                            // 豬ｮ驕企升縺ｮ謠冗判險ｭ螳・
+                            // 浮遊鏡の描画設定
                             var cdColor = window.SMA.selectedStage === 'battlefield' ? '#555' : '#000';
                             var mirrorColor = this.mirrorCooldown > 0 ? cdColor : '#81ecec';
                             var mirrorGlowColor = this.mirrorCooldown > 0 ? cdColor : 'rgba(255,255,255,0.6)';
                             ctx.strokeStyle = mirrorColor;
                             ctx.lineWidth = 2.6;
 
-                            // 豬ｮ驕企升縺ｮ繧｢繝九Γ繝ｼ繧ｷ繝ｧ繝ｳ
+                            // 浮遊鏡のアニメーション
                             var mirX = baseX;
                             var mirY = baseY;
                             var mirScale = 1.0;
@@ -2518,21 +2518,21 @@ window.SMA.Fighter.prototype.draw = function (ctx) {
                                 var forwardP = 1.0 - p; // 0 -> 1
 
                                 if (this.currentAttack.type === 'mirror_spin' || this.currentAttackType === 'AIR_NEUTRAL') {
-                                    // 遨ｺ荳ｭNA: 繧ｭ繝｣繝ｩ縺ｮ蜻ｨ繧翫ｒ荳蜻ｨ
+                                    // 空中NA: キャラの周りを一周
                                     var spinAngle = forwardP * Math.PI * 2;
                                     var r = 50;
                                     mirX = cx + (this.facingRight ? 1 : -1) * Math.cos(spinAngle) * r;
                                     mirY = this.y + 25 + Math.sin(spinAngle) * r;
-                                    mirAngle = 0; // 髀｡縺ｮ蜷代″縺ｯ荳螳・
+                                    mirAngle = 0; // 鏡の向きは一定
                                 } else if (this.currentAttack.type === 'mirror_throw_up' || this.currentAttackType === 'UP' || this.currentAttackType === 'AIR_UP') {
-                                    // 荳晦: 荳頑婿縺ｸ鬟帙・蜃ｺ縺・
+                                    // 上A: 上方へ飛び出す
                                     mirScale = 1.5;
                                     mirAngle = forwardP * Math.PI * 4;
                                     var throwH = 62;
                                     mirX = cx;
                                     mirY = this.y - 10 - Math.sin(forwardP * Math.PI) * throwH;
                                 } else if (this.currentAttack.type === 'mirror_throw' || this.currentAttackType === 'SIDE' || this.currentAttackType === 'AIR_SIDE') {
-                                    // 讓ｪA: 蜑肴婿縺ｸ鬟帙・蜃ｺ縺怜屓霆｢
+                                    // 横A: 前方へ飛び出し回転
                                     mirScale = 1.6;
                                     mirAngle = forwardP * Math.PI * 4;
                                     var throwDist = 75;
@@ -2540,11 +2540,11 @@ window.SMA.Fighter.prototype.draw = function (ctx) {
                                     mirX = cx + (this.facingRight ? distX : -distX);
                                     mirY = this.y + 25;
                                 } else if (this.currentAttackType === 'NEUTRAL') {
-                                    // 蝨ｰ荳劾A: 蜑肴婿縺ｫ荳迸ｬ遯√″蜃ｺ繧具ｼ亥屓霆｢辟｡縺暦ｼ・
+                                    // 地上NA: 前方に一瞬突き出る（回転無し）
                                     var pokeDist = Math.sin(forwardP * Math.PI) * 56;
                                     mirX = cx + (this.facingRight ? 30 + pokeDist : -30 - pokeDist);
                                 } else if (this.currentAttackType === 'DOWN' || this.currentAttackType === 'AIR_DOWN' || this.currentAttack.type === 'mirror_place') {
-                                    // 荳帰: 荳区婿縺ｸ鬟帙・蜃ｺ縺怜屓霆｢
+                                    // 下A: 下方へ飛び出し回転
                                     mirScale = 1.5;
                                     mirAngle = forwardP * Math.PI * 4;
                                     var throwH = 40;
@@ -2552,51 +2552,51 @@ window.SMA.Fighter.prototype.draw = function (ctx) {
                                     mirY = this.y + 40 + Math.sin(forwardP * Math.PI) * throwH;
                                 }
                             } else if (this.actionState === 'CHARGE') {
-                                // 繝√Ε繝ｼ繧ｸ荳ｭ・夐怫縺医ｋ
+                                // チャージ中：震える
                                 mirX += (Math.random() - 0.5) * 5;
                                 mirY += (Math.random() - 0.5) * 5;
                                 if (this.chargePower > 1.2) {
                                     ctx.shadowBlur = 10; ctx.shadowColor = '#81ecec'; ctx.strokeStyle = '#fff';
                                 }
                             } else if (this.actionState === 'LEDGE_ATK') {
-                                // 蟠匁判謦・
+                                // 崖攻撃
                                 mirX = cx + (this.facingRight ? 40 : -40);
                                 mirAngle = Math.PI / 4;
                                 mirScale = 1.2;
                             }
 
-                            // 髀｡縺ｮ謠冗判・育峡遶具ｼ・
+                            // 鏡の描画（独立）
                             ctx.save();
                             ctx.translate(mirX, mirY);
                             ctx.rotate(mirAngle);
                             ctx.scale(mirScale, mirScale);
 
-                            // 髀｡縺ｮ螟匁棧・育ｸｦ髟ｷ讌募・縺ｮ莉｣繧上ｊ縺ｨ縺励※縺ｮ邱夲ｼ・
+                            // 鏡の外枠（縦長楕円の代わりとしての線）
                             var len = this.actionState === 'ATTACK' ? 17.5 : 14;
                             ctx.beginPath(); ctx.moveTo(0, -len); ctx.lineTo(0, len); ctx.stroke();
 
                             ctx.restore();
 
-                            // 繧ｷ繝ｼ繝ｫ繝・
+                            // シールド
                             if (this.actionState === 'SHIELD') { ctx.save(); ctx.fillStyle = 'rgba(116, 185, 255, ' + (this.shieldHP / 150) + ')'; ctx.strokeStyle = '#0984e3'; ctx.beginPath(); ctx.arc(cx, this.y + 30, 45, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.restore(); }
 
                             ctx.restore();
                             drawn = true;
-                        } // !drawn 髢峨§
+                        } // !drawn 閉じ
                     }
                     if (this.charId !== 'spear' && this.charId !== 'hammer' && this.charId !== 'mirror') {
                         // GENERIC BODY DRAW (SWORD/MAGE when not special)
-                        // GRABBING荳ｭ縺ｯ閻輔ｒ蜑阪↓莨ｸ縺ｰ縺励※蠑輔″蟇・○繝｢繝ｼ繧ｷ繝ｧ繝ｳ縲ゝHROWING繧ょ酔讒・
+                        // GRABBING中は腕を前に伸ばして引き寄せモーション、THROWINGも同様
                         if (this.actionState === 'GRABBING' || this.actionState === 'THROWING') {
                             var pullProgress = this.actionState === 'GRABBING' ? Math.max(0, (120 - this.stateTimer) / 30) : 1.0;
-                            var armLen = Math.round(40 - pullProgress * 15); // 蠑輔″蟇・○繧九⊇縺ｩ閻輔′邵ｮ繧
+                            var armLen = Math.round(40 - pullProgress * 15); // 引き寄せるほど腕が縮む
                             ctx.beginPath(); ctx.moveTo(cx, this.y + 10); ctx.lineTo(cx, this.y + 40); ctx.moveTo(cx, this.y + 40); ctx.lineTo(cx - 10, this.y + 60); ctx.moveTo(cx, this.y + 40); ctx.lineTo(cx + 10, this.y + 60); ctx.moveTo(cx, this.y + 20); ctx.lineTo(cx + (this.facingRight ? armLen : -armLen), this.y + 25); ctx.stroke(); ctx.beginPath(); ctx.arc(cx, this.y + 10, 10, 0, Math.PI * 2); ctx.stroke();
                         } else if (this.actionState === 'GRAB_ATTEMPT') {
-                            // 縺､縺九∩隧ｦ縺ｿ繝｢繝ｼ繧ｷ繝ｧ繝ｳ: stateTimer 0竊・縺ｧ莨ｸ縺ｳ繧・ 7竊・5縺ｧ邵ｮ繧
+                            // つかみ試みモーション: stateTimer 0→7で伸びる, 7→15で縮む
                             var grabProgress = this.stateTimer <= 7 ? this.stateTimer / 7 : 1 - (this.stateTimer - 7) / 8;
-                            var armLen = Math.round(10 + grabProgress * 35); // 10px・・5px
+                            var armLen = Math.round(10 + grabProgress * 35); // 10px～45px
                             ctx.beginPath(); ctx.moveTo(cx, this.y + 10); ctx.lineTo(cx, this.y + 40); ctx.moveTo(cx, this.y + 40); ctx.lineTo(cx - 10, this.y + 60); ctx.moveTo(cx, this.y + 40); ctx.lineTo(cx + 10, this.y + 60); ctx.moveTo(cx, this.y + 22); ctx.lineTo(cx + (this.facingRight ? armLen : -armLen), this.y + 22); ctx.stroke(); ctx.beginPath(); ctx.arc(cx, this.y + 10, 10, 0, Math.PI * 2); ctx.stroke();
-                            // 謇具ｼ医げ繝ｼ・峨ｒ蜈育ｫｯ縺ｫ謠上￥
+                            // 手（グー）を先端に描く
                             ctx.beginPath(); ctx.arc(cx + (this.facingRight ? armLen : -armLen), this.y + 22, 5, 0, Math.PI * 2); ctx.stroke();
                         } else {
                             ctx.beginPath(); ctx.moveTo(cx, this.y + 10); ctx.lineTo(cx, this.y + 40); ctx.moveTo(cx, this.y + 40); ctx.lineTo(cx - 10, this.y + 60); ctx.moveTo(cx, this.y + 40); ctx.lineTo(cx + 10, this.y + 60); ctx.moveTo(cx, this.y + 20); ctx.lineTo(cx + (this.facingRight ? 15 : -15), this.y + 30); ctx.stroke(); ctx.beginPath(); ctx.arc(cx, this.y + 10, 10, 0, Math.PI * 2); ctx.stroke();

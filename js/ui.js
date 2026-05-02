@@ -29,7 +29,7 @@ window.onload = function () {
                 window.SMA.soundEnabled = (s === 'true');
                 var btn = g('btn-sound');
                 if (btn) {
-                    btn.innerText = "繧ｵ繧ｦ繝ｳ繝・ " + (window.SMA.soundEnabled ? "ON" : "OFF");
+                    btn.innerText = "サウンド: " + (window.SMA.soundEnabled ? "ON" : "OFF");
                     if (window.SMA.soundEnabled) btn.classList.remove('sound-off'); else btn.classList.add('sound-off');
                 }
             }
@@ -38,7 +38,7 @@ window.onload = function () {
     window.SMA.loadSettings();
     window.SMA.bindAudioUnlock();
 
-    // Gravity迺ｰ蠅・・蝣ｴ蜷医・繝ｦ繝ｼ繧ｶ繝ｼ諠・ｱ蜿門ｾ励ｒ髢句ｧ・
+    // Gravity環境の場合はユーザー情報取得を開始
     window.SMA.initGravity();
 
     var bindBtn = function (id, func) {
@@ -184,7 +184,7 @@ window.onload = function () {
             var rid = window.SMA.gravityRoomId;
             if (rid && navigator.clipboard) {
                 navigator.clipboard.writeText(rid).then(() => {
-                    window.SMA.showNotification("驛ｨ螻紀D繧偵さ繝斐・縺励∪縺励◆・・, 2000);
+                    window.SMA.showNotification("部屋IDをコピーしました！", 2000);
                 }).catch(err => {
                     console.error("Copy failed", err);
                 });
@@ -196,7 +196,7 @@ window.onload = function () {
                 textArea.select();
                 try {
                     document.execCommand('copy');
-                    window.SMA.showNotification("驛ｨ螻紀D繧偵さ繝斐・縺励∪縺励◆・・, 2000);
+                    window.SMA.showNotification("部屋IDをコピーしました！", 2000);
                 } catch (err) { }
                 document.body.removeChild(textArea);
             }
@@ -267,7 +267,7 @@ window.onload = function () {
         if (overlay) overlay.style.display = 'none';
         window.SMA.amIReady = false;
         var btnReady = document.getElementById('btn-hub-ready');
-        if (btnReady) { btnReady.innerText = "貅門ｙ螳御ｺ・ｼ・; btnReady.style.background = ""; btnReady.style.borderColor = ""; }
+        if (btnReady) { btnReady.innerText = "準備完了！"; btnReady.style.background = ""; btnReady.style.borderColor = ""; }
         if (window.SMA.isOnline) {
             var hubRole = (window.SMA.myRole === 'host') ? 'p1' : window.SMA.myRole;
             var msg = { type: 'hub_ready', role: hubRole, ready: false, stageId: window.SMA.myStageId, charId: window.SMA.myCharId };
@@ -281,7 +281,7 @@ window.onload = function () {
         var sndAction = function (e) {
             e.preventDefault(); e.stopPropagation();
             window.SMA.soundEnabled = !window.SMA.soundEnabled;
-            this.innerText = "繧ｵ繧ｦ繝ｳ繝・ " + (window.SMA.soundEnabled ? "ON" : "OFF");
+            this.innerText = "サウンド: " + (window.SMA.soundEnabled ? "ON" : "OFF");
             if (window.SMA.soundEnabled) { this.classList.remove('sound-off'); window.SMA.startAudioContext(); } else { this.classList.add('sound-off'); }
             window.SMA.saveSettings();
         };

@@ -26,7 +26,7 @@ window.SMA.netPeer = null; window.SMA.netConn = null; window.SMA.connections = [
 window.SMA.targetPeerId = null;
 window.SMA.gameState = 'COUNTDOWN'; window.SMA.countdownTimer = 180;
 window.SMA.localPlayerName = "Player";
-window.SMA.isGravity = (window.self !== window.top); // iframe蜀・ｼ・ravity迺ｰ蠅・ｼ峨°蛻､螳・
+window.SMA.isGravity = (window.self !== window.top); // iframe内（Gravity環境）か判定
 window.SMA.gravityUserInfo = null;
 window.SMA.animationFrameId = null;
 window.SMA.shake = 0; window.SMA.freezeFrame = 0; window.SMA.hitStop = 0; window.SMA.comets = []; window.SMA.stars = [];
@@ -40,8 +40,8 @@ window.SMA.myCharId = 'sword'; window.SMA.p1CharId = 'sword'; window.SMA.p2CharI
 window.SMA.amIReady = false; window.SMA.p1IsReady = false; window.SMA.p2IsReady = false; window.SMA.p3IsReady = false; window.SMA.p4IsReady = false;
 window.SMA.PLAYER_COLORS = ['#ff7675', '#74b9ff', '#fdcb6e', '#00b894'];
 window.SMA.PLAYER_ROLES = ['p1', 'p2', 'p3', 'p4'];
-window.SMA.players = []; // Fighter驟榊・・医ご繝ｼ繝荳ｭ縺ｫ菴ｿ逕ｨ・・
-window.SMA.playerCount = 2; // 螳滄圀縺ｮ蜿ょ刈繝励Ξ繧､繝､繝ｼ謨ｰ
+window.SMA.players = []; // Fighter配列（ゲーム中に使用）
+window.SMA.playerCount = 2; // 実際の参加プレイヤー数
 window.SMA.remoteKeysMap = { p2: {}, p3: {}, p4: {} };
 window.SMA.remoteEventsMap = { p2: [], p3: [], p4: [] };
 window.SMA.remoteLastInputTimeMap = { p2: 0, p3: 0, p4: 0 };
