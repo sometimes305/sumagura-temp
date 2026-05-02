@@ -1,4 +1,4 @@
-﻿function reportError(e) {
+function reportError(e) {
     var msg = (e && e.message) ? e.message : e.toString();
     if (msg.indexOf('Script error') !== -1) return;
     var d = document.getElementById('error-report');
