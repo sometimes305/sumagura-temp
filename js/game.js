@@ -1866,6 +1866,46 @@ window.SMA.Fighter.prototype.drawSword = function (ctx, cx, cy, angleDeg) {
         ctx.save(); ctx.translate(cx, cy); ctx.rotate(angleDeg * Math.PI / 180); var s = 0.8 * (1 + (this.chargePower - 1) * 0.5); ctx.scale(0.8, s); var bladeColor = this.chargePower > 1.2 ? '#fff' : (this.isP2 ? "#74b9ff" : "#ff7675"); var glow = this.chargePower > 1.2 ? 10 : 0; ctx.fillStyle = "#333"; ctx.fillRect(-2, -5, 4, 15); ctx.fillStyle = "#ffd700"; ctx.fillRect(-8, -5, 16, 4); ctx.fillStyle = bladeColor; if (glow) { ctx.shadowBlur = glow; ctx.shadowColor = bladeColor; } ctx.beginPath(); ctx.moveTo(-3, -5); ctx.lineTo(-3, -60); ctx.lineTo(0, -70); ctx.lineTo(3, -60); ctx.lineTo(3, -5); ctx.fill(); ctx.restore();
     }
 };
+window.SMA.spriteAssets = window.SMA.spriteAssets || {};
+window.SMA.getSpriteAsset = function (key, src) {
+    var img = window.SMA.spriteAssets[key];
+    if (!img) {
+        img = new Image();
+        img.src = src;
+        window.SMA.spriteAssets[key] = img;
+    }
+    return img;
+};
+window.SMA.Fighter.prototype.drawSwordSideAttackSprite = function (ctx, cx) {
+    if (this.charId !== 'sword' || this.actionState !== 'ATTACK' || this.currentAttackType !== 'SIDE' || !this.currentAttack) return false;
+    var img = window.SMA.getSpriteAsset('sword_side_attack', 'assets/characters/sword/side_attack_sheet.png?v=1');
+    if (!img.complete || !img.naturalWidth) return false;
+
+    var frames = 10;
+    var fw = 96;
+    var fh = 96;
+    var p = Math.max(0, Math.min(0.999, this.stateTimer / this.currentAttack.frames));
+    var frame = Math.floor(p * frames);
+    var sx = frame * fw;
+    var sy = 0;
+    var dw = 96;
+    var dh = 96;
+    var dx = cx - dw / 2 + (this.facingRight ? 10 : -10);
+    var dy = this.y + this.h - dh + 8;
+
+    ctx.save();
+    ctx.imageSmoothingEnabled = false;
+    if (!this.facingRight) {
+        ctx.translate(cx, 0);
+        ctx.scale(-1, 1);
+        ctx.drawImage(img, sx, sy, fw, fh, -(dx - cx) - dw, dy, dw, dh);
+    } else {
+        ctx.drawImage(img, sx, sy, fw, fh, dx, dy, dw, dh);
+    }
+    ctx.restore();
+    return true;
+};
+window.SMA.getSpriteAsset('sword_side_attack', 'assets/characters/sword/side_attack_sheet.png?v=1');
 window.SMA.Fighter.prototype.draw = function (ctx) {
     if (this.stocks <= 0 || this.actionState === 'DEAD' || this.actionState === 'RESPAWN') return;
     // V409: Draw check for invincibility (blink)
@@ -1885,6 +1925,10 @@ window.SMA.Fighter.prototype.draw = function (ctx) {
     } else {
         ctx.rotate(this.rotation);
         ctx.translate(-cx, -(this.y + this.h));
+
+        if (this.drawSwordSideAttackSprite(ctx, cx)) {
+            drawn = true;
+        }
 
         // V412 FIX: Check for Hammer double-draw during Ledge
         if (this.charId === 'brawler') {
