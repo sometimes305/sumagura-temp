@@ -372,6 +372,23 @@ window.onload = function () {
         el.addEventListener('mousedown', d); el.addEventListener('mouseup', u);
     };
     bind('btn-jump', 'jump'); bind('btn-attack', 'attack'); bind('btn-grab', 'grab'); bind('btn-shield', 'shield');
+    var keyDirMap = { KeyA: 'left', KeyD: 'right', KeyW: 'up', KeyS: 'down' };
+    var shouldUseGameKeys = function (e) {
+        if (window.SMA.isEditingLayout || window.SMA.myRole === 'spec') return false;
+        var t = e.target;
+        if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return false;
+        return !!keyDirMap[e.code];
+    };
+    window.addEventListener('keydown', function (e) {
+        if (!shouldUseGameKeys(e)) return;
+        window.SMA.myKeys[keyDirMap[e.code]] = true;
+        e.preventDefault();
+    });
+    window.addEventListener('keyup', function (e) {
+        if (!shouldUseGameKeys(e)) return;
+        window.SMA.myKeys[keyDirMap[e.code]] = false;
+        e.preventDefault();
+    });
     window.addEventListener('resize', function () {
         window.SMA.applyTopExclusionLayout();
         window.SMA.initCanvas();
