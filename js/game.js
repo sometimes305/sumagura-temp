@@ -2039,10 +2039,11 @@ window.SMA.SWORD_CHIBI_ANIMS = {
     airNeutral: { key: 'sword_chibi_air_neutral', src: 'assets/characters/sword/chibi_air_neutral_sheet.png?v=14', frames: 6, frameMs: 55 },
     airSide: { key: 'sword_chibi_air_side', src: 'assets/characters/sword/chibi_air_side_sheet.png?v=14', frames: 4, frameMs: 70 },
     airDown: { key: 'sword_chibi_air_down', src: 'assets/characters/sword/chibi_air_down_sheet.png?v=14', frames: 5, frameMs: 70 },
-    grab: { key: 'sword_chibi_grab', src: 'assets/characters/sword/chibi_grab_sheet.png?v=14', frames: 3, frameMs: 70 },
+    grab: { key: 'sword_chibi_grab', src: 'assets/characters/sword/chibi_grab_sheet.png?v=15', frames: 3, frameMs: 70 },
+    grabHold: { key: 'sword_chibi_grab_hold', src: 'assets/characters/sword/chibi_grab_hold_sheet.png?v=15', frames: 4, frameMs: 100 },
     throw: { key: 'sword_chibi_throw', src: 'assets/characters/sword/chibi_throw_sheet.png?v=14', frames: 4, frameMs: 80 },
     dodge: { key: 'sword_chibi_dodge', src: 'assets/characters/sword/chibi_dodge_sheet.png?v=14', frames: 2, frameMs: 70 },
-    ledge: { key: 'sword_chibi_ledge', src: 'assets/characters/sword/chibi_ledge_sheet.png?v=14', frames: 2, frameMs: 140 }
+    ledge: { key: 'sword_chibi_ledge', src: 'assets/characters/sword/chibi_ledge_sheet.png?v=15', frames: 2, frameMs: 140 }
 };
 for (var swordChibiAnimKey in window.SMA.SWORD_CHIBI_ANIMS) {
     if (Object.prototype.hasOwnProperty.call(window.SMA.SWORD_CHIBI_ANIMS, swordChibiAnimKey)) {
@@ -2067,7 +2068,8 @@ window.SMA.resolveSwordChibiAnim = function (fighter) {
     if (fighter.actionState === 'LEDGE' || fighter.actionState === 'LEDGE_UP') return A.ledge;
     if (fighter.actionState === 'LEDGE_ATK') return A.attackSide;
     if (fighter.actionState === 'GRAB_ATTEMPT') return A.grab;
-    if (fighter.actionState === 'GRABBING' || fighter.actionState === 'THROWING') return A.throw;
+    if (fighter.actionState === 'GRABBING') return A.grabHold || A.throw;
+    if (fighter.actionState === 'THROWING') return A.throw;
     if (fighter.actionState === 'ATTACK') {
         if (fighter.currentAttackType === 'SIDE') return A.attackSide;
         if (fighter.currentAttackType === 'UP' || fighter.currentAttackType === 'AIR_UP') return A.attackUp;
@@ -2401,7 +2403,8 @@ window.SMA.Fighter.prototype.drawSwordChibiSprite = function (ctx, cx) {
     ctx.scale(motion.scaleX, motion.scaleY);
     ctx.drawImage(img, sx, 0, fw, fh, -fw * spriteScale / 2, -baseline * spriteScale, fw * spriteScale, fh * spriteScale);
     ctx.restore();
-    if (!anim.integratedWeapon) {
+    var hideSword = this.actionState === 'LEDGE' || this.actionState === 'LEDGE_UP' || this.actionState === 'GRAB_ATTEMPT' || this.actionState === 'GRABBING';
+    if (!anim.integratedWeapon && !hideSword) {
         this.drawSwordChibiWeapon(ctx, cx, motion);
     }
 
@@ -2437,10 +2440,12 @@ window.SMA.MAGE_CHIBI_ANIMS = {
     airNeutral: { key: 'mage_chibi_air_neutral', src: 'assets/characters/mage/mage_air_neutral_sheet.png?v=2', frames: 4, frameMs: 70 },
     airSide: { key: 'mage_chibi_air_side', src: 'assets/characters/mage/mage_air_side_sheet.png?v=2', frames: 4, frameMs: 75 },
     airDown: { key: 'mage_chibi_air_down', src: 'assets/characters/mage/mage_air_down_sheet.png?v=2', frames: 4, frameMs: 75 },
-    grab: { key: 'mage_chibi_grab', src: 'assets/characters/mage/mage_grab_sheet.png?v=2', frames: 3, frameMs: 75 },
+    grab: { key: 'mage_chibi_grab', src: 'assets/characters/mage/mage_grab_sheet.png?v=3', frames: 3, frameMs: 75 },
+    grabHold: { key: 'mage_chibi_grab_hold', src: 'assets/characters/mage/mage_grab_hold_sheet.png?v=3', frames: 4, frameMs: 100 },
     throw: { key: 'mage_chibi_throw', src: 'assets/characters/mage/mage_throw_sheet.png?v=2', frames: 4, frameMs: 85 },
     dodge: { key: 'mage_chibi_dodge', src: 'assets/characters/mage/mage_dodge_sheet.png?v=2', frames: 2, frameMs: 75 },
-    ledge: { key: 'mage_chibi_ledge', src: 'assets/characters/mage/mage_ledge_sheet.png?v=2', frames: 2, frameMs: 150 }
+    ledge: { key: 'mage_chibi_ledge', src: 'assets/characters/mage/mage_ledge_sheet.png?v=3', frames: 2, frameMs: 150, baseline: 96 },
+    ledgeRoll: { key: 'mage_chibi_ledge_roll', src: 'assets/characters/mage/mage_ledge_roll_sheet.png?v=3', frames: 4, frameMs: 65 }
 };
 for (var mageChibiAnimKey in window.SMA.MAGE_CHIBI_ANIMS) {
     if (Object.prototype.hasOwnProperty.call(window.SMA.MAGE_CHIBI_ANIMS, mageChibiAnimKey)) {
@@ -2460,11 +2465,13 @@ window.SMA.resolveMageChibiAnim = function (fighter) {
     if (!A || !fighter || fighter.charId !== 'mage') return null;
     if (fighter.actionState === 'STUN' || fighter.actionState === 'GRABBED') return A.hurt;
     if (fighter.actionState === 'CHARGE') return A.charge;
-    if (fighter.actionState === 'DODGE' || fighter.actionState === 'LEDGE_ROLL') return A.dodge;
+    if (fighter.actionState === 'DODGE') return A.dodge;
+    if (fighter.actionState === 'LEDGE_ROLL') return A.ledgeRoll || A.dodge;
     if (fighter.actionState === 'LEDGE' || fighter.actionState === 'LEDGE_UP') return A.ledge;
     if (fighter.actionState === 'LEDGE_ATK') return A.attackSide;
     if (fighter.actionState === 'GRAB_ATTEMPT') return A.grab;
-    if (fighter.actionState === 'GRABBING' || fighter.actionState === 'THROWING') return A.throw;
+    if (fighter.actionState === 'GRABBING') return A.grabHold || A.throw;
+    if (fighter.actionState === 'THROWING') return A.throw;
     if (fighter.actionState === 'ATTACK') {
         if (fighter.currentAttackType === 'SIDE') return A.attackSide;
         if (fighter.currentAttackType === 'UP' || fighter.currentAttackType === 'AIR_UP') return A.attackUp;
@@ -2645,8 +2652,11 @@ window.SMA.Fighter.prototype.drawMageChibiSprite = function (ctx, cx) {
     }
     ctx.drawImage(img, sx, 0, fw, fh, -fw * spriteScale / 2, -baseline * spriteScale, fw * spriteScale, fh * spriteScale);
     ctx.restore();
-    this.drawMageChibiStaffBack(ctx, staffPose);
-    this.drawMageChibiStaffFront(ctx, staffPose);
+    var hideStaff = this.actionState === 'LEDGE' || this.actionState === 'LEDGE_UP' || this.actionState === 'LEDGE_ROLL' || this.actionState === 'GRAB_ATTEMPT' || this.actionState === 'GRABBING';
+    if (!hideStaff) {
+        this.drawMageChibiStaffBack(ctx, staffPose);
+        this.drawMageChibiStaffFront(ctx, staffPose);
+    }
 
     if (this.actionState === 'SHIELD') {
         ctx.save();
@@ -3002,11 +3012,11 @@ window.SMA.Fighter.prototype.draw = function (ctx) {
     ctx.scale(this.animScale.x, this.animScale.y);
 
     var drawn = false;
-    if (this.actionState === 'LEDGE_ROLL' && this.charId !== 'brawler') {
+    if (this.actionState === 'LEDGE_ROLL' && this.charId !== 'brawler' && this.charId !== 'mage' && this.charId !== 'sword') {
         ctx.translate(0, -15); ctx.rotate(this.rotation); ctx.strokeStyle = this.color; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(0, 0, 15, 0, Math.PI * 2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(15, 0); ctx.stroke();
         drawn = true;
     } else {
-        if (!(this.actionState === 'LEDGE_ROLL' && this.charId === 'brawler')) {
+        if (!(this.actionState === 'LEDGE_ROLL' && (this.charId === 'brawler' || this.charId === 'mage' || this.charId === 'sword'))) {
             ctx.rotate(this.rotation);
         }
         ctx.translate(-cx, -(this.y + this.h));
