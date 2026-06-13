@@ -54,7 +54,14 @@ window.SMA.drawTrident = function (ctx, x, y, angleDeg, color, tipColor) {
     ctx.drawImage(img, -gripX, -gripY, drawW, drawH);
     ctx.restore();
 };
-window.SMA.drawHammer = function (ctx, x, y, angleDeg, color, headColor) {
+window.SMA.HAMMER_WEAPON_ASSET = {
+    key: 'hammer_weapon',
+    src: 'assets/characters/hammer/hammer_weapon.png?v=2',
+    drawH: 108,
+    gripXRatio: 0.5,
+    gripYRatio: 0.58
+};
+window.SMA.drawVectorHammer = function (ctx, x, y, angleDeg, color, headColor) {
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(angleDeg * Math.PI / 180);
@@ -66,6 +73,9 @@ window.SMA.drawHammer = function (ctx, x, y, angleDeg, color, headColor) {
     ctx.lineWidth = 2;
     ctx.strokeRect(-15, 35, 30, 20);
     ctx.restore();
+};
+window.SMA.drawHammer = function (ctx, x, y, angleDeg, color, headColor) {
+    window.SMA.drawVectorHammer(ctx, x, y, angleDeg, color, headColor);
 };
 
 // --- Core game loop, simulation, fighters ---
@@ -1264,7 +1274,24 @@ window.SMA.Fighter.prototype.startCharge = function () {
         if (this.chargePower === 1.0) this.chargePower = 1.0;
     }
 };
-window.SMA.Fighter.prototype.releaseAttack = function (typeStr) { var S = window.SMA; if (this.actionState === 'CHARGE' || this.actionState === 'IDLE') { var power = this.chargePower; if (this.actionState === 'IDLE') power = 1.0; this.actionState = 'ATTACK'; if (!this.isGrounded) { if (typeStr === 'DOWN') typeStr = 'AIR_DOWN'; else if (typeStr === 'SIDE') typeStr = 'AIR_SIDE'; else if (typeStr === 'NEUTRAL') typeStr = 'AIR_NEUTRAL'; if (this.charId === 'spear' && typeStr === 'AIR_UP' && this.hasUpSpecial) return; } var set = S.CHAR_DATA[this.charId].attacks; if (set[typeStr]) this.currentAttack = set[typeStr]; else this.currentAttack = null; this.currentAttackType = typeStr; this.chargePower = power; this.hasHit = false; this.mirrorHasHit = false; this.stateTimer = 0; if (this.currentAttack) { if (this.currentAttack.type === 'arrow_shot') S.playSound('magic'); else if (this.currentAttack.type === 'shot') S.playSound('magic'); else if (this.currentAttack.type === 'fire_shot') S.playSound('magic'); else if (this.currentAttack.type === 'up_rush') S.playSound('jump'); else if (this.currentAttack.type === 'ground_shock') { } else if (this.currentAttack.type === 'boomerang' || this.currentAttack.type === 'boomerang_up') S.playSound('sword'); else if (this.currentAttackType === 'UP' && this.charId === 'mage') S.playSound('spin'); else S.playSound('sword'); } } };
+window.SMA.Fighter.prototype.releaseAttack = function (typeStr) {
+    var S = window.SMA;
+    if (this.actionState === 'CHARGE' || this.actionState === 'IDLE') {
+        var power = this.chargePower;
+        if (this.actionState === 'IDLE') power = 1.0;
+        var set = S.CHAR_DATA[this.charId].attacks;
+        if (!this.isGrounded) {
+            if (typeStr === 'DOWN') typeStr = 'AIR_DOWN';
+            else if (typeStr === 'SIDE') typeStr = 'AIR_SIDE';
+            else if (typeStr === 'NEUTRAL') typeStr = 'AIR_NEUTRAL';
+            else if (typeStr === 'UP' && set.AIR_UP) typeStr = 'AIR_UP';
+            if (this.charId === 'spear' && typeStr === 'AIR_UP' && this.hasUpSpecial) return;
+        }
+        this.actionState = 'ATTACK';
+        if (set[typeStr]) this.currentAttack = set[typeStr]; else this.currentAttack = null;
+        this.currentAttackType = typeStr; this.chargePower = power; this.hasHit = false; this.mirrorHasHit = false; this.stateTimer = 0; if (this.currentAttack) { if (this.currentAttack.type === 'arrow_shot') S.playSound('magic'); else if (this.currentAttack.type === 'shot') S.playSound('magic'); else if (this.currentAttack.type === 'fire_shot') S.playSound('magic'); else if (this.currentAttack.type === 'up_rush') S.playSound('jump'); else if (this.currentAttack.type === 'ground_shock') { } else if (this.currentAttack.type === 'boomerang' || this.currentAttack.type === 'boomerang_up') S.playSound('sword'); else if (this.currentAttackType === 'UP' && this.charId === 'mage') S.playSound('spin'); else S.playSound('sword'); }
+    }
+};
 window.SMA.Fighter.prototype.handleAttackFrame = function () {
     var S = window.SMA; this.stateTimer++; var atk = this.currentAttack; if (!atk) return;
 
@@ -1798,8 +1825,8 @@ window.SMA.Fighter.prototype.handleAttackFrame = function () {
     var start = Math.floor(atk.frames * 0.2); var end = Math.floor(atk.frames * (atk.frames > 100 ? 0.1 : 0.6)); if (this.stateTimer >= start && this.stateTimer <= end) {
         this.hitbox.active = true; var scale = 1 + (this.chargePower - 1.0) * 0.5; this.hitbox.w = (atk.radius ? atk.radius * 2 : 70) * scale; this.hitbox.h = this.hitbox.w; if (this.currentAttackType === 'UP' || this.currentAttackType === 'AIR_UP') {
             if (this.charId === 'mage') { this.hitbox.w = 80; this.hitbox.h = 40; this.hitbox.x = this.x - 25; this.hitbox.y = this.y - 40; } else if (this.charId === 'hammer') {
-                // Hammer Up Attack Arc Hitbox - Large Overhead Box - FASTER (17-20)
-                if (this.stateTimer >= 17 && this.stateTimer <= 20) {
+                // Hammer up attack follows the visible overhead arc.
+                if (this.stateTimer >= 15 && this.stateTimer <= 21) {
                     this.hitbox.active = true;
                     this.hitbox.w = 140 * scale; this.hitbox.h = 100 * scale;
                     this.hitbox.x = this.x + this.w / 2 - 70;
@@ -1889,8 +1916,9 @@ window.SMA.Fighter.prototype.drawSword = function (ctx, cx, cy, angleDeg) {
 window.SMA.spriteAssets = window.SMA.spriteAssets || {};
 window.SMA.getSpriteAsset = function (key, src) {
     var img = window.SMA.spriteAssets[key];
-    if (!img) {
+    if (!img || img._smaSrc !== src) {
         img = new Image();
+        img._smaSrc = src;
         img.src = src;
         window.SMA.spriteAssets[key] = img;
     }
@@ -3077,6 +3105,339 @@ window.SMA.Fighter.prototype.drawBrawlerChibiSprite = function (ctx, cx) {
     }
     return true;
 };
+window.SMA.HAMMER_CHIBI_FRAME = 128;
+window.SMA.HAMMER_CHIBI_FRAME_W = 128;
+window.SMA.HAMMER_CHIBI_BASELINE = 116;
+window.SMA.HAMMER_CHIBI_RENDER_SCALE = 0.78;
+window.SMA.HAMMER_CHIBI_ANIMS = {
+    idle: { key: 'hammer_chibi_idle', src: 'assets/characters/hammer/hammer_idle_sheet.png?v=1', frames: 4, frameMs: 220, baseline: 116 },
+    run: { key: 'hammer_chibi_run_v3', src: 'assets/characters/hammer/hammer_run_sheet.png?v=3', frames: 4, frameMs: 70, baseline: 116 },
+    jump: { key: 'hammer_chibi_jump_v3', src: 'assets/characters/hammer/hammer_jump_sheet.png?v=3', frames: 2, frameMs: 180, baseline: 116 },
+    fall: { key: 'hammer_chibi_fall', src: 'assets/characters/hammer/hammer_fall_sheet.png?v=5', frames: 1, frameMs: 180, baseline: 116 },
+    hurt: { key: 'hammer_chibi_hurt_v2', src: 'assets/characters/hammer/hammer_hurt_sheet.png?v=2', frames: 2, frameMs: 90, baseline: 116 },
+    charge: { key: 'hammer_chibi_charge_v3', src: 'assets/characters/hammer/hammer_charge_sheet.png?v=3', frames: 4, frameMs: 90, baseline: 116 },
+    attackNeutral: { key: 'hammer_chibi_attack_neutral_v4', src: 'assets/characters/hammer/hammer_attack_neutral_sheet.png?v=4', frames: 4, frameMs: 75, baseline: 116 },
+    attackSide: { key: 'hammer_chibi_attack_side_v5', src: 'assets/characters/hammer/hammer_attack_side_sheet.png?v=5', frames: 6, frameMs: 58, baseline: 116 },
+    attackUp: { key: 'hammer_chibi_attack_up_v3', src: 'assets/characters/hammer/hammer_attack_up_sheet.png?v=3', frames: 6, frameMs: 58, baseline: 116 },
+    attackDown: { key: 'hammer_chibi_attack_down', src: 'assets/characters/hammer/hammer_attack_down_sheet.png?v=4', frames: 7, frameMs: 32, baseline: 116 },
+    airNeutral: { key: 'hammer_chibi_air_neutral', src: 'assets/characters/hammer/hammer_air_neutral_sheet.png?v=2', frames: 4, frameMs: 65, baseline: 116 },
+    airSide: { key: 'hammer_chibi_air_side', src: 'assets/characters/hammer/hammer_air_side_sheet.png?v=2', frames: 4, frameMs: 65, baseline: 116 },
+    airUp: { key: 'hammer_chibi_air_up_v4', src: 'assets/characters/hammer/hammer_air_up_sheet.png?v=4', frames: 6, frameMs: 58, baseline: 116 },
+    airDown: { key: 'hammer_chibi_air_down', src: 'assets/characters/hammer/hammer_attack_down_sheet.png?v=4', frames: 7, frameMs: 32, baseline: 116 },
+    grab: { key: 'hammer_chibi_grab_v2', src: 'assets/characters/hammer/hammer_grab_sheet.png?v=2', frames: 4, frameMs: 65, baseline: 116 },
+    grabHold: { key: 'hammer_chibi_grab_hold_v2', src: 'assets/characters/hammer/hammer_grab_hold_sheet.png?v=2', frames: 4, frameMs: 100, baseline: 116 },
+    throw: { key: 'hammer_chibi_throw_v2', src: 'assets/characters/hammer/hammer_throw_sheet.png?v=2', frames: 4, frameMs: 70, baseline: 116 },
+    dodge: { key: 'hammer_chibi_dodge_v2', src: 'assets/characters/hammer/hammer_dodge_sheet.png?v=2', frames: 4, frameMs: 55, baseline: 116 },
+    ledge: { key: 'hammer_chibi_ledge_v2', src: 'assets/characters/hammer/hammer_ledge_sheet.png?v=2', frames: 4, frameMs: 110, baseline: 116 },
+    ledgeAttack: { key: 'hammer_chibi_ledge_attack', src: 'assets/characters/hammer/hammer_ledge_attack_sheet.png?v=1', frames: 4, frameMs: 70, baseline: 116 }
+};
+for (var hammerChibiAnimKey in window.SMA.HAMMER_CHIBI_ANIMS) {
+    if (Object.prototype.hasOwnProperty.call(window.SMA.HAMMER_CHIBI_ANIMS, hammerChibiAnimKey)) {
+        window.SMA.HAMMER_CHIBI_ANIMS[hammerChibiAnimKey].frameW = window.SMA.HAMMER_CHIBI_FRAME_W;
+    }
+}
+window.SMA.preloadHammerChibiSprites = function () {
+    var anims = window.SMA.HAMMER_CHIBI_ANIMS || {};
+    for (var k in anims) {
+        if (Object.prototype.hasOwnProperty.call(anims, k)) {
+            window.SMA.getSpriteAsset(anims[k].key, anims[k].src);
+        }
+    }
+    var weapon = window.SMA.HAMMER_WEAPON_ASSET;
+    if (weapon) window.SMA.getSpriteAsset(weapon.key, weapon.src);
+};
+window.SMA.resolveHammerChibiAnim = function (fighter) {
+    var A = window.SMA.HAMMER_CHIBI_ANIMS;
+    if (!A || !fighter || fighter.charId !== 'hammer') return null;
+    if (fighter.actionState === 'STUN' || fighter.actionState === 'GRABBED') return A.hurt;
+    if (fighter.actionState === 'CHARGE') return A.charge;
+    if (fighter.actionState === 'DODGE' || fighter.actionState === 'LEDGE_ROLL') return A.dodge;
+    if (fighter.actionState === 'LEDGE' || fighter.actionState === 'LEDGE_UP') return A.ledge;
+    if (fighter.actionState === 'LEDGE_ATK') return A.ledgeAttack || A.attackSide;
+    if (fighter.actionState === 'GRAB_ATTEMPT') return A.grab;
+    if (fighter.actionState === 'GRABBING') return A.grabHold || A.throw;
+    if (fighter.actionState === 'THROWING') return A.throw;
+    if (fighter.actionState === 'LAG') return A.idle;
+    if (fighter.actionState === 'ATTACK' && fighter.currentAttack) {
+        if (fighter.currentAttackType === 'AIR_NEUTRAL') return A.airNeutral;
+        if (fighter.currentAttackType === 'AIR_SIDE') return A.airSide;
+        if (fighter.currentAttackType === 'AIR_UP') return A.airUp;
+        if (fighter.currentAttackType === 'AIR_DOWN') return A.airDown;
+        if (fighter.currentAttackType === 'SIDE') return A.attackSide;
+        if (fighter.currentAttackType === 'UP') return A.attackUp;
+        if (fighter.currentAttackType === 'DOWN') return A.attackDown;
+        return A.attackNeutral;
+    }
+    if (!fighter.isGrounded) return fighter.vy < 0 ? A.jump : A.fall;
+    if (Math.abs(fighter.vx) > 0.5) return A.run;
+    return A.idle;
+};
+window.SMA.Fighter.prototype.getHammerChibiFrame = function (anim) {
+    var frames = anim.frames || 1;
+    if (frames <= 1) return 0;
+    var p = null;
+    if (this.actionState === 'ATTACK' && this.currentAttack) {
+        if (this.charId === 'hammer' && this.currentAttackType === 'NEUTRAL') {
+            if (this.stateTimer < 9) return 0;
+            if (this.stateTimer < 15) return Math.min(1, frames - 1);
+            if (this.stateTimer < 22) return Math.min(2, frames - 1);
+            return Math.min(3, frames - 1);
+        }
+        if (this.charId === 'hammer' && this.currentAttackType === 'SIDE') {
+            if (this.stateTimer < 6) return 0;
+            if (this.stateTimer < 10) return Math.min(1, frames - 1);
+            if (this.stateTimer < 18) return Math.min(2, frames - 1);
+            if (this.stateTimer < 24) return Math.min(3, frames - 1);
+            if (this.stateTimer < 28) return Math.min(4, frames - 1);
+            return Math.min(5, frames - 1);
+        }
+        if (this.charId === 'hammer' && (this.currentAttackType === 'DOWN' || this.currentAttackType === 'AIR_DOWN')) {
+            if (this.stateTimer >= 80) return frames - 1;
+            return Math.floor(this.stateTimer / 2) % Math.max(1, frames - 1);
+        }
+        if (this.charId === 'hammer' && this.currentAttackType === 'UP') {
+            if (this.stateTimer < 11) return 0;
+            if (this.stateTimer < 13) return Math.min(1, frames - 1);
+            if (this.stateTimer < 15) return Math.min(2, frames - 1);
+            if (this.stateTimer < 18) return Math.min(3, frames - 1);
+            if (this.stateTimer < 21) return Math.min(4, frames - 1);
+            return Math.min(5, frames - 1);
+        }
+        if (this.charId === 'hammer' && this.currentAttackType === 'AIR_UP') {
+            if (this.stateTimer < 11) return 0;
+            if (this.stateTimer < 13) return Math.min(1, frames - 1);
+            if (this.stateTimer < 15) return Math.min(2, frames - 1);
+            if (this.stateTimer < 18) return Math.min(3, frames - 1);
+            if (this.stateTimer < 21) return Math.min(4, frames - 1);
+            return Math.min(5, frames - 1);
+        }
+        p = Math.max(0, Math.min(0.999, this.stateTimer / Math.max(1, this.currentAttack.frames || frames)));
+    } else if (this.actionState === 'CHARGE') {
+        return Math.floor(Date.now() / (anim.frameMs || 90)) % frames;
+    } else if (this.actionState === 'GRAB_ATTEMPT') {
+        p = Math.max(0, Math.min(0.999, this.stateTimer / 15));
+    } else if (this.actionState === 'GRABBING') {
+        return Math.floor(Date.now() / (anim.frameMs || 100)) % frames;
+    } else if (this.actionState === 'THROWING') {
+        p = Math.max(0, Math.min(0.999, (15 - this.stateTimer) / 15));
+    } else if (this.actionState === 'LEDGE') {
+        return 0;
+    } else if (this.actionState === 'LEDGE_UP') {
+        if (this.stateTimer > 12) return Math.min(1, frames - 1);
+        if (this.stateTimer > 6) return Math.min(2, frames - 1);
+        return Math.min(3, frames - 1);
+    } else if (this.actionState === 'LEDGE_ATK') {
+        p = Math.max(0, Math.min(0.999, (30 - this.stateTimer) / 30));
+    } else if (this.actionState === 'DODGE' || this.actionState === 'LEDGE_ROLL') {
+        p = Math.max(0, Math.min(0.999, (25 - this.stateTimer) / 25));
+    }
+    if (p !== null) return Math.floor(p * frames);
+    return Math.floor(Date.now() / (anim.frameMs || 100)) % frames;
+};
+window.SMA.Fighter.prototype.drawHammerChibiWeapon = function (ctx, cx, drawFootY) {
+    var hideHammer = this.actionState === 'LEDGE' || this.actionState === 'LEDGE_UP' || this.actionState === 'LEDGE_ROLL' || this.actionState === 'GRAB_ATTEMPT' || this.actionState === 'GRABBING' || this.actionState === 'THROWING';
+    if (hideHammer) return;
+    var sign = this.facingRight ? 1 : -1;
+    var s = window.SMA.HAMMER_CHIBI_RENDER_SCALE || 1;
+    var handX = cx + sign * 15 * s;
+    var handY = drawFootY - 30 * s;
+    var angleDeg = sign * 30;
+    var headColor = null;
+
+    if (this.actionState === 'CHARGE') {
+        var isCharged = this.chargePower > 1.2;
+        headColor = isCharged ? 'white' : null;
+        ctx.save();
+        if (isCharged) {
+            ctx.shadowBlur = (this.chargePower - 1.0) * 50 + 10;
+            ctx.shadowColor = 'white';
+        }
+        window.SMA.drawHammer(ctx, cx + sign * 8 * s, drawFootY - 38 * s, sign * 135, '#636e72', headColor);
+        ctx.restore();
+        return;
+    }
+
+    if (this.actionState === 'LEDGE_ATK' && this.currentAttack) {
+        var ledgeP = Math.max(0, Math.min(0.999, (30 - this.stateTimer) / 30));
+        var ledgeSwingP = Math.max(0, Math.min(1, (ledgeP - 0.18) / 0.55));
+        var ledgeHandX = cx + sign * (6 + ledgeP * 14) * s;
+        var ledgeHandY = drawFootY - (22 + Math.sin(ledgeP * Math.PI) * 4) * s;
+        angleDeg = sign * (135 + ledgeSwingP * 155);
+        window.SMA.drawHammer(ctx, ledgeHandX, ledgeHandY, angleDeg, '#636e72');
+        return;
+    }
+
+    if (this.actionState === 'ATTACK' && this.currentAttack) {
+        var p = Math.max(0, Math.min(0.999, this.stateTimer / Math.max(1, this.currentAttack.frames || 1)));
+        var shouldDraw = true;
+        if (this.currentAttack.type === 'tornado') {
+            if (this.charId === 'hammer' && this.stateTimer >= 80) {
+                window.SMA.drawHammer(ctx, cx + sign * 24 * s, drawFootY - 28 * s, this.facingRight ? -120 : 120, '#636e72');
+                return;
+            }
+            var spin = this.stateTimer < 15 ? this.stateTimer * 0.5 : (15 * 0.5) + (this.stateTimer - 15) * 1.2;
+            var xOff = Math.cos(spin) * 30 * s;
+            var widthScale = Math.sin(spin);
+            ctx.save();
+            ctx.translate(cx + xOff, drawFootY - 30 * s);
+            ctx.scale(widthScale, 1);
+            window.SMA.drawHammer(ctx, 0, 0, 90, '#636e72');
+            ctx.restore();
+            return;
+        } else if (this.currentAttackType === 'NEUTRAL') {
+            if (this.stateTimer < 14) {
+                angleDeg = 180;
+            } else if (this.stateTimer < 22) {
+                angleDeg = 180 + (190 * ((this.stateTimer - 14) / 8));
+            } else {
+                angleDeg = 10;
+            }
+        } else if (this.currentAttack.type === 'hammer_spin_air') {
+            angleDeg = 0;
+        } else if (this.currentAttackType === 'SIDE') {
+            var sideT = this.stateTimer;
+            var sideU = 0;
+            if (sideT < 6) {
+                angleDeg = 150;
+                handY = drawFootY - 46 * s;
+            } else if (sideT < 12) {
+                sideU = (sideT - 6) / 6;
+                angleDeg = 150 + 150 * sideU;
+                handY = drawFootY - (46 - 24 * sideU) * s;
+            } else if (sideT < 18) {
+                angleDeg = 300;
+                handY = drawFootY - 22 * s;
+            } else if (sideT < 24) {
+                sideU = (sideT - 18) / 6;
+                angleDeg = 300 - 150 * sideU;
+                handY = drawFootY - (22 + 24 * sideU) * s;
+            } else if (sideT < 32) {
+                sideU = (sideT - 24) / 8;
+                angleDeg = 150 + 150 * sideU;
+                handY = drawFootY - (46 - 24 * sideU) * s;
+            } else {
+                angleDeg = 300;
+                handY = drawFootY - 22 * s;
+            }
+            handX = cx + sign * (14 + Math.min(1, sideT / 42) * 18) * s;
+        } else if (this.currentAttackType === 'AIR_SIDE') {
+            var airSideT = Math.max(0, Math.min(1, this.stateTimer / Math.max(1, this.currentAttack.frames || 18)));
+            angleDeg = -170 + (135 * airSideT);
+        } else if (this.currentAttackType === 'spin_hammer') {
+            angleDeg = -180 + (p * 270);
+        } else if (this.currentAttackType === 'UP') {
+            var groundUpT = this.stateTimer;
+            var groundUpU = 0;
+            if (groundUpT < 11) {
+                angleDeg = -90;
+                handX = cx + sign * 15 * s;
+                handY = drawFootY - 45 * s;
+            } else if (groundUpT < 21) {
+                groundUpU = (groundUpT - 11) / 10;
+                angleDeg = -90 - 180 * groundUpU;
+                handX = cx + sign * (15 - 26 * groundUpU) * s;
+                handY = drawFootY - (45 + Math.sin(groundUpU * Math.PI) * 28) * s;
+            } else {
+                angleDeg = -270;
+                handX = cx - sign * 11 * s;
+                handY = drawFootY - 45 * s;
+            }
+        } else if (this.currentAttackType === 'AIR_UP') {
+            var upT = this.stateTimer;
+            var upU = 0;
+            if (upT < 11) {
+                angleDeg = -90;
+                handX = cx + sign * 15 * s;
+                handY = drawFootY - 58 * s;
+            } else if (upT < 21) {
+                upU = (upT - 11) / 10;
+                angleDeg = -90 - 180 * upU;
+                handX = cx + sign * (15 - 26 * upU) * s;
+                handY = drawFootY - (58 + Math.sin(upU * Math.PI) * 20) * s;
+            } else {
+                angleDeg = -270;
+                handX = cx - sign * 11 * s;
+                handY = drawFootY - 58 * s;
+            }
+        } else if (this.currentAttackType === 'DOWN' || this.currentAttackType === 'AIR_DOWN') {
+            angleDeg = 45 + (135 - 45) * p;
+        } else {
+            shouldDraw = false;
+        }
+        if (!shouldDraw) return;
+        if (!this.facingRight) {
+            if (this.currentAttack.type !== 'spin_hammer' && this.currentAttack.type !== 'hammer_spin_air' && this.currentAttackType !== 'SIDE') angleDeg = -angleDeg;
+            else if (this.currentAttack.type === 'hammer_spin_air') angleDeg = 0;
+            else angleDeg = -angleDeg;
+        }
+    }
+
+    window.SMA.drawHammer(ctx, handX, handY, angleDeg, '#636e72');
+};
+window.SMA.Fighter.prototype.drawHammerChibiSprite = function (ctx, cx) {
+    var anim = window.SMA.resolveHammerChibiAnim(this);
+    if (!anim) return false;
+    var img = window.SMA.getSpriteAsset(anim.key, anim.src);
+    if (!img.complete || !img.naturalWidth) return true;
+
+    var fw = anim.frameW || window.SMA.HAMMER_CHIBI_FRAME_W || 128;
+    var fh = anim.frameH || window.SMA.HAMMER_CHIBI_FRAME || 128;
+    var baseline = anim.baseline || window.SMA.HAMMER_CHIBI_BASELINE || 116;
+    var spriteScale = window.SMA.HAMMER_CHIBI_RENDER_SCALE || 1;
+    var frame = this.getHammerChibiFrame(anim);
+    var sx = Math.min(frame, (anim.frames || 1) - 1) * fw;
+    var footY = this.y + this.h;
+    var drawCx = cx;
+    var drawFootY = footY;
+
+    if (this.actionState === 'LEDGE_UP' && this.ledgeGrabbed) {
+        var ledgePlatform = this.ledgeGrabbed.platform;
+        var ledgeDir = this.ledgeGrabbed.dir;
+        var ledgeTopX = (ledgeDir === 'left') ? ledgePlatform.x : (ledgePlatform.x + ledgePlatform.w - this.w);
+        var t = Math.max(0, Math.min(1, (20 - this.stateTimer) / 20));
+        var eased = t * t * (3 - 2 * t);
+        drawCx = cx + ((ledgeTopX + this.w / 2) - cx) * eased;
+        drawFootY = footY + (ledgePlatform.y - footY) * eased;
+    }
+    if (this.actionState === 'ATTACK' && this.currentAttackType === 'SIDE' && this.currentAttack) {
+        var sideAdvance = Math.min(1, this.stateTimer / Math.max(1, (this.currentAttack.frames || 50) * 0.84));
+        drawCx += (this.facingRight ? 1 : -1) * 14 * spriteScale * sideAdvance;
+    }
+
+    ctx.save();
+    ctx.imageSmoothingEnabled = true;
+    ctx.globalAlpha = 0.22;
+    ctx.strokeStyle = this.color;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.ellipse(drawCx, drawFootY - 3, 23 * spriteScale, 7 * spriteScale, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+    ctx.restore();
+
+    ctx.save();
+    ctx.imageSmoothingEnabled = true;
+    ctx.translate(drawCx, drawFootY);
+    if (!this.facingRight) {
+        ctx.scale(-1, 1);
+    }
+    ctx.drawImage(img, sx, 0, fw, fh, -fw * spriteScale / 2, -baseline * spriteScale, fw * spriteScale, fh * spriteScale);
+    ctx.restore();
+
+    this.drawHammerChibiWeapon(ctx, drawCx, drawFootY);
+
+    if (this.actionState === 'SHIELD') {
+        ctx.save();
+        ctx.fillStyle = 'rgba(116, 185, 255, ' + (this.shieldHP / 150) + ')';
+        ctx.strokeStyle = '#0984e3';
+        ctx.beginPath();
+        ctx.arc(cx, this.y + this.h / 2, 45, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+    }
+    return true;
+};
 window.SMA.SPEAR_CHIBI_FRAME = 128;
 window.SMA.SPEAR_CHIBI_FRAME_W = 224;
 window.SMA.SPEAR_CHIBI_BASELINE = 118;
@@ -3318,6 +3679,7 @@ window.SMA.Fighter.prototype.drawSpearChibiSprite = function (ctx, cx) {
 window.SMA.preloadSwordChibiSprites();
 window.SMA.preloadMageChibiSprites();
 window.SMA.preloadBrawlerChibiSprites();
+window.SMA.preloadHammerChibiSprites();
 window.SMA.preloadSpearChibiSprites();
 window.SMA.preloadMageVfxSprites();
 window.SMA.Fighter.prototype.draw = function (ctx) {
@@ -3333,11 +3695,11 @@ window.SMA.Fighter.prototype.draw = function (ctx) {
     ctx.scale(this.animScale.x, this.animScale.y);
 
     var drawn = false;
-    if (this.actionState === 'LEDGE_ROLL' && this.charId !== 'brawler' && this.charId !== 'mage' && this.charId !== 'sword' && this.charId !== 'spear') {
+    if (this.actionState === 'LEDGE_ROLL' && this.charId !== 'brawler' && this.charId !== 'mage' && this.charId !== 'sword' && this.charId !== 'hammer' && this.charId !== 'spear') {
         ctx.translate(0, -15); ctx.rotate(this.rotation); ctx.strokeStyle = this.color; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(0, 0, 15, 0, Math.PI * 2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(15, 0); ctx.stroke();
         drawn = true;
     } else {
-        if (!(this.actionState === 'LEDGE_ROLL' && (this.charId === 'brawler' || this.charId === 'mage' || this.charId === 'sword' || this.charId === 'spear'))) {
+        if (!(this.actionState === 'LEDGE_ROLL' && (this.charId === 'brawler' || this.charId === 'mage' || this.charId === 'sword' || this.charId === 'hammer' || this.charId === 'spear'))) {
             ctx.rotate(this.rotation);
         }
         ctx.translate(-cx, -(this.y + this.h));
@@ -3360,6 +3722,13 @@ window.SMA.Fighter.prototype.draw = function (ctx) {
                 ctx.globalAlpha = 1.0;
                 return;
             }
+            ctx.restore();
+            ctx.globalAlpha = 1.0;
+            return;
+        }
+
+        if (this.charId === 'hammer') {
+            this.drawHammerChibiSprite(ctx, cx);
             ctx.restore();
             ctx.globalAlpha = 1.0;
             return;
@@ -3812,6 +4181,12 @@ window.SMA.Fighter.prototype.draw = function (ctx) {
                         var p = this.stateTimer / this.currentAttack.frames;
                         var shouldDraw = true;
                         if (this.currentAttack.type === 'tornado') {
+                            if (this.charId === 'hammer' && this.stateTimer >= 80) {
+                                var finishSign = this.facingRight ? 1 : -1;
+                                window.SMA.drawHammer(ctx, cx + finishSign * 24, this.y + 42, this.facingRight ? -120 : 120, "#636e72");
+                                hammerDrawn = true;
+                                shouldDraw = false;
+                            } else {
                             // Tornado Visual: Spin around Y axis
                             // Hammer X offset moves left/right. Scale flips.
                             // NEW: Spin slowly during wind-up (0-15), fast after.
@@ -3833,6 +4208,7 @@ window.SMA.Fighter.prototype.draw = function (ctx) {
                             ctx.restore();
                             hammerDrawn = true; // Mark as drawn
                             shouldDraw = false; // Skip default hammer logic below
+                            }
                         } else if (this.currentAttackType === 'NEUTRAL') {
                             // GROUND: New Wind up (Straight Up) then Slam
                             // 0-14 frames: Instant hold UP (180)
@@ -3851,20 +4227,26 @@ window.SMA.Fighter.prototype.draw = function (ctx) {
                             angleDeg = 0;
                         } else if (this.currentAttackType === 'SIDE' || this.currentAttackType === 'AIR_SIDE' || this.currentAttackType === 'spin_hammer') {
                             if (this.currentAttackType === 'AIR_SIDE') {
-                                // VERTICAL CHOP: -180 to 90
-                                angleDeg = -180 + (p * 270);
+                                var airSideT = Math.max(0, Math.min(1, this.stateTimer / Math.max(1, this.currentAttack.frames || 18)));
+                                angleDeg = -170 + (135 * airSideT);
                             } else {
                                 angleDeg = p * 720;
                             }
-                        } else if (this.currentAttackType === 'UP' || this.currentAttackType === 'AIR_UP') {
-                            // Overhead Arc: -90 (Front) -> -270 (Back)
-                            // Wait 0-15: Hold Front (-90).
-                            // Swing 15-20: Fast Arc.
-                            if (this.stateTimer < 15) {
+                        } else if (this.currentAttackType === 'UP') {
+                            if (this.stateTimer < 11) {
                                 angleDeg = -90;
-                            } else if (this.stateTimer < 20) {
-                                var subP = (this.stateTimer - 15) / 5;
-                                angleDeg = -90 - (subP * 180);
+                            } else if (this.stateTimer < 21) {
+                                var groundUpU = (this.stateTimer - 11) / 10;
+                                angleDeg = -90 - 180 * groundUpU;
+                            } else {
+                                angleDeg = -270;
+                            }
+                        } else if (this.currentAttackType === 'AIR_UP') {
+                            if (this.stateTimer < 11) {
+                                angleDeg = -90;
+                            } else if (this.stateTimer < 21) {
+                                var upU = (this.stateTimer - 11) / 10;
+                                angleDeg = -90 - 180 * upU;
                             } else {
                                 angleDeg = -270;
                             }

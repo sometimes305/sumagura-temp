@@ -333,39 +333,60 @@ window.onload = function () {
     window.addEventListener('mousemove', function (e) { if (isMouseDown) moveJoy(e.clientX, e.clientY); });
     window.addEventListener('mouseup', function (e) { if (isMouseDown) { isMouseDown = false; endJoy(); } });
 
+    var pressControl = function (k, e) {
+        if (window.SMA.isEditingLayout || window.SMA.myRole === 'spec') return;
+        try { if (e && e.cancelable) e.preventDefault(); } catch (err) { }
+        window.SMA.myKeys[k] = true;
+        if (window.SMA.gameRunning) {
+            if (window.SMA.isHost && window.SMA.pOne) {
+                if (k === 'jump') window.SMA.pOne.triggerJump(window.SMA.myKeys);
+                if (k === 'attack') window.SMA.pOne.startCharge();
+                if (k === 'grab') {
+                    var target = null; var minDist = Infinity;
+                    window.SMA.players.forEach(function (p) {
+                        if (p === window.SMA.pOne || p.stocks <= 0) return;
+                        var d = Math.abs(p.x - window.SMA.pOne.x);
+                        if (d < minDist) { minDist = d; target = p; }
+                    });
+                    window.SMA.pOne.tryGrab(target);
+                }
+            }
+        }
+        if (window.SMA.isGravity && window.SMA.gravityUsePeerInMatch) {
+            if (k === 'jump') window.SMA.sendGravityInput({ ...window.SMA.myKeys, triggerJump: true });
+            if (k === 'attack') window.SMA.sendGravityInput({ ...window.SMA.myKeys, triggerStartCharge: true });
+            if (k === 'grab') window.SMA.sendGravityInput({ ...window.SMA.myKeys, triggerGrab: true });
+        } else if (window.SMA.netConn && window.SMA.netConn.open) {
+            if (k === 'jump') window.SMA.netConn.send({ type: 'input', keys: { ...window.SMA.myKeys, triggerJump: true } });
+            if (k === 'attack') window.SMA.netConn.send({ type: 'input', keys: { ...window.SMA.myKeys, triggerStartCharge: true } });
+            if (k === 'grab') window.SMA.netConn.send({ type: 'input', keys: { ...window.SMA.myKeys, triggerGrab: true } });
+        }
+    };
+    var releaseControl = function (k, e) {
+        if (window.SMA.isEditingLayout || window.SMA.myRole === 'spec') return;
+        try { if (e && e.cancelable) e.preventDefault(); } catch (err) { }
+        window.SMA.myKeys[k] = false;
+        var type = 'NEUTRAL';
+        if (window.SMA.myKeys.up) type = 'UP';
+        else if (window.SMA.myKeys.down) type = 'DOWN';
+        else if (window.SMA.myKeys.left || window.SMA.myKeys.right) type = 'SIDE';
+        if (window.SMA.gameRunning && window.SMA.isHost && window.SMA.pOne) {
+            if (k === 'attack') window.SMA.pOne.releaseAttack(type);
+        }
+        if (k === 'attack') {
+            if (window.SMA.isGravity && window.SMA.gravityUsePeerInMatch) window.SMA.sendGravityInput({ ...window.SMA.myKeys, triggerReleaseAttack: true, attackType: type });
+            else if (window.SMA.netConn && window.SMA.netConn.open) window.SMA.netConn.send({ type: 'input', keys: { ...window.SMA.myKeys, triggerReleaseAttack: true, attackType: type } });
+        }
+    };
     var bind = function (id, k) {
         var el = g(id);
         var d = function (e) {
             if (window.SMA.isEditingLayout || window.SMA.myRole === 'spec') return;
-            try { if (e.cancelable) e.preventDefault(); } catch (err) { } window.SMA.myKeys[k] = true;
-            if (window.SMA.gameRunning) {
-                if (window.SMA.isHost && window.SMA.pOne) {
-                    if (k === 'jump') window.SMA.pOne.triggerJump(window.SMA.myKeys);
-                    if (k === 'attack') window.SMA.pOne.startCharge();
-                    if (k === 'grab') {
-                        var target = null; var minDist = Infinity;
-                        window.SMA.players.forEach(function (p) {
-                            if (p === window.SMA.pOne || p.stocks <= 0) return;
-                            var d = Math.abs(p.x - window.SMA.pOne.x);
-                            if (d < minDist) { minDist = d; target = p; }
-                        });
-                        window.SMA.pOne.tryGrab(target);
-                    }
-                }
-            }
-            if (window.SMA.isGravity && window.SMA.gravityUsePeerInMatch) {
-                if (k === 'jump') window.SMA.sendGravityInput({ ...window.SMA.myKeys, triggerJump: true });
-                if (k === 'attack') window.SMA.sendGravityInput({ ...window.SMA.myKeys, triggerStartCharge: true });
-                if (k === 'grab') window.SMA.sendGravityInput({ ...window.SMA.myKeys, triggerGrab: true });
-            } else if (window.SMA.netConn && window.SMA.netConn.open) {
-                if (k === 'jump') window.SMA.netConn.send({ type: 'input', keys: { ...window.SMA.myKeys, triggerJump: true } });
-                if (k === 'attack') window.SMA.netConn.send({ type: 'input', keys: { ...window.SMA.myKeys, triggerStartCharge: true } });
-                if (k === 'grab') window.SMA.netConn.send({ type: 'input', keys: { ...window.SMA.myKeys, triggerGrab: true } });
-            }
+            pressControl(k, e);
         };
         var u = function (e) {
             if (window.SMA.isEditingLayout || window.SMA.myRole === 'spec') return;
-            try { if (e.cancelable) e.preventDefault(); } catch (err) { } window.SMA.myKeys[k] = false; var type = 'NEUTRAL'; if (window.SMA.myKeys.up) type = 'UP'; else if (window.SMA.myKeys.down) type = 'DOWN'; else if (window.SMA.myKeys.left || window.SMA.myKeys.right) type = 'SIDE'; if (window.SMA.gameRunning && window.SMA.isHost && window.SMA.pOne) { if (k === 'attack') window.SMA.pOne.releaseAttack(type); } if (k === 'attack') { if (window.SMA.isGravity && window.SMA.gravityUsePeerInMatch) window.SMA.sendGravityInput({ ...window.SMA.myKeys, triggerReleaseAttack: true, attackType: type }); else if (window.SMA.netConn && window.SMA.netConn.open) window.SMA.netConn.send({ type: 'input', keys: { ...window.SMA.myKeys, triggerReleaseAttack: true, attackType: type } }); }
+            releaseControl(k, e);
         };
         try { el.addEventListener('touchstart', d, { passive: false }); } catch (e) { el.addEventListener('touchstart', d); }
         try { el.addEventListener('touchend', u, { passive: false }); } catch (e) { el.addEventListener('touchend', u); }
@@ -373,20 +394,34 @@ window.onload = function () {
     };
     bind('btn-jump', 'jump'); bind('btn-attack', 'attack'); bind('btn-grab', 'grab'); bind('btn-shield', 'shield');
     var keyDirMap = { KeyA: 'left', KeyD: 'right', KeyW: 'up', KeyS: 'down' };
+    var keyButtonMap = { Space: 'jump' };
+    var getKeyButton = function (e) {
+        if (keyButtonMap[e.code]) return keyButtonMap[e.code];
+        if (e.key === ' ' || e.key === 'Spacebar' || e.key === 'Space') return 'jump';
+        return null;
+    };
     var shouldUseGameKeys = function (e) {
         if (window.SMA.isEditingLayout || window.SMA.myRole === 'spec') return false;
         var t = e.target;
         if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return false;
-        return !!keyDirMap[e.code];
+        return !!(keyDirMap[e.code] || getKeyButton(e));
     };
     window.addEventListener('keydown', function (e) {
         if (!shouldUseGameKeys(e)) return;
-        window.SMA.myKeys[keyDirMap[e.code]] = true;
+        if (keyDirMap[e.code]) window.SMA.myKeys[keyDirMap[e.code]] = true;
+        else {
+            var keyButton = getKeyButton(e);
+            if (keyButton && !e.repeat) pressControl(keyButton, e);
+        }
         e.preventDefault();
     });
     window.addEventListener('keyup', function (e) {
         if (!shouldUseGameKeys(e)) return;
-        window.SMA.myKeys[keyDirMap[e.code]] = false;
+        if (keyDirMap[e.code]) window.SMA.myKeys[keyDirMap[e.code]] = false;
+        else {
+            var keyButton = getKeyButton(e);
+            if (keyButton) releaseControl(keyButton, e);
+        }
         e.preventDefault();
     });
     window.addEventListener('resize', function () {
