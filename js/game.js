@@ -56,10 +56,10 @@ window.SMA.drawTrident = function (ctx, x, y, angleDeg, color, tipColor) {
 };
 window.SMA.HAMMER_WEAPON_ASSET = {
     key: 'hammer_weapon',
-    src: 'assets/characters/hammer/hammer_weapon.png?v=2',
-    drawH: 108,
+    src: 'assets/characters/hammer/hammer_weapon.png?v=4',
+    drawH: 66,
     gripXRatio: 0.5,
-    gripYRatio: 0.58
+    gripYRatio: 0.1
 };
 window.SMA.drawVectorHammer = function (ctx, x, y, angleDeg, color, headColor) {
     ctx.save();
@@ -75,6 +75,21 @@ window.SMA.drawVectorHammer = function (ctx, x, y, angleDeg, color, headColor) {
     ctx.restore();
 };
 window.SMA.drawHammer = function (ctx, x, y, angleDeg, color, headColor) {
+    var asset = window.SMA.HAMMER_WEAPON_ASSET;
+    var img = asset && window.SMA.getSpriteAsset ? window.SMA.getSpriteAsset(asset.key, asset.src) : null;
+    if (img && img.complete && img.naturalWidth) {
+        var drawH = asset.drawH || 60;
+        var drawW = drawH * img.naturalWidth / img.naturalHeight;
+        var gripX = drawW * (asset.gripXRatio || 0.5);
+        var gripY = drawH * (asset.gripYRatio || 0.1);
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(angleDeg * Math.PI / 180);
+        ctx.imageSmoothingEnabled = true;
+        ctx.drawImage(img, -gripX, -gripY, drawW, drawH);
+        ctx.restore();
+        return;
+    }
     window.SMA.drawVectorHammer(ctx, x, y, angleDeg, color, headColor);
 };
 
@@ -1301,9 +1316,9 @@ window.SMA.Fighter.prototype.handleAttackFrame = function () {
     } else {
         this.superArmor = false;
     }
-    // Explicit Armor for Hammer NA - Only during HITBOX (18-22)
+    // Hammer neutral armor matches the visible slam hit frames.
     if (this.charId === 'hammer' && this.currentAttackType === 'NEUTRAL') {
-        if (this.stateTimer >= 18 && this.stateTimer <= 22) this.superArmor = true;
+        if (this.stateTimer >= 15 && this.stateTimer <= 21) this.superArmor = true;
         else this.superArmor = false;
     }
 
@@ -1843,6 +1858,15 @@ window.SMA.Fighter.prototype.handleAttackFrame = function () {
                 this.hitbox.x = this.x + (this.facingRight ? 20 : -20 - this.hitbox.w) + this.w / 2;
             }
             this.hitbox.y = this.y - 10;
+        } else if (this.charId === 'hammer' && this.currentAttackType === 'NEUTRAL') {
+            if (this.stateTimer >= 15 && this.stateTimer <= 21) {
+                this.hitbox.active = true;
+                this.hitbox.w = 100 * scale; this.hitbox.h = 100 * scale;
+                this.hitbox.x = this.x + (this.facingRight ? 20 : -20 - this.hitbox.w) + this.w / 2;
+                this.hitbox.y = this.y - 20;
+                this.superArmor = true;
+            } else { this.hitbox.active = false; }
+            return;
         } else if (this.currentAttackType === 'NEUTRAL') {
             this.hitbox.w = 60 * scale; this.hitbox.h = 30 * scale;
             if (this.charId === 'sword') {
@@ -1852,18 +1876,7 @@ window.SMA.Fighter.prototype.handleAttackFrame = function () {
                 this.hitbox.x = this.x + (this.facingRight ? 25 : -25 - this.hitbox.w) + this.w / 2;
             }
             this.hitbox.y = this.y + 25;
-        } else if ((this.currentAttackType === 'DOWN' || this.currentAttackType === 'AIR_DOWN') && this.charId === 'mage') { if (this.charId === 'mage') { } else { this.hitbox.w = 80 * scale; this.hitbox.h = 30 * scale; this.hitbox.x = this.x + (this.facingRight ? -10 : -40); this.hitbox.y = this.y + 40; } } else if (this.currentAttackType === 'NEUTRAL' && this.charId === 'brawler') { this.hitbox.w = 40; this.hitbox.h = 30; this.hitbox.x = this.x + (this.facingRight ? 25 : -65); this.hitbox.y = this.y + 25; } else if (this.charId === 'hammer' && this.currentAttackType === 'NEUTRAL') {
-            // Hammer Ground NA Hitbox - 15-21 (SWING PHASE)
-            if (this.stateTimer >= 15 && this.stateTimer <= 21) {
-                this.hitbox.active = true;
-                // Hitbox covers ARC in front
-                this.hitbox.w = 100 * scale; this.hitbox.h = 100 * scale;
-                this.hitbox.x = this.x + (this.facingRight ? 20 : -20 - this.hitbox.w) + this.w / 2;
-                this.hitbox.y = this.y - 20; // Starts from head height, covers down to feet
-                this.superArmor = true;
-            } else { this.hitbox.active = false; }
-            return; // Skip default box logic
-        } else if (this.charId === 'hammer' && this.currentAttackType === 'AIR_SIDE') {
+        } else if ((this.currentAttackType === 'DOWN' || this.currentAttackType === 'AIR_DOWN') && this.charId === 'mage') { if (this.charId === 'mage') { } else { this.hitbox.w = 80 * scale; this.hitbox.h = 30 * scale; this.hitbox.x = this.x + (this.facingRight ? -10 : -40); this.hitbox.y = this.y + 40; } } else if (this.currentAttackType === 'NEUTRAL' && this.charId === 'brawler') { this.hitbox.w = 40; this.hitbox.h = 30; this.hitbox.x = this.x + (this.facingRight ? 25 : -65); this.hitbox.y = this.y + 25; } else if (this.charId === 'hammer' && this.currentAttackType === 'AIR_SIDE') {
             // Vertical Chop
             if (this.stateTimer >= 10 && this.stateTimer <= 14) {
                 this.hitbox.active = true;
@@ -3178,7 +3191,7 @@ window.SMA.Fighter.prototype.getHammerChibiFrame = function (anim) {
     var p = null;
     if (this.actionState === 'ATTACK' && this.currentAttack) {
         if (this.charId === 'hammer' && this.currentAttackType === 'NEUTRAL') {
-            if (this.stateTimer < 9) return 0;
+            if (this.stateTimer < 10) return 0;
             if (this.stateTimer < 15) return Math.min(1, frames - 1);
             if (this.stateTimer < 22) return Math.min(2, frames - 1);
             return Math.min(3, frames - 1);
@@ -3285,12 +3298,20 @@ window.SMA.Fighter.prototype.drawHammerChibiWeapon = function (ctx, cx, drawFoot
             ctx.restore();
             return;
         } else if (this.currentAttackType === 'NEUTRAL') {
-            if (this.stateTimer < 14) {
+            var neutralT = this.stateTimer;
+            if (neutralT < 15) {
                 angleDeg = 180;
-            } else if (this.stateTimer < 22) {
-                angleDeg = 180 + (190 * ((this.stateTimer - 14) / 8));
+                handX = cx + sign * 10 * s;
+                handY = drawFootY - 42 * s;
+            } else if (neutralT < 22) {
+                var neutralU = Math.max(0, Math.min(1, (neutralT - 14) / 7));
+                angleDeg = 180 + (190 * neutralU);
+                handX = cx + sign * (10 + 10 * neutralU) * s;
+                handY = drawFootY - (42 - 14 * neutralU) * s;
             } else {
                 angleDeg = 10;
+                handX = cx + sign * 20 * s;
+                handY = drawFootY - 28 * s;
             }
         } else if (this.currentAttack.type === 'hammer_spin_air') {
             angleDeg = 0;
@@ -3370,6 +3391,10 @@ window.SMA.Fighter.prototype.drawHammerChibiWeapon = function (ctx, cx, drawFoot
             else if (this.currentAttack.type === 'hammer_spin_air') angleDeg = 0;
             else angleDeg = -angleDeg;
         }
+    } else {
+        handX = cx + sign * 2 * s;
+        handY = drawFootY - 32 * s;
+        angleDeg = this.facingRight ? -125 : 125;
     }
 
     window.SMA.drawHammer(ctx, handX, handY, angleDeg, '#636e72');
@@ -4159,12 +4184,11 @@ window.SMA.Fighter.prototype.draw = function (ctx) {
                         var headColor = isCharged ? "white" : null;
                         var glow = isCharged ? (this.chargePower - 1.0) * 50 + 10 : 0;
                         if (glow) { ctx.shadowBlur = glow; ctx.shadowColor = "white"; }
-                        var holdAngle = 45;
-                        if (!this.facingRight) holdAngle = -45;
+                        var holdAngle = this.facingRight ? 135 : -135;
 
                         var jitter = (Math.random() - 0.5) * 5;
-                        var handX = cx + (this.facingRight ? 5 : -5);
-                        var handY = this.y + 25;
+                        var handX = cx + (this.facingRight ? 8 : -8);
+                        var handY = this.y + 27;
                         window.SMA.drawHammer(ctx, handX, handY, holdAngle + jitter, "#636e72", headColor);
                         ctx.restore();
                         drawn = true;
@@ -4210,14 +4234,11 @@ window.SMA.Fighter.prototype.draw = function (ctx) {
                             shouldDraw = false; // Skip default hammer logic below
                             }
                         } else if (this.currentAttackType === 'NEUTRAL') {
-                            // GROUND: New Wind up (Straight Up) then Slam
-                            // 0-14 frames: Instant hold UP (180)
-                            // 14-22 frames: Fast Slam (180 -> 10)
-                            // 22-45 frames: Hold Down (10)
-                            if (this.stateTimer < 14) {
+                            // Ground neutral: hold up, then slam during the hit frames.
+                            if (this.stateTimer < 15) {
                                 angleDeg = 180; // Instant Hold Up
                             } else if (this.stateTimer < 22) {
-                                var subP = (this.stateTimer - 14) / 8;
+                                var subP = Math.max(0, Math.min(1, (this.stateTimer - 14) / 7));
                                 angleDeg = 180 + (190 * subP); // 180 -> 370 (10 deg)
                             } else {
                                 angleDeg = 10; // Hold at bottom
@@ -4261,8 +4282,8 @@ window.SMA.Fighter.prototype.draw = function (ctx) {
                                 else if (this.currentAttack.type === 'hammer_spin_air') angleDeg = 0; // Keep Down
                                 else angleDeg = -angleDeg;
                             }
-                            var handX = cx + (this.facingRight ? 15 : -15);
-                            var handY = this.y + 30;
+                            var handX = cx + (this.facingRight ? 9 : -9);
+                            var handY = this.y + 26;
                             window.SMA.drawHammer(ctx, handX, handY, angleDeg, "#636e72");
                             hammerDrawn = true;
                         }
@@ -4270,10 +4291,9 @@ window.SMA.Fighter.prototype.draw = function (ctx) {
                     }
 
                     if (!hammerDrawn && !drawn) {
-                        var angleDeg = 30;
-                        if (!this.facingRight) angleDeg = -30;
-                        var handX = cx + (this.facingRight ? 15 : -15);
-                        var handY = this.y + 30;
+                        var angleDeg = this.facingRight ? -125 : 125;
+                        var handX = cx + (this.facingRight ? 2 : -2);
+                        var handY = this.y + 38;
                         window.SMA.drawHammer(ctx, handX, handY, angleDeg, "#636e72");
                     }
                 }
