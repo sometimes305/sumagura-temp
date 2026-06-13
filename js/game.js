@@ -13,7 +13,14 @@ window.SMA.drawComets = function (ctx) { for (var i = window.SMA.comets.length -
 window.SMA.createParticles = function (x, y, n, c) { if (window.SMA.isHost && window.SMA.isOnline) window.SMA.syncEvents.push({ type: 'part', x: x, y: y, n: n, c: c }); for (var i = 0; i < n; i++) window.SMA.particles.push({ x: x, y: y, vx: (Math.random() - 0.5) * 10, vy: (Math.random() - 0.5) * 10, color: c, l: 20 }); };
 window.SMA.updateParticles = function (ctx) { for (var i = window.SMA.particles.length - 1; i >= 0; i--) { var p = window.SMA.particles[i]; ctx.fillStyle = p.color; ctx.globalAlpha = p.life / 30; ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1; } };
 window.SMA.mageVfx = window.SMA.mageVfx || [];
-window.SMA.drawTrident = function (ctx, x, y, angleDeg, color, tipColor) {
+window.SMA.SPEAR_WEAPON_ASSET = {
+    key: 'spear_weapon_v4',
+    src: 'assets/characters/spear/spear_weapon.png?v=4',
+    drawW: 110,
+    gripXRatio: 0.18,
+    gripYRatio: 0.52
+};
+window.SMA.drawVectorTrident = function (ctx, x, y, angleDeg, color, tipColor) {
     ctx.save(); ctx.translate(x, y); ctx.rotate(angleDeg * Math.PI / 180); ctx.fillStyle = color; ctx.fillRect(-20, -3, 80, 6); ctx.fillRect(55, -12, 6, 24); if (tipColor) ctx.fillStyle = tipColor; ctx.beginPath(); ctx.moveTo(60, 0); ctx.lineTo(90, 0); ctx.lineTo(85, 4); ctx.lineTo(85, -4); ctx.fill();
     // Side prongs (curved)
     ctx.beginPath();
@@ -22,6 +29,29 @@ window.SMA.drawTrident = function (ctx, x, y, angleDeg, color, tipColor) {
     ctx.beginPath();
     ctx.moveTo(60, 10); ctx.quadraticCurveTo(70, 15, 80, 15); ctx.lineTo(80, 12); ctx.quadraticCurveTo(70, 12, 60, 8);
     ctx.fill();
+    ctx.restore();
+};
+window.SMA.drawTrident = function (ctx, x, y, angleDeg, color, tipColor) {
+    var asset = window.SMA.SPEAR_WEAPON_ASSET;
+    var img = asset && window.SMA.getSpriteAsset ? window.SMA.getSpriteAsset(asset.key, asset.src) : null;
+    if (!img || !img.complete || !img.naturalWidth) {
+        window.SMA.drawVectorTrident(ctx, x, y, angleDeg, color, tipColor);
+        return;
+    }
+
+    var drawW = asset.drawW || 132;
+    var drawH = drawW * img.naturalHeight / img.naturalWidth;
+    var gripX = drawW * (asset.gripXRatio || 0.18);
+    var gripY = drawH * (asset.gripYRatio || 0.5);
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angleDeg * Math.PI / 180);
+    ctx.imageSmoothingEnabled = true;
+    if (tipColor) {
+        ctx.shadowBlur = 12;
+        ctx.shadowColor = tipColor;
+    }
+    ctx.drawImage(img, -gripX, -gripY, drawW, drawH);
     ctx.restore();
 };
 window.SMA.drawHammer = function (ctx, x, y, angleDeg, color, headColor) {
@@ -1838,26 +1868,7 @@ window.SMA.Fighter.prototype.handleAttackFrame = function () {
     }
 };
 window.SMA.Fighter.prototype.drawTrident = function (ctx, x, y, angleDeg, color, tipColor) {
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.rotate(angleDeg * Math.PI / 180);
-    ctx.fillStyle = color;
-    // DRAW RELATIVE TO GRIP (at 0,0)
-    // Shaft extends BACK (-20) and FORWARD (+60)
-    ctx.fillRect(-20, -3, 80, 6);
-    // Crossbar near tip
-    ctx.fillRect(55, -12, 6, 24);
-    // Center prong
-    if (tipColor) ctx.fillStyle = tipColor; // Apply tip color
-    ctx.beginPath(); ctx.moveTo(60, 0); ctx.lineTo(90, 0); ctx.lineTo(85, 4); ctx.lineTo(85, -4); ctx.fill();
-    // Side prongs (curved)
-    ctx.beginPath();
-    ctx.moveTo(60, -10); ctx.quadraticCurveTo(70, -15, 80, -15); ctx.lineTo(80, -12); ctx.quadraticCurveTo(70, -12, 60, -8);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.moveTo(60, 10); ctx.quadraticCurveTo(70, 15, 80, 15); ctx.lineTo(80, 12); ctx.quadraticCurveTo(70, 12, 60, 8);
-    ctx.fill();
-    ctx.restore();
+    window.SMA.drawTrident(ctx, x, y, angleDeg, color, tipColor);
 };
 window.SMA.Fighter.prototype.drawSword = function (ctx, cx, cy, angleDeg) {
     if (this.charId === 'mage') { ctx.save(); ctx.translate(cx, cy); ctx.rotate(angleDeg * Math.PI / 180); ctx.fillStyle = "#8e44ad"; ctx.fillRect(-2, -5, 4, 15); var orbColor = this.chargePower > 1.2 ? '#fff' : "#a29bfe"; if (this.chargePower > 1.2) { ctx.shadowBlur = 10; ctx.shadowColor = "#fff"; } ctx.fillStyle = orbColor; ctx.beginPath(); ctx.arc(0, -60, 8, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0; ctx.fillStyle = "#555"; ctx.fillRect(-2, -55, 4, 50); ctx.restore(); } else if (this.charId === 'angel') {
@@ -2025,6 +2036,13 @@ window.SMA.SWORD_CHIBI_RENDER_SCALE = 0.78;
 window.SMA.SWORD_CHIBI_BLADE_LEN = 72;
 window.SMA.SWORD_CHIBI_BLADE_WIDTH_SCALE = 0.78;
 window.SMA.SWORD_CHIBI_REACH_SCALE = 0.9;
+window.SMA.SWORD_CHIBI_WEAPON_ASSET = {
+    key: 'sword_chibi_weapon',
+    src: 'assets/characters/sword/sword_weapon.png?v=1',
+    drawH: 92,
+    gripXRatio: 0.5,
+    gripYRatio: 0.73
+};
 window.SMA.SWORD_CHIBI_ANIMS = {
     idle: { key: 'sword_chibi_idle', src: 'assets/characters/sword/chibi_idle_sheet.png?v=14', frames: 4, frameMs: 160 },
     run: { key: 'sword_chibi_run', src: 'assets/characters/sword/chibi_run_sheet.png?v=14', frames: 4, frameMs: 70 },
@@ -2058,6 +2076,8 @@ window.SMA.preloadSwordChibiSprites = function () {
             window.SMA.getSpriteAsset(anims[k].key, anims[k].src);
         }
     }
+    var weapon = window.SMA.SWORD_CHIBI_WEAPON_ASSET;
+    if (weapon) window.SMA.getSpriteAsset(weapon.key, weapon.src);
 };
 window.SMA.resolveSwordChibiAnim = function (fighter) {
     var A = window.SMA.SWORD_CHIBI_ANIMS;
@@ -2293,6 +2313,26 @@ window.SMA.Fighter.prototype.drawSwordChibiWeapon = function (ctx, cx, motion) {
         ctx.stroke();
         ctx.restore();
     }
+    var swordAsset = window.SMA.SWORD_CHIBI_WEAPON_ASSET;
+    var swordImg = swordAsset && window.SMA.getSpriteAsset ? window.SMA.getSpriteAsset(swordAsset.key, swordAsset.src) : null;
+    if (swordImg && swordImg.complete && swordImg.naturalWidth) {
+        var swordDrawH = swordAsset.drawH || (bladeLen + 26);
+        var swordDrawW = swordDrawH * swordImg.naturalWidth / swordImg.naturalHeight;
+        var swordGripX = swordDrawW * (swordAsset.gripXRatio || 0.5);
+        var swordGripY = swordDrawH * (swordAsset.gripYRatio || 0.72);
+        ctx.save();
+        ctx.translate(pose.handX, pose.handY);
+        ctx.rotate(pose.angleDeg * Math.PI / 180);
+        ctx.scale(bladeWidthScale, scaleY);
+        ctx.imageSmoothingEnabled = true;
+        if (this.chargePower > 1.2) {
+            ctx.shadowBlur = 12;
+            ctx.shadowColor = '#ffffff';
+        }
+        ctx.drawImage(swordImg, -swordGripX, -swordGripY, swordDrawW, swordDrawH);
+        ctx.restore();
+        return;
+    }
     ctx.save();
     ctx.translate(pose.handX, pose.handY);
     ctx.rotate(pose.angleDeg * Math.PI / 180);
@@ -2426,6 +2466,14 @@ window.SMA.MAGE_CHIBI_BASELINE = 116;
 window.SMA.MAGE_CHIBI_RENDER_SCALE = 0.74;
 window.SMA.MAGE_CHIBI_STAFF_WEIGHT = 1.05;
 window.SMA.MAGE_CHIBI_STAFF_ORB_SCALE = 1.0;
+window.SMA.MAGE_CHIBI_STAFF_ASSET = {
+    key: 'mage_chibi_staff_weapon',
+    src: 'assets/characters/mage/mage_staff.png?v=1',
+    gripXRatio: 0.5,
+    topYRatio: 0.18,
+    bottomYRatio: 0.93,
+    minDrawH: 42
+};
 window.SMA.MAGE_CHIBI_ANIMS = {
     idle: { key: 'mage_chibi_idle', src: 'assets/characters/mage/mage_idle_sheet.png?v=2', frames: 4, frameMs: 170 },
     run: { key: 'mage_chibi_run', src: 'assets/characters/mage/mage_run_sheet.png?v=2', frames: 4, frameMs: 75 },
@@ -2459,6 +2507,8 @@ window.SMA.preloadMageChibiSprites = function () {
             window.SMA.getSpriteAsset(anims[k].key, anims[k].src);
         }
     }
+    var staff = window.SMA.MAGE_CHIBI_STAFF_ASSET;
+    if (staff) window.SMA.getSpriteAsset(staff.key, staff.src);
 };
 window.SMA.resolveMageChibiAnim = function (fighter) {
     var A = window.SMA.MAGE_CHIBI_ANIMS;
@@ -2560,6 +2610,36 @@ window.SMA.Fighter.prototype.getMageChibiStaffPose = function (cx) {
 
     return { sign: sign, scale: spriteScale, handX: handX, handY: handY, topX: topX, topY: topY, bottomX: bottomX, bottomY: bottomY, glow: glow };
 };
+window.SMA.Fighter.prototype.drawMageChibiStaffImage = function (ctx, pose) {
+    if (!pose) return false;
+    var asset = window.SMA.MAGE_CHIBI_STAFF_ASSET;
+    var img = asset && window.SMA.getSpriteAsset ? window.SMA.getSpriteAsset(asset.key, asset.src) : null;
+    if (!img || !img.complete || !img.naturalWidth) return false;
+
+    var dx = pose.bottomX - pose.topX;
+    var dy = pose.bottomY - pose.topY;
+    var dist = Math.sqrt(dx * dx + dy * dy);
+    var topRatio = asset.topYRatio || 0.18;
+    var bottomRatio = asset.bottomYRatio || 0.93;
+    var drawH = Math.max(asset.minDrawH || 42, dist / Math.max(0.01, bottomRatio - topRatio));
+    var drawW = drawH * img.naturalWidth / img.naturalHeight;
+    var gripX = drawW * (asset.gripXRatio || 0.5);
+    var gripY = drawH * topRatio;
+    var angle = Math.atan2(-dx, dy);
+    var orbColor = this.chargePower > 1.2 ? '#ffffff' : '#73f1bf';
+
+    ctx.save();
+    ctx.translate(pose.topX, pose.topY);
+    ctx.rotate(angle);
+    ctx.imageSmoothingEnabled = true;
+    if (pose.glow > 0.05) {
+        ctx.shadowBlur = 10 + pose.glow * 12;
+        ctx.shadowColor = orbColor;
+    }
+    ctx.drawImage(img, -gripX, -gripY, drawW, drawH);
+    ctx.restore();
+    return true;
+};
 window.SMA.Fighter.prototype.drawMageChibiStaffBack = function (ctx, pose) {
     if (!pose) return;
     var s = pose.scale;
@@ -2654,8 +2734,10 @@ window.SMA.Fighter.prototype.drawMageChibiSprite = function (ctx, cx) {
     ctx.restore();
     var hideStaff = this.actionState === 'LEDGE' || this.actionState === 'LEDGE_UP' || this.actionState === 'LEDGE_ROLL' || this.actionState === 'GRAB_ATTEMPT' || this.actionState === 'GRABBING';
     if (!hideStaff) {
-        this.drawMageChibiStaffBack(ctx, staffPose);
-        this.drawMageChibiStaffFront(ctx, staffPose);
+        if (!this.drawMageChibiStaffImage(ctx, staffPose)) {
+            this.drawMageChibiStaffBack(ctx, staffPose);
+            this.drawMageChibiStaffFront(ctx, staffPose);
+        }
     }
 
     if (this.actionState === 'SHIELD') {
@@ -2995,9 +3077,248 @@ window.SMA.Fighter.prototype.drawBrawlerChibiSprite = function (ctx, cx) {
     }
     return true;
 };
+window.SMA.SPEAR_CHIBI_FRAME = 128;
+window.SMA.SPEAR_CHIBI_FRAME_W = 224;
+window.SMA.SPEAR_CHIBI_BASELINE = 118;
+window.SMA.SPEAR_CHIBI_RENDER_SCALE = 0.8;
+window.SMA.SPEAR_CHIBI_ANIMS = {
+    idle: { key: 'spear_chibi_idle', src: 'assets/characters/spear/spear_idle_sheet.png?v=3', frames: 4, frameMs: 240, baseline: 118 },
+    run: { key: 'spear_chibi_run', src: 'assets/characters/spear/spear_run_sheet.png?v=3', frames: 4, frameMs: 62, baseline: 118 },
+    jump: { key: 'spear_chibi_jump', src: 'assets/characters/spear/spear_jump_sheet.png?v=3', frames: 2, frameMs: 180, baseline: 118 },
+    fall: { key: 'spear_chibi_fall', src: 'assets/characters/spear/spear_fall_sheet.png?v=4', frames: 1, frameMs: 190, baseline: 118 },
+    hurt: { key: 'spear_chibi_hurt', src: 'assets/characters/spear/spear_hurt_sheet.png?v=2', frames: 4, frameMs: 80, baseline: 118 },
+    charge: { key: 'spear_chibi_charge', src: 'assets/characters/spear/spear_charge_sheet.png?v=2', frames: 4, frameMs: 90, baseline: 118 },
+    attackNeutral: { key: 'spear_chibi_attack_neutral', src: 'assets/characters/spear/spear_attack_neutral_sheet.png?v=2', frames: 4, frameMs: 64, baseline: 118 },
+    attackSide: { key: 'spear_chibi_attack_side', src: 'assets/characters/spear/spear_attack_side_sheet.png?v=2', frames: 6, frameMs: 58, baseline: 118 },
+    attackUp: { key: 'spear_chibi_attack_up', src: 'assets/characters/spear/spear_attack_up_sheet.png?v=2', frames: 6, frameMs: 58, baseline: 118 },
+    attackDown: { key: 'spear_chibi_attack_down', src: 'assets/characters/spear/spear_attack_down_sheet.png?v=2', frames: 6, frameMs: 58, baseline: 118 },
+    airNeutral: { key: 'spear_chibi_air_neutral', src: 'assets/characters/spear/spear_air_neutral_sheet.png?v=2', frames: 4, frameMs: 58, baseline: 118 },
+    airSide: { key: 'spear_chibi_air_side', src: 'assets/characters/spear/spear_air_side_sheet.png?v=2', frames: 6, frameMs: 58, baseline: 118 },
+    airUp: { key: 'spear_chibi_air_up', src: 'assets/characters/spear/spear_air_up_sheet.png?v=2', frames: 6, frameMs: 52, baseline: 118 },
+    airDown: { key: 'spear_chibi_air_down', src: 'assets/characters/spear/spear_air_down_sheet.png?v=2', frames: 6, frameMs: 58, baseline: 118 },
+    grab: { key: 'spear_chibi_grab', src: 'assets/characters/spear/spear_grab_sheet.png?v=2', frames: 4, frameMs: 62, baseline: 118 },
+    grabHold: { key: 'spear_chibi_grab_hold', src: 'assets/characters/spear/spear_grab_hold_sheet.png?v=2', frames: 4, frameMs: 100, baseline: 118 },
+    throw: { key: 'spear_chibi_throw', src: 'assets/characters/spear/spear_throw_sheet.png?v=2', frames: 4, frameMs: 68, baseline: 118 },
+    dodge: { key: 'spear_chibi_dodge', src: 'assets/characters/spear/spear_dodge_sheet.png?v=2', frames: 4, frameMs: 55, baseline: 118 },
+    ledge: { key: 'spear_chibi_ledge', src: 'assets/characters/spear/spear_ledge_sheet.png?v=2', frames: 4, frameMs: 110, baseline: 118 }
+};
+for (var spearChibiAnimKey in window.SMA.SPEAR_CHIBI_ANIMS) {
+    if (Object.prototype.hasOwnProperty.call(window.SMA.SPEAR_CHIBI_ANIMS, spearChibiAnimKey)) {
+        window.SMA.SPEAR_CHIBI_ANIMS[spearChibiAnimKey].frameW = window.SMA.SPEAR_CHIBI_FRAME_W;
+    }
+}
+window.SMA.preloadSpearChibiSprites = function () {
+    var anims = window.SMA.SPEAR_CHIBI_ANIMS || {};
+    for (var k in anims) {
+        if (Object.prototype.hasOwnProperty.call(anims, k)) {
+            window.SMA.getSpriteAsset(anims[k].key, anims[k].src);
+        }
+    }
+    var weapon = window.SMA.SPEAR_WEAPON_ASSET;
+    if (weapon) window.SMA.getSpriteAsset(weapon.key, weapon.src);
+};
+window.SMA.resolveSpearChibiAnim = function (fighter) {
+    var A = window.SMA.SPEAR_CHIBI_ANIMS;
+    if (!A || !fighter || fighter.charId !== 'spear') return null;
+    if (fighter.actionState === 'STUN' || fighter.actionState === 'GRABBED') return A.hurt;
+    if (fighter.actionState === 'CHARGE') return A.charge;
+    if (fighter.actionState === 'DODGE' || fighter.actionState === 'LEDGE_ROLL') return A.dodge;
+    if (fighter.actionState === 'LEDGE' || fighter.actionState === 'LEDGE_UP') return A.ledge;
+    if (fighter.actionState === 'LEDGE_ATK') return A.attackSide;
+    if (fighter.actionState === 'GRAB_ATTEMPT') return A.grab;
+    if (fighter.actionState === 'GRABBING') return A.grabHold || A.throw;
+    if (fighter.actionState === 'THROWING') return A.throw;
+    if (fighter.actionState === 'ATTACK') {
+        if (fighter.currentAttackType === 'SIDE') return A.attackSide;
+        if (fighter.currentAttackType === 'UP') return A.attackUp;
+        if (fighter.currentAttackType === 'DOWN') return A.attackDown;
+        if (fighter.currentAttackType === 'AIR_NEUTRAL') return A.airNeutral;
+        if (fighter.currentAttackType === 'AIR_SIDE') return A.airSide;
+        if (fighter.currentAttackType === 'AIR_UP') return A.airUp;
+        if (fighter.currentAttackType === 'AIR_DOWN') return A.airDown;
+        return A.attackNeutral;
+    }
+    if (!fighter.isGrounded) return fighter.vy < 0 ? A.jump : A.fall;
+    if (Math.abs(fighter.vx) > 0.7) return A.run;
+    return A.idle;
+};
+window.SMA.Fighter.prototype.getSpearChibiFrame = function (anim) {
+    var frames = anim.frames || 1;
+    var p = null;
+    if (this.actionState === 'STUN') {
+        var stunSpeed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+        if (!this.isGrounded || stunSpeed > 4) return Math.min(1, frames - 1);
+        return this.stateTimer > 20 ? Math.min(2, frames - 1) : Math.min(3, frames - 1);
+    }
+    if (this.actionState === 'GRABBED') return Math.min(1, frames - 1);
+    if (this.actionState === 'ATTACK' && this.currentAttack) {
+        p = Math.max(0, Math.min(0.999, this.stateTimer / Math.max(1, this.currentAttack.frames || frames)));
+    } else if (this.actionState === 'GRAB_ATTEMPT') {
+        p = Math.max(0, Math.min(0.999, this.stateTimer / 15));
+    } else if (this.actionState === 'GRABBING') {
+        return Math.floor(Date.now() / (anim.frameMs || 100)) % frames;
+    } else if (this.actionState === 'THROWING') {
+        p = Math.max(0, Math.min(0.999, (15 - this.stateTimer) / 15));
+    } else if (this.actionState === 'LEDGE') {
+        return 0;
+    } else if (this.actionState === 'LEDGE_UP') {
+        if (this.stateTimer > 12) return Math.min(1, frames - 1);
+        if (this.stateTimer > 6) return Math.min(2, frames - 1);
+        return Math.min(3, frames - 1);
+    } else if (this.actionState === 'LEDGE_ATK') {
+        p = Math.max(0, Math.min(0.999, (30 - this.stateTimer) / 30));
+    } else if (this.actionState === 'DODGE' || this.actionState === 'LEDGE_ROLL') {
+        p = Math.max(0, Math.min(0.999, (25 - this.stateTimer) / 25));
+    }
+    if (p !== null) return Math.floor(p * frames);
+    return Math.floor(Date.now() / (anim.frameMs || 100)) % frames;
+};
+window.SMA.Fighter.prototype.getSpearChibiWeaponPose = function (cx, drawFootY) {
+    var sign = this.facingRight ? 1 : -1;
+    var s = window.SMA.SPEAR_CHIBI_RENDER_SCALE || 1;
+    var footY = drawFootY || (this.y + this.h);
+    var handX = cx + sign * 16 * s;
+    var handY = footY - 42 * s;
+    var angleDeg = -78;
+    var draw = true;
+    var progress = 0;
+
+    if (this.actionState === 'CHARGE') {
+        progress = Math.min(1, Math.max(0, this.chargePower - 1));
+        handX = cx - sign * (10 + progress * 2) * s;
+        handY = footY - (43 + progress * 3) * s;
+        angleDeg = -150;
+    } else if (this.actionState === 'LEDGE_ATK') {
+        progress = Math.max(0, Math.min(0.999, (30 - this.stateTimer) / 30));
+        handX = cx + sign * (16 + Math.sin(progress * Math.PI) * 36) * s;
+        handY = footY - (41 + Math.sin(progress * Math.PI) * 5) * s;
+        angleDeg = -22;
+    } else if (this.actionState === 'ATTACK' && this.currentAttack) {
+        progress = Math.max(0, Math.min(0.999, this.stateTimer / Math.max(1, this.currentAttack.frames || 1)));
+        if (this.currentAttackType === 'SIDE' || this.currentAttackType === 'AIR_SIDE') {
+            if (this.stateTimer >= 6) draw = false;
+            handX = cx + sign * (17 + progress * 16) * s;
+            handY = footY - (43 - progress * 2) * s;
+            angleDeg = -32 + progress * 70;
+        } else if (this.currentAttackType === 'UP') {
+            if (this.stateTimer >= 6) draw = false;
+            handX = cx + sign * 11 * s;
+            handY = footY - (54 + Math.sin(progress * Math.PI) * 22) * s;
+            angleDeg = -86 + progress * 54;
+        } else if (this.currentAttackType === 'DOWN') {
+            handX = cx + sign * (10 + progress * 12) * s;
+            handY = progress < 0.32 ? footY - 60 * s : footY - 24 * s;
+            angleDeg = progress < 0.32 ? -88 : 86;
+        } else if (this.currentAttackType === 'NEUTRAL' || this.currentAttackType === 'AIR_NEUTRAL') {
+            var thrust = Math.sin(progress * Math.PI);
+            handX = cx + sign * (19 + thrust * 39) * s;
+            handY = footY - 42 * s;
+            angleDeg = -18;
+        } else if (this.currentAttackType === 'AIR_UP') {
+            handX = cx + sign * 9 * s;
+            handY = footY - (71 + Math.sin(progress * Math.PI) * 7) * s;
+            angleDeg = -90;
+        } else if (this.currentAttackType === 'AIR_DOWN') {
+            if (this.stateTimer >= 6) draw = false;
+            handX = cx + sign * (14 + progress * 16) * s;
+            handY = footY - (34 - progress * 9) * s;
+            angleDeg = 72;
+        }
+    }
+
+    if (!this.facingRight && angleDeg !== 90 && angleDeg !== -90) {
+        angleDeg = -180 - angleDeg;
+    }
+    return { draw: draw, handX: handX, handY: handY, angleDeg: angleDeg };
+};
+window.SMA.Fighter.prototype.drawSpearChibiWeapon = function (ctx, cx, drawFootY) {
+    var hideSpear = this.actionState === 'LEDGE' || this.actionState === 'LEDGE_UP' || this.actionState === 'LEDGE_ROLL' || this.actionState === 'GRAB_ATTEMPT' || this.actionState === 'GRABBING' || this.actionState === 'THROWING';
+    if (hideSpear) return;
+    if (this.actionState === 'ATTACK' && this.currentAttack && (this.currentAttackType === 'SIDE' || this.currentAttackType === 'AIR_SIDE' || this.currentAttackType === 'UP' || this.currentAttackType === 'AIR_DOWN') && this.stateTimer >= 6) {
+        return;
+    }
+    var pose = this.getSpearChibiWeaponPose(cx, drawFootY);
+    if (!pose || !pose.draw) return;
+    var charged = this.chargePower > 1.2;
+    ctx.save();
+    if (charged) {
+        ctx.shadowBlur = 14;
+        ctx.shadowColor = '#ffffff';
+    }
+    window.SMA.drawTrident(ctx, pose.handX, pose.handY, pose.angleDeg, '#00b894', charged ? '#ffffff' : null);
+    ctx.restore();
+};
+window.SMA.Fighter.prototype.drawSpearChibiSprite = function (ctx, cx) {
+    var anim = window.SMA.resolveSpearChibiAnim(this);
+    if (!anim) return false;
+    var img = window.SMA.getSpriteAsset(anim.key, anim.src);
+    if (!img.complete || !img.naturalWidth) return true;
+
+    var fw = anim.frameW || window.SMA.SPEAR_CHIBI_FRAME_W || 224;
+    var fh = anim.frameH || window.SMA.SPEAR_CHIBI_FRAME || 128;
+    var baseline = anim.baseline || window.SMA.SPEAR_CHIBI_BASELINE || 118;
+    var spriteScale = window.SMA.SPEAR_CHIBI_RENDER_SCALE || 1;
+    var frame = this.getSpearChibiFrame(anim);
+    var sx = Math.min(frame, (anim.frames || 1) - 1) * fw;
+    var footY = this.y + this.h;
+    var drawCx = cx;
+    var drawFootY = footY;
+
+    if (this.actionState === 'LEDGE_UP' && this.ledgeGrabbed) {
+        var ledgePlatform = this.ledgeGrabbed.platform;
+        var ledgeDir = this.ledgeGrabbed.dir;
+        var ledgeTopX = (ledgeDir === 'left') ? ledgePlatform.x : (ledgePlatform.x + ledgePlatform.w - this.w);
+        var t = Math.max(0, Math.min(1, (20 - this.stateTimer) / 20));
+        var eased = t * t * (3 - 2 * t);
+        drawCx = cx + ((ledgeTopX + this.w / 2) - cx) * eased;
+        drawFootY = footY + (ledgePlatform.y - footY) * eased;
+    }
+
+    ctx.save();
+    ctx.imageSmoothingEnabled = true;
+    ctx.globalAlpha = 0.22;
+    ctx.strokeStyle = this.color;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.ellipse(drawCx, drawFootY - 3, 23 * spriteScale, 7 * spriteScale, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+    ctx.restore();
+
+    var weaponInFront = this.actionState === 'ATTACK' || this.actionState === 'LEDGE_ATK';
+    if (!weaponInFront) {
+        this.drawSpearChibiWeapon(ctx, drawCx, drawFootY);
+    }
+
+    ctx.save();
+    ctx.imageSmoothingEnabled = true;
+    ctx.translate(drawCx, drawFootY);
+    if (!this.facingRight) {
+        ctx.scale(-1, 1);
+    }
+    ctx.drawImage(img, sx, 0, fw, fh, -fw * spriteScale / 2, -baseline * spriteScale, fw * spriteScale, fh * spriteScale);
+    ctx.restore();
+
+    if (weaponInFront) {
+        this.drawSpearChibiWeapon(ctx, drawCx, drawFootY);
+    }
+
+    if (this.actionState === 'SHIELD') {
+        ctx.save();
+        ctx.fillStyle = 'rgba(116, 185, 255, ' + (this.shieldHP / 150) + ')';
+        ctx.strokeStyle = '#0984e3';
+        ctx.beginPath();
+        ctx.arc(cx, this.y + this.h / 2, 45, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+    }
+    return true;
+};
 window.SMA.preloadSwordChibiSprites();
 window.SMA.preloadMageChibiSprites();
 window.SMA.preloadBrawlerChibiSprites();
+window.SMA.preloadSpearChibiSprites();
 window.SMA.preloadMageVfxSprites();
 window.SMA.Fighter.prototype.draw = function (ctx) {
     if (this.stocks <= 0 || this.actionState === 'DEAD' || this.actionState === 'RESPAWN') return;
@@ -3012,11 +3333,11 @@ window.SMA.Fighter.prototype.draw = function (ctx) {
     ctx.scale(this.animScale.x, this.animScale.y);
 
     var drawn = false;
-    if (this.actionState === 'LEDGE_ROLL' && this.charId !== 'brawler' && this.charId !== 'mage' && this.charId !== 'sword') {
+    if (this.actionState === 'LEDGE_ROLL' && this.charId !== 'brawler' && this.charId !== 'mage' && this.charId !== 'sword' && this.charId !== 'spear') {
         ctx.translate(0, -15); ctx.rotate(this.rotation); ctx.strokeStyle = this.color; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(0, 0, 15, 0, Math.PI * 2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(15, 0); ctx.stroke();
         drawn = true;
     } else {
-        if (!(this.actionState === 'LEDGE_ROLL' && (this.charId === 'brawler' || this.charId === 'mage' || this.charId === 'sword'))) {
+        if (!(this.actionState === 'LEDGE_ROLL' && (this.charId === 'brawler' || this.charId === 'mage' || this.charId === 'sword' || this.charId === 'spear'))) {
             ctx.rotate(this.rotation);
         }
         ctx.translate(-cx, -(this.y + this.h));
@@ -3039,6 +3360,13 @@ window.SMA.Fighter.prototype.draw = function (ctx) {
                 ctx.globalAlpha = 1.0;
                 return;
             }
+            ctx.restore();
+            ctx.globalAlpha = 1.0;
+            return;
+        }
+
+        if (this.charId === 'spear') {
+            this.drawSpearChibiSprite(ctx, cx);
             ctx.restore();
             ctx.globalAlpha = 1.0;
             return;
