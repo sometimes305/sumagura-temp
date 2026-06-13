@@ -348,12 +348,7 @@ window.SMA.gameLoop = function () {
                         ctx.save();
                         var previewX = fighter.x + fighter.w / 2 + (fighter.facingRight ? fighter.mirrorPlaceRange : -fighter.mirrorPlaceRange);
                         var previewY = fighter.y + fighter.h;
-                        ctx.globalAlpha = 0.3 + Math.sin(Date.now() * 0.01) * 0.15;
-                        ctx.strokeStyle = '#81ecec';
-                        ctx.lineWidth = 2;
-                        ctx.setLineDash([4, 4]);
-                        ctx.strokeRect(previewX - 4, previewY - 56, 8, 57);
-                        ctx.setLineDash([]);
+                        window.SMA.drawMirrorPropImage(ctx, previewX, previewY - 31, 0, 0.4, 0.25 + Math.sin(Date.now() * 0.01) * 0.12, fighter.mirrorCooldown > 0 ? 'cooldown' : null);
                         ctx.restore();
                     }
                     // 髀｡繧ｪ繝悶ず繧ｧ繧ｯ繝医・謠冗判
@@ -363,16 +358,8 @@ window.SMA.gameLoop = function () {
                         var ctx = window.SMA.ctx;
                         ctx.save();
                         // 髀｡譛ｬ菴難ｼ育ｴｰ縺・ｸｦ髟ｷ縺ｮ遏ｩ蠖｢・・
-                        var grad = ctx.createLinearGradient(mx - 3, my - 50, mx + 3, my);
-                        grad.addColorStop(0, 'rgba(129, 236, 236, 0.9)');
-                        grad.addColorStop(0.5, 'rgba(255, 255, 255, 0.95)');
-                        grad.addColorStop(1, 'rgba(129, 236, 236, 0.9)');
-                        ctx.fillStyle = grad;
-                        ctx.fillRect(mx - 3, my - 55, 6, 55);
+                        window.SMA.drawMirrorPropImage(ctx, mx, my - 31, 0, 0.43, 0.86);
                         // 蜈峨・繧ｨ繝輔ぉ繧ｯ繝・
-                        ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
-                        ctx.lineWidth = 1;
-                        ctx.strokeRect(mx - 4, my - 56, 8, 57);
                         // 繧ｿ繧､繝槭・陦ｨ遉ｺ・域ｮ九ｊ譎る俣繝舌・・・
                         var ratio = fighter.mirror.timer / 480;
                         ctx.fillStyle = 'rgba(129, 236, 236, ' + (0.3 + ratio * 0.5) + ')';
@@ -383,7 +370,7 @@ window.SMA.gameLoop = function () {
                     if (fighter.mirrorClone && fighter.mirror) {
                         var ctx = window.SMA.ctx;
                         ctx.save();
-                        ctx.globalAlpha = 0.45;
+                        ctx.globalAlpha = 0;
                         var cX = fighter.mirrorClone.x;
                         var cY = fighter.mirrorClone.y;
                         var cx = cX + fighter.w / 2;
@@ -405,15 +392,18 @@ window.SMA.gameLoop = function () {
                             ctx.beginPath(); ctx.moveTo(cx, cY + 40); ctx.lineTo(cx - 10, cY + 60); ctx.stroke();
                             ctx.beginPath(); ctx.moveTo(cx, cY + 40); ctx.lineTo(cx + 10, cY + 60); ctx.stroke();
                         }
+                        ctx.globalAlpha = 1;
+                        fighter.drawMirrorChibiGhost(ctx, cx, cY + fighter.h, fr);
+                        ctx.globalAlpha = 0.45;
                         // 豬ｮ驕企升縺ｮ蝓ｺ譛ｬ蠎ｧ讓・
                         var hoverY = Math.sin(Date.now() / 200) * 5;
                         var baseY = cY + 20 + hoverY;
-                        var baseX = cx + (fr ? 30 : -30);
+                        var baseX = cx + (fr ? 42 : -42);
 
                         // 閻包ｼ郁・辟ｶ縺ｫ荳九ｍ縺呻ｼ・
                         ctx.strokeStyle = '#00cec9';
                         ctx.lineWidth = 3;
-                        ctx.beginPath(); ctx.moveTo(cx, cY + 20); ctx.lineTo(cx + (fr ? 5 : -5), cY + 35); ctx.stroke();
+                        // Clone body is drawn by the chibi ghost sprite.
 
                         // 豬ｮ驕企升縺ｮ繧｢繝九Γ繝ｼ繧ｷ繝ｧ繝ｳ
                         var mirX = baseX;
@@ -428,7 +418,7 @@ window.SMA.gameLoop = function () {
 
                             if (atkType === 'mirror_spin' || fighter.currentAttackType === 'AIR_NEUTRAL') {
                                 var spinAngle = forwardP * Math.PI * 2;
-                                var r = 40;
+                                var r = 52;
                                 mirX = cx + (fr ? 1 : -1) * Math.cos(spinAngle) * r;
                                 mirY = cY + 25 + Math.sin(spinAngle) * r;
                                 mirAngle = 0;
@@ -441,18 +431,18 @@ window.SMA.gameLoop = function () {
                             } else if (atkType === 'mirror_throw' || fighter.currentAttackType === 'SIDE' || fighter.currentAttackType === 'AIR_SIDE') {
                                 mirScale = 1.6;
                                 mirAngle = forwardP * Math.PI * 4;
-                                var throwDist = 60;
+                                var throwDist = 58;
                                 var distX = Math.sin(forwardP * Math.PI) * throwDist;
-                                mirX = cx + (fr ? distX : -distX);
+                                mirX = cx + (fr ? 30 + distX : -30 - distX);
                                 mirY = cY + 25;
                             } else if (fighter.currentAttackType === 'NEUTRAL' || atkType === 'mirror_slash') {
-                                var pokeDist = Math.sin(forwardP * Math.PI) * 45;
+                                var pokeDist = Math.sin(forwardP * Math.PI) * 22;
                                 mirX = cx + (fr ? 30 + pokeDist : -30 - pokeDist);
                             } else if (fighter.currentAttackType === 'DOWN' || fighter.currentAttackType === 'AIR_DOWN' || atkType === 'mirror_place') {
                                 mirScale = 1.5;
                                 mirAngle = forwardP * Math.PI * 4;
                                 var throwH = 40;
-                                mirX = cx + (fr ? 15 : -15);
+                                mirX = cx + (fr ? 28 : -28);
                                 mirY = cY + 40 + Math.sin(forwardP * Math.PI) * throwH;
                             }
                         }
@@ -461,12 +451,7 @@ window.SMA.gameLoop = function () {
                         ctx.save();
                         ctx.translate(mirX, mirY);
                         ctx.rotate(mirAngle);
-                        ctx.scale(mirScale, mirScale);
-
-                        ctx.strokeStyle = '#81ecec';
-                        ctx.lineWidth = 2.6;
-                        var len = 14;
-                        ctx.beginPath(); ctx.moveTo(0, -len); ctx.lineTo(0, len); ctx.stroke();
+                        window.SMA.drawMirrorPropImage(ctx, 0, 0, 0, 0.34 * mirScale, 0.78);
 
                         ctx.restore();
 
@@ -977,7 +962,7 @@ window.SMA.CHAR_DATA = {
             DOWN: { type: 'low_kick', dmg: 6, kb: 3.0, scale: 0.01, angle: -90, frames: 15, lag: 6, stun: 8, hitstun: 45, color: '#d35400' },
             AIR_NEUTRAL: { type: 'sex_kick', dmg: 6, kb: 1.0, scale: 0.05, angle: -45, frames: 25, lag: 1, stun: 5, hitstun: 33, color: '#f39c12' },
             AIR_SIDE: { type: 'axe', dmg: 18, kb: 16.0, scale: 0.2, angle: 90, frames: 40, lag: 16, stun: 12, color: '#c0392b' },
-            AIR_UP: { dmg: 10, kb: 2.5, scale: 0.1, angle: -90, frames: 20, lag: 15, stun: 8, color: '#e74c3c' },
+            AIR_UP: { type: 'shoryu', dmg: 10, kb: 2.5, scale: 0.1, angle: -90, frames: 20, lag: 15, stun: 8, color: '#e74c3c' },
             AIR_DOWN: { type: 'dive', dmg: 15, kb: 3.0, scale: 0.1, angle: 90, frames: 999, lag: 30, stun: 10, color: '#c0392b' },
             LEDGE_ATK: { dmg: 8, kb: 12.0, scale: 0.01, angle: -45, frames: 30, lag: 10, stun: 10 },
             CHARGE: { type: 'blast', dmg: 18, kb: 5.0, scale: 0.15, angle: -45, frames: 40, lag: 30, stun: 15, color: '#e67e22' }
@@ -1217,8 +1202,8 @@ window.SMA.Fighter.prototype.update = function (inputKeys, opponent) {
         }
     }
 };
-window.SMA.Fighter.prototype.serialize = function () { return { x: this.x, y: this.y, vx: this.vx, vy: this.vy, state: this.actionState, timer: this.stateTimer, atkType: this.currentAttackType, grounded: this.isGrounded, pct: this.percent, st: this.stocks, face: this.facingRight, chg: this.chargePower, sh: this.shieldHP, inv: this.invincible, grInv: this.grabInvincible, mirror: this.mirror, mirrorClone: this.mirrorClone, mirrorCooldown: this.mirrorCooldown, mirrorPlaceRange: this.mirrorPlaceRange, hitboxActive: this.hitbox.active, hitboxX: this.hitbox.x, hitboxY: this.hitbox.y, hitboxW: this.hitbox.w, hitboxH: this.hitbox.h }; };
-window.SMA.Fighter.prototype.deserialize = function (data) { var S = window.SMA; if (!data) return; this.x = data.x; this.y = data.y; this.vx = data.vx; this.vy = data.vy; this.actionState = data.state; this.stateTimer = data.timer; this.isGrounded = data.grounded; this.currentAttackType = data.atkType; if (this.currentAttackType) { var set = S.CHAR_DATA[this.charId]; if (set.attacks[this.currentAttackType]) this.currentAttack = set.attacks[this.currentAttackType]; else if (set.throws[this.currentAttackType]) this.currentAttack = set.throws[this.currentAttackType]; } else this.currentAttack = null; this.percent = data.pct; this.stocks = data.st; this.facingRight = data.face; this.chargePower = data.chg; this.shieldHP = data.sh; this.invincible = data.inv; this.grabInvincible = data.grInv || 0; this.mirror = data.mirror || null; this.mirrorClone = data.mirrorClone || null; this.mirrorCooldown = data.mirrorCooldown || 0; this.mirrorPlaceRange = data.mirrorPlaceRange || 0; if (data.hitboxActive !== undefined) { this.hitbox.active = data.hitboxActive; this.hitbox.x = data.hitboxX; this.hitbox.y = data.hitboxY; this.hitbox.w = data.hitboxW; this.hitbox.h = data.hitboxH; } };
+window.SMA.Fighter.prototype.serialize = function () { return { x: this.x, y: this.y, vx: this.vx, vy: this.vy, state: this.actionState, timer: this.stateTimer, atkType: this.currentAttackType, grounded: this.isGrounded, pct: this.percent, st: this.stocks, face: this.facingRight, chg: this.chargePower, sh: this.shieldHP, inv: this.invincible, grInv: this.grabInvincible, mirror: this.mirror, mirrorClone: this.mirrorClone, mirrorCooldown: this.mirrorCooldown, mirrorPlaceRange: this.mirrorPlaceRange, mirrorChibiDownVariant: this._mirrorChibiDownVariant || null, hitboxActive: this.hitbox.active, hitboxX: this.hitbox.x, hitboxY: this.hitbox.y, hitboxW: this.hitbox.w, hitboxH: this.hitbox.h }; };
+window.SMA.Fighter.prototype.deserialize = function (data) { var S = window.SMA; if (!data) return; this.x = data.x; this.y = data.y; this.vx = data.vx; this.vy = data.vy; this.actionState = data.state; this.stateTimer = data.timer; this.isGrounded = data.grounded; this.currentAttackType = data.atkType; if (this.currentAttackType) { var set = S.CHAR_DATA[this.charId]; if (set.attacks[this.currentAttackType]) this.currentAttack = set.attacks[this.currentAttackType]; else if (set.throws[this.currentAttackType]) this.currentAttack = set.throws[this.currentAttackType]; } else this.currentAttack = null; this.percent = data.pct; this.stocks = data.st; this.facingRight = data.face; this.chargePower = data.chg; this.shieldHP = data.sh; this.invincible = data.inv; this.grabInvincible = data.grInv || 0; this.mirror = data.mirror || null; this.mirrorClone = data.mirrorClone || null; this.mirrorCooldown = data.mirrorCooldown || 0; this.mirrorPlaceRange = data.mirrorPlaceRange || 0; this._mirrorChibiDownVariant = data.mirrorChibiDownVariant || null; if (data.hitboxActive !== undefined) { this.hitbox.active = data.hitboxActive; this.hitbox.x = data.hitboxX; this.hitbox.y = data.hitboxY; this.hitbox.w = data.hitboxW; this.hitbox.h = data.hitboxH; } };
 window.SMA.Fighter.prototype.enterState = function (state, duration) { this.actionState = state; this.stateTimer = duration; this.hitbox.active = false; };
 window.SMA.Fighter.prototype.faceOpponent = function (opponent) { if (opponent && opponent.stocks > 0 && opponent.actionState !== 'RESPAWN' && this.actionState !== 'ATTACK') { if (this.x < opponent.x - 10) this.facingRight = true; if (this.x > opponent.x + 10) this.facingRight = false; } };
 window.SMA.Fighter.prototype.applyPhysics = function () { var S = window.SMA; if (this.actionState === 'ATTACK' && this.currentAttack && (this.currentAttack.type === 'meteor' || this.currentAttack.type === 'dive' || this.currentAttack.type === 'axe' || this.currentAttack.type === 'stall_fall' || this.currentAttack.type === 'up_rush')) { if (this.vy > 30) this.vy = 30; } else { var cap = S.MAX_FALL_SPEED; if (this.actionState === 'STUN' && this.vy > cap) cap = 40; if (this.vy > cap) this.vy = cap; } if (this.actionState === 'STUN') { var speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy); if (speed < 4.0) { this.vx *= S.FRICTION; this.vy += S.GRAVITY; } else { this.vx *= S.KB_FRICTION; this.vy *= S.KB_FRICTION; } } else { this.vx *= S.FRICTION; this.vy += S.GRAVITY; } if (isNaN(this.x)) this.x = 0; if (isNaN(this.y)) this.y = 0; if (isNaN(this.vx)) this.vx = 0; if (isNaN(this.vy)) this.vy = 0; this.x += this.vx; this.y += this.vy; };
@@ -1275,6 +1260,7 @@ window.SMA.Fighter.prototype.startCharge = function () {
                     this.actionState = 'ATTACK';
                     this.currentAttack = set[typeStr];
                     this.currentAttackType = typeStr;
+                    this._mirrorChibiDownVariant = (this.mirror && !this.mirror.swapped) ? 'swap' : 'summon';
                     this.chargePower = 1.0;
                     this.hasHit = false;
                     this.mirrorHasHit = false;
@@ -1304,7 +1290,13 @@ window.SMA.Fighter.prototype.releaseAttack = function (typeStr) {
         }
         this.actionState = 'ATTACK';
         if (set[typeStr]) this.currentAttack = set[typeStr]; else this.currentAttack = null;
-        this.currentAttackType = typeStr; this.chargePower = power; this.hasHit = false; this.mirrorHasHit = false; this.stateTimer = 0; if (this.currentAttack) { if (this.currentAttack.type === 'arrow_shot') S.playSound('magic'); else if (this.currentAttack.type === 'shot') S.playSound('magic'); else if (this.currentAttack.type === 'fire_shot') S.playSound('magic'); else if (this.currentAttack.type === 'up_rush') S.playSound('jump'); else if (this.currentAttack.type === 'ground_shock') { } else if (this.currentAttack.type === 'boomerang' || this.currentAttack.type === 'boomerang_up') S.playSound('sword'); else if (this.currentAttackType === 'UP' && this.charId === 'mage') S.playSound('spin'); else S.playSound('sword'); }
+        this.currentAttackType = typeStr;
+        if (this.charId === 'mirror' && this.currentAttack && this.currentAttack.type === 'mirror_place') {
+            this._mirrorChibiDownVariant = (this.mirror && !this.mirror.swapped) ? 'swap' : 'summon';
+        } else if (this.charId === 'mirror') {
+            this._mirrorChibiDownVariant = null;
+        }
+        this.chargePower = power; this.hasHit = false; this.mirrorHasHit = false; this.stateTimer = 0; if (this.currentAttack) { if (this.currentAttack.type === 'arrow_shot') S.playSound('magic'); else if (this.currentAttack.type === 'shot') S.playSound('magic'); else if (this.currentAttack.type === 'fire_shot') S.playSound('magic'); else if (this.currentAttack.type === 'up_rush') S.playSound('jump'); else if (this.currentAttack.type === 'ground_shock') { } else if (this.currentAttack.type === 'boomerang' || this.currentAttack.type === 'boomerang_up') S.playSound('sword'); else if (this.currentAttackType === 'UP' && this.charId === 'mage') S.playSound('spin'); else S.playSound('sword'); }
     }
 };
 window.SMA.Fighter.prototype.handleAttackFrame = function () {
@@ -1435,6 +1427,9 @@ window.SMA.Fighter.prototype.handleAttackFrame = function () {
     // *** 髀｡繧ｭ繝｣繝ｩ謾ｻ謦・・逅・***
     if (atk.type === 'mirror_place') {
         if (this.stateTimer === 1) {
+            if (!this._mirrorChibiDownVariant) {
+                this._mirrorChibiDownVariant = (this.mirror && !this.mirror.swapped) ? 'swap' : 'summon';
+            }
             if (this.mirror && !this.mirror.swapped) {
                 // 蜈･繧梧崛繧上ｊ: 譛ｬ菴薙→髀｡蜒上・菴咲ｽｮ繧剃ｺ､謠幢ｼ・蝗槭・縺ｿ・・
                 var oldX = this.x; var oldY = this.y;
@@ -3131,11 +3126,11 @@ window.SMA.HAMMER_CHIBI_ANIMS = {
     charge: { key: 'hammer_chibi_charge_v3', src: 'assets/characters/hammer/hammer_charge_sheet.png?v=3', frames: 4, frameMs: 90, baseline: 116 },
     attackNeutral: { key: 'hammer_chibi_attack_neutral_v4', src: 'assets/characters/hammer/hammer_attack_neutral_sheet.png?v=4', frames: 4, frameMs: 75, baseline: 116 },
     attackSide: { key: 'hammer_chibi_attack_side_v5', src: 'assets/characters/hammer/hammer_attack_side_sheet.png?v=5', frames: 6, frameMs: 58, baseline: 116 },
-    attackUp: { key: 'hammer_chibi_attack_up_v3', src: 'assets/characters/hammer/hammer_attack_up_sheet.png?v=3', frames: 6, frameMs: 58, baseline: 116 },
+    attackUp: { key: 'hammer_chibi_attack_up_v3', src: 'assets/characters/hammer/hammer_attack_up_sheet.png?v=3', frames: 6, frameMs: 58, baseline: 116, renderScale: 0.88 },
     attackDown: { key: 'hammer_chibi_attack_down', src: 'assets/characters/hammer/hammer_attack_down_sheet.png?v=4', frames: 7, frameMs: 32, baseline: 116 },
     airNeutral: { key: 'hammer_chibi_air_neutral', src: 'assets/characters/hammer/hammer_air_neutral_sheet.png?v=2', frames: 4, frameMs: 65, baseline: 116 },
     airSide: { key: 'hammer_chibi_air_side', src: 'assets/characters/hammer/hammer_air_side_sheet.png?v=2', frames: 4, frameMs: 65, baseline: 116 },
-    airUp: { key: 'hammer_chibi_air_up_v4', src: 'assets/characters/hammer/hammer_air_up_sheet.png?v=4', frames: 6, frameMs: 58, baseline: 116 },
+    airUp: { key: 'hammer_chibi_air_up_v4', src: 'assets/characters/hammer/hammer_air_up_sheet.png?v=4', frames: 6, frameMs: 58, baseline: 116, renderScale: 0.88 },
     airDown: { key: 'hammer_chibi_air_down', src: 'assets/characters/hammer/hammer_attack_down_sheet.png?v=4', frames: 7, frameMs: 32, baseline: 116 },
     grab: { key: 'hammer_chibi_grab_v2', src: 'assets/characters/hammer/hammer_grab_sheet.png?v=2', frames: 4, frameMs: 65, baseline: 116 },
     grabHold: { key: 'hammer_chibi_grab_hold_v2', src: 'assets/characters/hammer/hammer_grab_hold_sheet.png?v=2', frames: 4, frameMs: 100, baseline: 116 },
@@ -3251,7 +3246,7 @@ window.SMA.Fighter.prototype.drawHammerChibiWeapon = function (ctx, cx, drawFoot
     var hideHammer = this.actionState === 'LEDGE' || this.actionState === 'LEDGE_UP' || this.actionState === 'LEDGE_ROLL' || this.actionState === 'GRAB_ATTEMPT' || this.actionState === 'GRABBING' || this.actionState === 'THROWING';
     if (hideHammer) return;
     var sign = this.facingRight ? 1 : -1;
-    var s = window.SMA.HAMMER_CHIBI_RENDER_SCALE || 1;
+    var s = this._hammerChibiDrawScale || window.SMA.HAMMER_CHIBI_RENDER_SCALE || 1;
     var handX = cx + sign * 15 * s;
     var handY = drawFootY - 30 * s;
     var angleDeg = sign * 30;
@@ -3408,7 +3403,7 @@ window.SMA.Fighter.prototype.drawHammerChibiSprite = function (ctx, cx) {
     var fw = anim.frameW || window.SMA.HAMMER_CHIBI_FRAME_W || 128;
     var fh = anim.frameH || window.SMA.HAMMER_CHIBI_FRAME || 128;
     var baseline = anim.baseline || window.SMA.HAMMER_CHIBI_BASELINE || 116;
-    var spriteScale = window.SMA.HAMMER_CHIBI_RENDER_SCALE || 1;
+    var spriteScale = anim.renderScale || window.SMA.HAMMER_CHIBI_RENDER_SCALE || 1;
     var frame = this.getHammerChibiFrame(anim);
     var sx = Math.min(frame, (anim.frames || 1) - 1) * fw;
     var footY = this.y + this.h;
@@ -3449,7 +3444,9 @@ window.SMA.Fighter.prototype.drawHammerChibiSprite = function (ctx, cx) {
     ctx.drawImage(img, sx, 0, fw, fh, -fw * spriteScale / 2, -baseline * spriteScale, fw * spriteScale, fh * spriteScale);
     ctx.restore();
 
+    this._hammerChibiDrawScale = spriteScale;
     this.drawHammerChibiWeapon(ctx, drawCx, drawFootY);
+    this._hammerChibiDrawScale = null;
 
     if (this.actionState === 'SHIELD') {
         ctx.save();
@@ -3701,11 +3698,412 @@ window.SMA.Fighter.prototype.drawSpearChibiSprite = function (ctx, cx) {
     }
     return true;
 };
+window.SMA.MIRROR_CHIBI_FRAME = 160;
+window.SMA.MIRROR_CHIBI_FRAME_W = 160;
+window.SMA.MIRROR_CHIBI_BASELINE = 148;
+window.SMA.MIRROR_CHIBI_RENDER_SCALE = 0.56;
+window.SMA.MIRROR_PROP_ASSET = { key: 'mirror_prop_v1', src: 'assets/characters/mirror/mirror_prop.png?v=1', w: 96, h: 144 };
+window.SMA.MIRROR_CHIBI_ANIMS = {
+    idle: { key: 'mirror_chibi_idle', src: 'assets/characters/mirror/mirror_idle_sheet.png?v=1', frames: 4, frameMs: 240, baseline: 148 },
+    run: { key: 'mirror_chibi_run_v3', src: 'assets/characters/mirror/mirror_run_sheet_v3.png?v=1', frames: 4, frameMs: 76, baseline: 148 },
+    jump: { key: 'mirror_chibi_jump', src: 'assets/characters/mirror/mirror_jump_sheet.png?v=1', frames: 2, frameMs: 170, baseline: 148 },
+    fall: { key: 'mirror_chibi_fall_v2', src: 'assets/characters/mirror/mirror_fall_sheet_v2.png?v=1', frames: 1, frameMs: 180, baseline: 148 },
+    hurt: { key: 'mirror_chibi_hurt', src: 'assets/characters/mirror/mirror_hurt_sheet.png?v=1', frames: 2, frameMs: 90, baseline: 148 },
+    charge: { key: 'mirror_chibi_charge', src: 'assets/characters/mirror/mirror_charge_sheet.png?v=1', frames: 4, frameMs: 100, baseline: 148 },
+    attackNeutral: { key: 'mirror_chibi_attack_neutral', src: 'assets/characters/mirror/mirror_attack_neutral_sheet.png?v=1', frames: 4, frameMs: 48, baseline: 148 },
+    attackSide: { key: 'mirror_chibi_attack_side', src: 'assets/characters/mirror/mirror_attack_side_sheet.png?v=1', frames: 4, frameMs: 62, baseline: 148 },
+    attackUp: { key: 'mirror_chibi_attack_up', src: 'assets/characters/mirror/mirror_attack_up_sheet.png?v=1', frames: 4, frameMs: 62, baseline: 148 },
+    attackDownSummon: { key: 'mirror_chibi_attack_down_summon', src: 'assets/characters/mirror/mirror_attack_down_summon_sheet.png?v=1', frames: 4, frameMs: 64, baseline: 148 },
+    attackDownSwap: { key: 'mirror_chibi_attack_down_swap', src: 'assets/characters/mirror/mirror_attack_down_swap_sheet.png?v=1', frames: 4, frameMs: 60, baseline: 148 },
+    airNeutral: { key: 'mirror_chibi_air_neutral', src: 'assets/characters/mirror/mirror_air_neutral_sheet.png?v=1', frames: 4, frameMs: 60, baseline: 148 },
+    airSide: { key: 'mirror_chibi_air_side', src: 'assets/characters/mirror/mirror_air_side_sheet.png?v=1', frames: 4, frameMs: 62, baseline: 148 },
+    airUp: { key: 'mirror_chibi_air_up', src: 'assets/characters/mirror/mirror_air_up_sheet.png?v=1', frames: 4, frameMs: 62, baseline: 148 },
+    airDown: { key: 'mirror_chibi_air_down', src: 'assets/characters/mirror/mirror_air_down_sheet.png?v=1', frames: 4, frameMs: 62, baseline: 148 },
+    grab: { key: 'mirror_chibi_grab', src: 'assets/characters/mirror/mirror_grab_sheet.png?v=1', frames: 4, frameMs: 62, baseline: 148 },
+    grabHold: { key: 'mirror_chibi_grab_hold', src: 'assets/characters/mirror/mirror_grab_hold_sheet.png?v=1', frames: 4, frameMs: 100, baseline: 148 },
+    throw: { key: 'mirror_chibi_throw', src: 'assets/characters/mirror/mirror_throw_sheet.png?v=1', frames: 4, frameMs: 68, baseline: 148 },
+    dodge: { key: 'mirror_chibi_dodge', src: 'assets/characters/mirror/mirror_dodge_sheet.png?v=1', frames: 4, frameMs: 55, baseline: 148 },
+    ledge: { key: 'mirror_chibi_ledge_v2', src: 'assets/characters/mirror/mirror_ledge_sheet.png?v=1', frames: 4, frameMs: 110, baseline: 148, renderScale: 0.68 },
+    ledgeAttack: { key: 'mirror_chibi_ledge_attack', src: 'assets/characters/mirror/mirror_ledge_attack_sheet.png?v=1', frames: 4, frameMs: 70, baseline: 148 },
+    ledgeRoll: { key: 'mirror_chibi_ledge_roll', src: 'assets/characters/mirror/mirror_ledge_roll_sheet.png?v=1', frames: 4, frameMs: 55, baseline: 148 }
+};
+for (var mirrorChibiAnimKey in window.SMA.MIRROR_CHIBI_ANIMS) {
+    if (Object.prototype.hasOwnProperty.call(window.SMA.MIRROR_CHIBI_ANIMS, mirrorChibiAnimKey)) {
+        window.SMA.MIRROR_CHIBI_ANIMS[mirrorChibiAnimKey].frameW = window.SMA.MIRROR_CHIBI_FRAME_W;
+        window.SMA.MIRROR_CHIBI_ANIMS[mirrorChibiAnimKey].frameH = window.SMA.MIRROR_CHIBI_FRAME;
+    }
+}
+window.SMA.preloadMirrorChibiSprites = function () {
+    var anims = window.SMA.MIRROR_CHIBI_ANIMS || {};
+    for (var k in anims) {
+        if (Object.prototype.hasOwnProperty.call(anims, k)) {
+            window.SMA.getSpriteAsset(anims[k].key, anims[k].src);
+        }
+    }
+    var prop = window.SMA.MIRROR_PROP_ASSET;
+    if (prop) window.SMA.getSpriteAsset(prop.key, prop.src);
+};
+window.SMA.resolveMirrorChibiAnim = function (fighter) {
+    var A = window.SMA.MIRROR_CHIBI_ANIMS;
+    if (!A || !fighter || fighter.charId !== 'mirror') return null;
+    if (fighter.actionState === 'STUN' || fighter.actionState === 'GRABBED') return A.hurt;
+    if (fighter.actionState === 'CHARGE') return A.charge;
+    if (fighter.actionState === 'DODGE') return A.dodge;
+    if (fighter.actionState === 'LEDGE_ROLL') return A.ledgeRoll || A.dodge;
+    if (fighter.actionState === 'LEDGE' || fighter.actionState === 'LEDGE_UP') return A.ledge;
+    if (fighter.actionState === 'LEDGE_ATK') return A.ledgeAttack || A.attackSide;
+    if (fighter.actionState === 'GRAB_ATTEMPT') return A.grab;
+    if (fighter.actionState === 'GRABBING') return A.grabHold || A.throw;
+    if (fighter.actionState === 'THROWING') return A.throw;
+    if (fighter.actionState === 'LAG' && fighter._mirrorChibiDownVariant === 'swap') return A.attackDownSwap;
+    if (fighter.actionState === 'LAG' && fighter._mirrorChibiDownVariant === 'summon') return A.attackDownSummon;
+    if (fighter.actionState === 'LAG') return A.idle;
+    if (fighter.actionState === 'ATTACK' && fighter.currentAttack) {
+        if (fighter.currentAttackType === 'AIR_NEUTRAL') return A.airNeutral;
+        if (fighter.currentAttackType === 'AIR_SIDE') return A.airSide;
+        if (fighter.currentAttackType === 'AIR_UP') return A.airUp;
+        if (fighter.currentAttackType === 'AIR_DOWN') {
+            if (fighter.currentAttack.type === 'mirror_place') {
+                return fighter._mirrorChibiDownVariant === 'swap' ? A.attackDownSwap : A.attackDownSummon;
+            }
+            return A.airDown;
+        }
+        if (fighter.currentAttackType === 'SIDE') return A.attackSide;
+        if (fighter.currentAttackType === 'UP') return A.attackUp;
+        if (fighter.currentAttackType === 'DOWN') {
+            return fighter._mirrorChibiDownVariant === 'swap' ? A.attackDownSwap : A.attackDownSummon;
+        }
+        return A.attackNeutral;
+    }
+    if (!fighter.isGrounded) return fighter.vy < 0 ? A.jump : A.fall;
+    if (Math.abs(fighter.vx) > 0.6) return A.run;
+    return A.idle;
+};
+window.SMA.Fighter.prototype.getMirrorChibiFrame = function (anim) {
+    var frames = anim.frames || 1;
+    if (frames <= 1) return 0;
+    var p = null;
+    if (this.actionState === 'STUN') {
+        var stunSpeed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+        return (!this.isGrounded || stunSpeed > 4) ? Math.min(1, frames - 1) : 0;
+    }
+    if (this.actionState === 'GRABBED') return Math.min(1, frames - 1);
+    if (this.actionState === 'ATTACK' && this.currentAttack) {
+        if (this.currentAttack.type === 'mirror_place') {
+            p = Math.max(0, Math.min(0.999, this.stateTimer / 24));
+        } else {
+            p = Math.max(0, Math.min(0.999, this.stateTimer / Math.max(1, this.currentAttack.frames || frames)));
+        }
+    } else if (this.actionState === 'LAG' && this._mirrorChibiDownVariant) {
+        var lagTotal = this._mirrorChibiDownVariant === 'swap' ? 18 : 12;
+        p = Math.max(0, Math.min(0.999, (lagTotal - this.stateTimer) / lagTotal));
+    } else if (this.actionState === 'GRAB_ATTEMPT') {
+        p = Math.max(0, Math.min(0.999, this.stateTimer / 15));
+    } else if (this.actionState === 'GRABBING') {
+        return Math.floor(Date.now() / (anim.frameMs || 100)) % frames;
+    } else if (this.actionState === 'THROWING') {
+        p = Math.max(0, Math.min(0.999, (15 - this.stateTimer) / 15));
+    } else if (this.actionState === 'LEDGE') {
+        return 0;
+    } else if (this.actionState === 'LEDGE_UP') {
+        if (this.stateTimer > 12) return Math.min(1, frames - 1);
+        if (this.stateTimer > 6) return Math.min(2, frames - 1);
+        return Math.min(3, frames - 1);
+    } else if (this.actionState === 'LEDGE_ATK') {
+        p = Math.max(0, Math.min(0.999, (30 - this.stateTimer) / 30));
+    } else if (this.actionState === 'DODGE' || this.actionState === 'LEDGE_ROLL') {
+        p = Math.max(0, Math.min(0.999, (25 - this.stateTimer) / 25));
+    }
+    if (p !== null) return Math.floor(p * frames);
+    return Math.floor(Date.now() / (anim.frameMs || 100)) % frames;
+};
+window.SMA.drawMirrorPropImage = function (ctx, x, y, angle, scale, alpha, tone) {
+    var prop = window.SMA.MIRROR_PROP_ASSET;
+    var img = prop ? window.SMA.getSpriteAsset(prop.key, prop.src) : null;
+    var w = prop ? prop.w : 96;
+    var h = prop ? prop.h : 144;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angle || 0);
+    ctx.scale(scale || 1, scale || 1);
+    ctx.globalAlpha *= (alpha === undefined ? 1 : alpha);
+    if (img && img.complete && img.naturalWidth) {
+        if (tone === 'cooldown') ctx.filter = 'grayscale(1) brightness(0.38) contrast(1.1)';
+        ctx.drawImage(img, -w / 2, -h / 2, w, h);
+        if (tone === 'cooldown') ctx.filter = 'none';
+    } else {
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = tone === 'cooldown' ? 'rgba(60, 64, 72, 0.65)' : 'rgba(129, 236, 236, 0.75)';
+        ctx.fillStyle = tone === 'cooldown' ? 'rgba(58, 62, 70, 0.55)' : 'rgba(220, 255, 255, 0.38)';
+        ctx.strokeStyle = tone === 'cooldown' ? '#3a3f48' : '#81ecec';
+        ctx.lineWidth = 2.4;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 6, 15, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(-3, -9);
+        ctx.lineTo(3, 9);
+        ctx.stroke();
+        ctx.strokeStyle = tone === 'cooldown' ? '#3a3f48' : '#81ecec';
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        ctx.moveTo(0, 14);
+        ctx.lineTo(0, 24);
+        ctx.stroke();
+    }
+    ctx.restore();
+};
+window.SMA.Fighter.prototype.drawMirrorChibiFocus = function (ctx, cx, drawFootY, spriteScale) {
+    var hidden = this.actionState === 'LEDGE' || this.actionState === 'LEDGE_UP' || this.actionState === 'LEDGE_ROLL' || this.actionState === 'GRAB_ATTEMPT' || this.actionState === 'GRABBING' || this.actionState === 'THROWING' || this.actionState === 'STUN' || this.actionState === 'GRABBED';
+    if (hidden) return;
+    var sign = this.facingRight ? 1 : -1;
+    var s = 1;
+    var yS = 0.78;
+    var hover = Math.sin(Date.now() / 220) * 4 * yS;
+    var mirX = cx + sign * 42 * s;
+    var mirY = drawFootY - 58 * yS + hover;
+    var mirScale = 1.0;
+    var mirAngle = 0;
+    var alpha = 0.85;
+
+    if (this.actionState === 'ATTACK' && this.currentAttack) {
+        var p = Math.max(0, Math.min(0.999, this.stateTimer / Math.max(1, this.currentAttack.frames || 1)));
+        var arc = Math.sin(p * Math.PI);
+        if (this.currentAttack.type === 'mirror_spin' || this.currentAttackType === 'AIR_NEUTRAL') {
+            var spin = p * Math.PI * 2;
+            mirX = cx + sign * Math.cos(spin) * 58 * s;
+            mirY = drawFootY - 62 * yS + Math.sin(spin) * 42 * yS;
+            mirScale = 1.05;
+        } else if (this.currentAttack.type === 'mirror_throw_up' || this.currentAttackType === 'UP' || this.currentAttackType === 'AIR_UP') {
+            mirX = cx;
+            mirY = drawFootY - (82 + arc * 46) * yS;
+            mirAngle = p * Math.PI * 4;
+            mirScale = 1.25;
+        } else if (this.currentAttack.type === 'mirror_throw' || this.currentAttackType === 'SIDE' || this.currentAttackType === 'AIR_SIDE') {
+            mirX = cx + sign * (30 + arc * 58) * s;
+            mirY = drawFootY - 57 * yS;
+            mirAngle = p * Math.PI * 4;
+            mirScale = 1.25;
+        } else if (this.currentAttack.type === 'mirror_slash' || this.currentAttackType === 'NEUTRAL') {
+            mirX = cx + sign * (30 + arc * 22) * s;
+            mirY = drawFootY - 60 * yS;
+            mirAngle = sign * 0.4;
+            mirScale = 1.15;
+        } else if (this.currentAttack.type === 'mirror_place' || this.currentAttackType === 'DOWN' || this.currentAttackType === 'AIR_DOWN') {
+            mirX = cx + sign * 34 * s;
+            mirY = drawFootY - (24 + arc * 32) * yS;
+            mirAngle = p * Math.PI * 3;
+            mirScale = this._mirrorChibiDownVariant === 'swap' ? 1.45 : 1.2;
+            alpha = this._mirrorChibiDownVariant === 'swap' ? 0.95 : 0.8;
+        }
+    } else if (this.actionState === 'CHARGE') {
+        var charged = this.chargePower > 1.2;
+        mirX += (Math.random() - 0.5) * 4 * s;
+        mirY += (Math.random() - 0.5) * 4 * yS;
+        mirScale = charged ? 1.2 : 1.0;
+        alpha = charged ? 0.95 : 0.78;
+    }
+
+    window.SMA.drawMirrorPropImage(ctx, mirX, mirY, mirAngle, 0.34 * mirScale, alpha, this.mirrorCooldown > 0 ? 'cooldown' : null);
+};
+window.SMA.Fighter.prototype.drawMirrorChibiSprite = function (ctx, cx) {
+    var anim = window.SMA.resolveMirrorChibiAnim(this);
+    if (!anim) return false;
+    var img = window.SMA.getSpriteAsset(anim.key, anim.src);
+    if (!img.complete || !img.naturalWidth) return true;
+
+    var fw = anim.frameW || window.SMA.MIRROR_CHIBI_FRAME_W || 160;
+    var fh = anim.frameH || window.SMA.MIRROR_CHIBI_FRAME || 160;
+    var baseline = anim.baseline || window.SMA.MIRROR_CHIBI_BASELINE || 148;
+    var spriteScale = anim.renderScale || window.SMA.MIRROR_CHIBI_RENDER_SCALE || 1;
+    var frame = this.getMirrorChibiFrame(anim);
+    var sx = Math.min(frame, (anim.frames || 1) - 1) * fw;
+    var footY = this.y + this.h;
+    var drawCx = cx;
+    var drawFootY = footY;
+
+    if (this.actionState === 'LEDGE_UP' && this.ledgeGrabbed) {
+        var ledgePlatform = this.ledgeGrabbed.platform;
+        var ledgeDir = this.ledgeGrabbed.dir;
+        var ledgeTopX = (ledgeDir === 'left') ? ledgePlatform.x : (ledgePlatform.x + ledgePlatform.w - this.w);
+        var t = Math.max(0, Math.min(1, (20 - this.stateTimer) / 20));
+        var eased = t * t * (3 - 2 * t);
+        drawCx = cx + ((ledgeTopX + this.w / 2) - cx) * eased;
+        drawFootY = footY + (ledgePlatform.y - footY) * eased;
+    }
+
+    ctx.save();
+    ctx.imageSmoothingEnabled = true;
+    ctx.globalAlpha = 0.22;
+    ctx.strokeStyle = this.color;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.ellipse(drawCx, drawFootY - 3, 22 * spriteScale, 7 * spriteScale, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+    ctx.restore();
+
+    ctx.save();
+    ctx.imageSmoothingEnabled = true;
+    ctx.translate(drawCx, drawFootY);
+    if (!this.facingRight) {
+        ctx.scale(-1, 1);
+    }
+    ctx.drawImage(img, sx, 0, fw, fh, -fw * spriteScale / 2, -baseline * spriteScale, fw * spriteScale, fh * spriteScale);
+    ctx.restore();
+
+    this.drawMirrorChibiFocus(ctx, drawCx, drawFootY, spriteScale);
+
+    if (this.actionState === 'SHIELD') {
+        ctx.save();
+        ctx.fillStyle = 'rgba(116, 185, 255, ' + (this.shieldHP / 150) + ')';
+        ctx.strokeStyle = '#0984e3';
+        ctx.beginPath();
+        ctx.arc(cx, this.y + this.h / 2, 45, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+    }
+    return true;
+};
+window.SMA.Fighter.prototype.drawMirrorChibiGhost = function (ctx, cloneCx, cloneFootY, cloneFacingRight) {
+    var anim = window.SMA.resolveMirrorChibiAnim(this);
+    if (!anim) return false;
+    var img = window.SMA.getSpriteAsset(anim.key, anim.src);
+    if (!img.complete || !img.naturalWidth) return false;
+
+    var fw = anim.frameW || window.SMA.MIRROR_CHIBI_FRAME_W || 160;
+    var fh = anim.frameH || window.SMA.MIRROR_CHIBI_FRAME || 160;
+    var baseline = anim.baseline || window.SMA.MIRROR_CHIBI_BASELINE || 148;
+    var spriteScale = (anim.renderScale || window.SMA.MIRROR_CHIBI_RENDER_SCALE || 1) * 0.98;
+    var frame = this.getMirrorChibiFrame(anim);
+    var sx = Math.min(frame, (anim.frames || 1) - 1) * fw;
+    var ghostCanvas = window.SMA._mirrorChibiGhostCanvas;
+    if (!ghostCanvas) {
+        ghostCanvas = document.createElement('canvas');
+        window.SMA._mirrorChibiGhostCanvas = ghostCanvas;
+    }
+    if (ghostCanvas.width !== fw || ghostCanvas.height !== fh) {
+        ghostCanvas.width = fw;
+        ghostCanvas.height = fh;
+    }
+    var gctx = ghostCanvas.getContext('2d');
+    gctx.clearRect(0, 0, fw, fh);
+    gctx.globalAlpha = 1;
+    gctx.globalCompositeOperation = 'source-over';
+    gctx.drawImage(img, sx, 0, fw, fh, 0, 0, fw, fh);
+    var sourcePixels = gctx.getImageData(0, 0, fw, fh);
+    gctx.globalCompositeOperation = 'source-in';
+    gctx.fillStyle = 'rgba(80, 238, 255, 0.72)';
+    gctx.fillRect(0, 0, fw, fh);
+    gctx.globalCompositeOperation = 'source-over';
+
+    var lineCanvas = window.SMA._mirrorChibiGhostLineCanvas;
+    if (!lineCanvas) {
+        lineCanvas = document.createElement('canvas');
+        window.SMA._mirrorChibiGhostLineCanvas = lineCanvas;
+    }
+    if (lineCanvas.width !== fw || lineCanvas.height !== fh) {
+        lineCanvas.width = fw;
+        lineCanvas.height = fh;
+    }
+    var lctx = lineCanvas.getContext('2d');
+    var linePixels = lctx.createImageData(fw, fh);
+    var srcData = sourcePixels.data;
+    var lineData = linePixels.data;
+    function mirrorGhostLum(idx) {
+        return srcData[idx] * 0.299 + srcData[idx + 1] * 0.587 + srcData[idx + 2] * 0.114;
+    }
+    function setMirrorGhostLinePixel(x, y, alpha) {
+        if (x < 0 || y < 0 || x >= fw || y >= fh) return;
+        var di = (y * fw + x) * 4;
+        if (lineData[di + 3] >= alpha) return;
+        lineData[di] = 165;
+        lineData[di + 1] = 252;
+        lineData[di + 2] = 255;
+        lineData[di + 3] = alpha;
+    }
+    for (var ly = 1; ly < fh - 1; ly++) {
+        for (var lx = 1; lx < fw - 1; lx++) {
+            var idx = (ly * fw + lx) * 4;
+            var a = srcData[idx + 3];
+            if (a < 36) continue;
+            var right = idx + 4;
+            var down = idx + fw * 4;
+            var left = idx - 4;
+            var up = idx - fw * 4;
+            var alphaDelta = Math.max(Math.abs(a - srcData[right + 3]), Math.abs(a - srcData[down + 3]), Math.abs(a - srcData[left + 3]), Math.abs(a - srcData[up + 3]));
+            var l = mirrorGhostLum(idx);
+            var lumDelta = Math.max(Math.abs(l - mirrorGhostLum(right)), Math.abs(l - mirrorGhostLum(down)), Math.abs(l - mirrorGhostLum(left)), Math.abs(l - mirrorGhostLum(up)));
+            if (alphaDelta > 30 || lumDelta > 22) {
+                var edgeAlpha = Math.max(75, Math.min(215, alphaDelta * 1.4 + lumDelta * 2.1));
+                setMirrorGhostLinePixel(lx, ly, edgeAlpha);
+                if (edgeAlpha > 130) {
+                    setMirrorGhostLinePixel(lx + 1, ly, Math.floor(edgeAlpha * 0.55));
+                    setMirrorGhostLinePixel(lx, ly + 1, Math.floor(edgeAlpha * 0.45));
+                }
+            }
+        }
+    }
+    lctx.putImageData(linePixels, 0, 0);
+
+    var outlineCanvas = window.SMA._mirrorChibiGhostOutlineCanvas;
+    if (!outlineCanvas) {
+        outlineCanvas = document.createElement('canvas');
+        window.SMA._mirrorChibiGhostOutlineCanvas = outlineCanvas;
+    }
+    if (outlineCanvas.width !== fw || outlineCanvas.height !== fh) {
+        outlineCanvas.width = fw;
+        outlineCanvas.height = fh;
+    }
+    var octx = outlineCanvas.getContext('2d');
+    octx.clearRect(0, 0, fw, fh);
+    octx.globalCompositeOperation = 'source-over';
+    octx.drawImage(img, sx, 0, fw, fh, -1, 0, fw, fh);
+    octx.drawImage(img, sx, 0, fw, fh, 1, 0, fw, fh);
+    octx.drawImage(img, sx, 0, fw, fh, 0, -1, fw, fh);
+    octx.drawImage(img, sx, 0, fw, fh, 0, 1, fw, fh);
+    octx.globalCompositeOperation = 'source-in';
+    octx.fillStyle = 'rgba(140, 252, 255, 0.95)';
+    octx.fillRect(0, 0, fw, fh);
+    octx.globalCompositeOperation = 'destination-out';
+    octx.drawImage(img, sx, 0, fw, fh, 0, 0, fw, fh);
+    octx.globalCompositeOperation = 'source-over';
+
+    ctx.save();
+    ctx.imageSmoothingEnabled = true;
+    ctx.translate(cloneCx, cloneFootY);
+    if (!cloneFacingRight) {
+        ctx.scale(-1, 1);
+    }
+    ctx.globalAlpha = 0.26;
+    ctx.shadowBlur = 8;
+    ctx.shadowColor = 'rgba(76, 238, 255, 0.45)';
+    ctx.drawImage(ghostCanvas, -fw * spriteScale / 2, -baseline * spriteScale, fw * spriteScale, fh * spriteScale);
+    ctx.globalAlpha = 0.72;
+    ctx.shadowBlur = 12;
+    ctx.shadowColor = 'rgba(76, 238, 255, 0.85)';
+    ctx.drawImage(outlineCanvas, -fw * spriteScale / 2, -baseline * spriteScale, fw * spriteScale, fh * spriteScale);
+    ctx.globalAlpha = 0.84;
+    ctx.shadowBlur = 5;
+    ctx.shadowColor = 'rgba(140, 252, 255, 0.75)';
+    ctx.drawImage(lineCanvas, -fw * spriteScale / 2, -baseline * spriteScale, fw * spriteScale, fh * spriteScale);
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 0.06;
+    ctx.drawImage(ghostCanvas, -fw * spriteScale / 2, -baseline * spriteScale, fw * spriteScale, fh * spriteScale);
+    ctx.restore();
+    return true;
+};
 window.SMA.preloadSwordChibiSprites();
 window.SMA.preloadMageChibiSprites();
 window.SMA.preloadBrawlerChibiSprites();
 window.SMA.preloadHammerChibiSprites();
 window.SMA.preloadSpearChibiSprites();
+window.SMA.preloadMirrorChibiSprites();
 window.SMA.preloadMageVfxSprites();
 window.SMA.Fighter.prototype.draw = function (ctx) {
     if (this.stocks <= 0 || this.actionState === 'DEAD' || this.actionState === 'RESPAWN') return;
@@ -3720,11 +4118,11 @@ window.SMA.Fighter.prototype.draw = function (ctx) {
     ctx.scale(this.animScale.x, this.animScale.y);
 
     var drawn = false;
-    if (this.actionState === 'LEDGE_ROLL' && this.charId !== 'brawler' && this.charId !== 'mage' && this.charId !== 'sword' && this.charId !== 'hammer' && this.charId !== 'spear') {
+    if (this.actionState === 'LEDGE_ROLL' && this.charId !== 'brawler' && this.charId !== 'mage' && this.charId !== 'sword' && this.charId !== 'hammer' && this.charId !== 'spear' && this.charId !== 'mirror') {
         ctx.translate(0, -15); ctx.rotate(this.rotation); ctx.strokeStyle = this.color; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(0, 0, 15, 0, Math.PI * 2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(15, 0); ctx.stroke();
         drawn = true;
     } else {
-        if (!(this.actionState === 'LEDGE_ROLL' && (this.charId === 'brawler' || this.charId === 'mage' || this.charId === 'sword' || this.charId === 'hammer' || this.charId === 'spear'))) {
+        if (!(this.actionState === 'LEDGE_ROLL' && (this.charId === 'brawler' || this.charId === 'mage' || this.charId === 'sword' || this.charId === 'hammer' || this.charId === 'spear' || this.charId === 'mirror'))) {
             ctx.rotate(this.rotation);
         }
         ctx.translate(-cx, -(this.y + this.h));
@@ -3761,6 +4159,13 @@ window.SMA.Fighter.prototype.draw = function (ctx) {
 
         if (this.charId === 'spear') {
             this.drawSpearChibiSprite(ctx, cx);
+            ctx.restore();
+            ctx.globalAlpha = 1.0;
+            return;
+        }
+
+        if (this.charId === 'mirror') {
+            this.drawMirrorChibiSprite(ctx, cx);
             ctx.restore();
             ctx.globalAlpha = 1.0;
             return;
