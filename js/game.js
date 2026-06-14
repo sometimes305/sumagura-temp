@@ -4238,7 +4238,7 @@ window.SMA.ANGEL_ARROW_ASSET = {
     key: 'angel_arrow_light_generated_v3',
     src: 'assets/characters/angel/angel_arrow.png?v=5',
     drawW: 46,
-    drawH: 13
+    drawH: 17
 };
 window.SMA.ANGEL_SHOCKWAVE_ASSET = {
     key: 'angel_shockwave_v1',
