@@ -1973,7 +1973,7 @@ window.SMA.STAGE_ASSETS = {
     battlefieldMain: { key: 'stage_battlefield_main_platform_v1', src: 'assets/stages/battlefield_platform_main.png?v=1' },
     battlefieldSmallWide: { key: 'stage_battlefield_small_wide_surface_v2', src: 'assets/stages/battlefield_platform_small_wide_surface_v2.png?v=2' },
     battlefieldSmallShort: { key: 'stage_battlefield_small_short_surface_v2', src: 'assets/stages/battlefield_platform_small_short_surface_v2.png?v=2' },
-    finalBg: { key: 'stage_final_bg_mobile_v1', src: 'assets/stages/final_background_mobile.png?v=1' },
+    finalBg: { key: 'stage_final_bg_mobile_v2', src: 'assets/stages/final_background_mobile.png?v=2' },
     finalMain: { key: 'stage_final_main_platform_v1', src: 'assets/stages/final_platform_main.png?v=1' }
 };
 window.SMA.drawStageImageCover = function (ctx, asset, x, y, w, h) {

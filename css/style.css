@@ -908,21 +908,23 @@ select {
     position: absolute;
     inset: 0;
     display: block;
+    background-size: cover;
+    background-repeat: no-repeat;
 }
 
 .preview-battlefield {
-    background:
-        radial-gradient(circle at 16% 20%, rgba(255, 247, 179, 0.85) 0 1.2px, transparent 1.6px),
-        radial-gradient(circle at 30% 34%, rgba(255, 247, 179, 0.75) 0 1.1px, transparent 1.5px),
-        radial-gradient(circle at 58% 18%, rgba(255, 247, 179, 0.8) 0 1.3px, transparent 1.7px),
-        radial-gradient(circle at 78% 30%, rgba(255, 247, 179, 0.7) 0 1px, transparent 1.4px),
-        radial-gradient(circle at 90% 16%, rgba(255, 247, 179, 0.75) 0 1.1px, transparent 1.5px),
-        linear-gradient(180deg, #0a0a1a 0%, #111733 55%, #1a2144 100%);
+    background-image: url('../assets/stages/stage_select_battlefield.png?v=1');
+    background-position: center 52%;
 }
 
 .preview-final {
-    background:
-        linear-gradient(180deg, #2c3e50 0%, #7a4f43 45%, #d35400 100%);
+    background-image: url('../assets/stages/stage_select_final.png?v=2');
+    background-position: center 52%;
+}
+
+.stage-preview .plat,
+.stage-preview .sun {
+    display: none !important;
 }
 
 .stage-preview .plat {
