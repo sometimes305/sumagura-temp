@@ -390,11 +390,33 @@ window.onload = function () {
         };
         try { el.addEventListener('touchstart', d, { passive: false }); } catch (e) { el.addEventListener('touchstart', d); }
         try { el.addEventListener('touchend', u, { passive: false }); } catch (e) { el.addEventListener('touchend', u); }
-        el.addEventListener('mousedown', d); el.addEventListener('mouseup', u);
+        try { el.addEventListener('touchcancel', u, { passive: false }); } catch (e) { el.addEventListener('touchcancel', u); }
+        el.addEventListener('mousedown', d); el.addEventListener('mouseup', u); el.addEventListener('mouseleave', u);
     };
     bind('btn-jump', 'jump'); bind('btn-attack', 'attack'); bind('btn-grab', 'grab'); bind('btn-shield', 'shield');
     var keyDirMap = { KeyA: 'left', KeyD: 'right', KeyW: 'up', KeyS: 'down' };
     var keyButtonMap = { Space: 'jump' };
+    var getAttackType = function () {
+        if (window.SMA.myKeys.up) return 'UP';
+        if (window.SMA.myKeys.down) return 'DOWN';
+        if (window.SMA.myKeys.left || window.SMA.myKeys.right) return 'SIDE';
+        return 'NEUTRAL';
+    };
+    var releaseStuckControls = function () {
+        var attackWasHeld = !!window.SMA.myKeys.attack;
+        var type = getAttackType();
+        if (attackWasHeld && window.SMA.gameRunning && window.SMA.isHost && window.SMA.pOne) {
+            window.SMA.pOne.releaseAttack(type);
+        }
+        window.SMA.myKeys.left = false;
+        window.SMA.myKeys.right = false;
+        window.SMA.myKeys.up = false;
+        window.SMA.myKeys.down = false;
+        window.SMA.myKeys.attack = false;
+        window.SMA.myKeys.jump = false;
+        window.SMA.myKeys.grab = false;
+        window.SMA.myKeys.shield = false;
+    };
     var getKeyButton = function (e) {
         if (keyButtonMap[e.code]) return keyButtonMap[e.code];
         if (e.key === ' ' || e.key === 'Spacebar' || e.key === 'Space') return 'jump';
@@ -424,6 +446,8 @@ window.onload = function () {
         }
         e.preventDefault();
     });
+    window.addEventListener('blur', releaseStuckControls);
+    window.addEventListener('pagehide', releaseStuckControls);
     window.addEventListener('resize', function () {
         window.SMA.applyTopExclusionLayout();
         window.SMA.initCanvas();

@@ -289,7 +289,7 @@ window.SMA.gameLoop = function () {
                     window.SMA.checkGameSet();
                     // 繝阪ャ繝医Ρ繝ｼ繧ｯ蜷梧悄
                     if (window.SMA.isOnline) {
-                        var pkt = { type: 'sync', stg: window.SMA.selectedStage, gState: window.SMA.gameState, cd: window.SMA.countdownTimer, playerCount: pc, events: window.SMA.syncEvents, projs: window.SMA.projectiles.map(function (p) { return { x: p.x, y: p.y, vx: p.vx, vy: p.vy, type: p.type, w: p.w, h: p.h, hitW: p.hitW, hitH: p.hitH, hitOffsetX: p.hitOffsetX, hitOffsetY: p.hitOffsetY, color: p.color, angle: p.angle || 0, age: p.age || 0, maxLife: p.maxLife || p.life || 0, surfaceY: p.surfaceY }; }), win: (window.SMA.gameState === 'GAMEOVER' ? document.getElementById('result-text').innerText : null) };
+                        var pkt = { type: 'sync', stg: window.SMA.selectedStage, gState: window.SMA.gameState, cd: window.SMA.countdownTimer, playerCount: pc, events: window.SMA.syncEvents, projs: window.SMA.projectiles.map(function (p) { return { x: p.x, y: p.y, vx: p.vx, vy: p.vy, type: p.type, w: p.w, h: p.h, hitW: p.hitW, hitH: p.hitH, hitOffsetX: p.hitOffsetX, hitOffsetY: p.hitOffsetY, color: p.color, particleColor: p.particleColor, angle: p.angle || 0, age: p.age || 0, maxLife: p.maxLife || p.life || 0, surfaceY: p.surfaceY }; }), win: (window.SMA.gameState === 'GAMEOVER' ? document.getElementById('result-text').innerText : null) };
                         // 蜷・・繝ｬ繧､繝､繝ｼ縺ｮ迥ｶ諷九ｒ霑ｽ蜉
                         for (var si = 0; si < pc; si++) {
                             pkt['p' + (si + 1)] = allPlayers[si].serialize();
@@ -618,7 +618,7 @@ window.SMA.checkHit = function (atk, vic) {
                 // FIX: Ensure scale is handled if 0
                 var kb = (p.kb + (Math.pow(vic.percent, 1.2) * scale)) * kbMult;
 
-                vic.vx = (p.vx > 0 ? 1 : -1) * kb * 2.0; if (p.vx === 0) vic.vx = (p.x < vic.x + vic.w / 2 ? 1 : -1) * kb * 2.0; vic.vy = -kb * 2.0; vic.enterState('STUN', Math.min(60, kb * 1.5)); window.SMA.hitStop = Math.floor(kb * 0.5); window.SMA.shake = 5; window.SMA.createParticles(vic.x, vic.y, 10, p.color); window.SMA.playSound('hit'); if (p.type !== 'fire_trap') window.SMA.projectiles.splice(i, 1);
+                vic.vx = (p.vx > 0 ? 1 : -1) * kb * 2.0; if (p.vx === 0) vic.vx = (p.x < vic.x + vic.w / 2 ? 1 : -1) * kb * 2.0; vic.vy = -kb * 2.0; vic.enterState('STUN', Math.min(60, kb * 1.5)); window.SMA.hitStop = Math.floor(kb * 0.5); window.SMA.shake = 5; window.SMA.createParticles(vic.x, vic.y, 10, p.particleColor || p.color); window.SMA.playSound('hit'); if (p.type !== 'fire_trap') window.SMA.projectiles.splice(i, 1);
             }
         }
     }
@@ -1027,7 +1027,7 @@ window.SMA.CHAR_DATA = {
             DOWN: { type: 'ground_shock', range: 130, dmg: 9, kb: 1.46, scale: 0.08, angle: -45, frames: 35, lag: 20, color: '#00b894' },
             AIR_NEUTRAL: { type: 'poke', range: 100, dmg: 8, kb: 1.62, scale: 0.1, angle: -30, frames: 20, lag: 10, color: '#00b894' },
             AIR_SIDE: { type: 'boomerang', dmg: 8, kb: 1.46, scale: 0.08, angle: -25, frames: 30, lag: 22, color: '#00b894' }, 
-            AIR_UP: { type: 'up_rush', dmg: 9, kb: 1.63, scale: 0.08, angle: -90, frames: 40, lag: 32, color: '#00cec9', limit: true }, 
+            AIR_UP: { type: 'boomerang_up', range: 100, dmg: 7, kb: 1.28, scale: 0.08, angle: -80, frames: 30, lag: 22, color: '#00b894' }, 
             AIR_DOWN: { type: 'boomerang_down', dmg: 11, kb: 1.46, scale: 0.08, angle: 90, frames: 30, lag: 20, color: '#00b894' },
             LEDGE_ATK: { dmg: 6, kb: 9.7, scale: 0.01, angle: -45, frames: 30, lag: 10, stun: 10 }
         },
@@ -1174,6 +1174,14 @@ window.SMA.Fighter.prototype.update = function (inputKeys, opponent) {
         }
         case 'ATTACK': if (!this.isGrounded) { var moveSpd = S.SPEED * 0.5; var cAtk = S.CHAR_DATA[this.charId] || {}; var airMoveMult = (typeof cAtk.airAttackMoveMult === 'number') ? cAtk.airAttackMoveMult : 1.0; moveSpd *= airMoveMult; if (inputKeys.left) this.vx -= moveSpd; if (inputKeys.right) this.vx += moveSpd; if (this.vx > 5) this.vx = 5; if (this.vx < -5) this.vx = -5; } if (this.currentAttack && (this.currentAttack.type === 'meteor' || this.currentAttack.type === 'beam' || this.currentAttack.type === 'dive' || this.currentAttack.type === 'axe' || this.currentAttack.type === 'stall_fall' || this.currentAttack.type === 'up_rush' || this.currentAttack.type === 'ground_shock')) { this.handleAttackFrame(); this.applyPhysics(); } else if (this.currentAttack && (this.currentAttack.type === 'slide' || this.currentAttack.type === 'lunge' || this.currentAttack.type === 'spin_hammer' || this.currentAttack.type === 'hammer_spin_air' || this.currentAttack.type === 'tornado')) { this.handleAttackFrame(); this.vx *= 0.95; this.vy += S.GRAVITY; this.checkPlatforms(inputKeys); this.x += this.vx; this.y += this.vy; if (this.y > 2000) this.checkBounds(); } else { this.handleAttackFrame(); this.applyPhysics(); } break;
         case 'CHARGE':
+            if (!inputKeys.attack) {
+                var chargeReleaseType = 'NEUTRAL';
+                if (inputKeys.up) chargeReleaseType = 'UP';
+                else if (inputKeys.down) chargeReleaseType = 'DOWN';
+                else if (inputKeys.left || inputKeys.right) chargeReleaseType = 'SIDE';
+                this.releaseAttack(chargeReleaseType);
+                break;
+            }
             this.stateTimer++;
             if (inputKeys.left) this.facingRight = false;
             if (inputKeys.right) this.facingRight = true;
@@ -1328,7 +1336,6 @@ window.SMA.Fighter.prototype.releaseAttack = function (typeStr) {
             else if (typeStr === 'SIDE') typeStr = 'AIR_SIDE';
             else if (typeStr === 'NEUTRAL') typeStr = 'AIR_NEUTRAL';
             else if (typeStr === 'UP' && set.AIR_UP) typeStr = 'AIR_UP';
-            if (this.charId === 'spear' && typeStr === 'AIR_UP' && this.hasUpSpecial) return;
         }
         this.actionState = 'ATTACK';
         if (set[typeStr]) this.currentAttack = set[typeStr]; else this.currentAttack = null;
@@ -1760,7 +1767,7 @@ window.SMA.Fighter.prototype.handleAttackFrame = function () {
             }
             // FIX: Pass scale
             var atkScale = (atk.scale !== undefined) ? atk.scale : 0.1;
-            S.projectiles.push({ x: startX, y: startY, vx: vx, vy: vy, w: 40, h: 40, ownerRole: this.playerRole, dmg: atk.dmg, kb: atk.kb, scale: atkScale, type: 'spear_throw', life: 60, angle: 0, color: atk.color });
+            S.projectiles.push({ x: startX, y: startY, vx: vx, vy: vy, w: 40, h: 40, ownerRole: this.playerRole, dmg: atk.dmg, kb: atk.kb, scale: atkScale, type: 'spear_throw', life: 60, angle: 0, color: atk.color, particleColor: '#050505' });
         }
         if (this.stateTimer >= atk.frames) {
             this.actionState = 'LAG'; this.stateTimer = atk.lag; this.chargePower = 1.0;
@@ -3743,7 +3750,7 @@ window.SMA.Fighter.prototype.getSpearChibiWeaponPose = function (cx, drawFootY) 
 window.SMA.Fighter.prototype.drawSpearChibiWeapon = function (ctx, cx, drawFootY) {
     var hideSpear = this.actionState === 'LEDGE' || this.actionState === 'LEDGE_UP' || this.actionState === 'LEDGE_ROLL' || this.actionState === 'GRAB_ATTEMPT' || this.actionState === 'GRABBING' || this.actionState === 'THROWING';
     if (hideSpear) return;
-    if (this.actionState === 'ATTACK' && this.currentAttack && (this.currentAttackType === 'SIDE' || this.currentAttackType === 'AIR_SIDE' || this.currentAttackType === 'UP' || this.currentAttackType === 'AIR_DOWN') && this.stateTimer >= 6) {
+    if (this.actionState === 'ATTACK' && this.currentAttack && (this.currentAttackType === 'SIDE' || this.currentAttackType === 'AIR_SIDE' || this.currentAttackType === 'UP' || this.currentAttackType === 'AIR_UP' || this.currentAttackType === 'AIR_DOWN' || this.currentAttack.type === 'boomerang_up') && this.stateTimer >= 6) {
         return;
     }
     var pose = this.getSpearChibiWeaponPose(cx, drawFootY);
@@ -4935,7 +4942,7 @@ window.SMA.Fighter.prototype.draw = function (ctx) {
                         var p = this.stateTimer / this.currentAttack.frames;
                         var shouldDrawSpear = true;
 
-                        if (this.currentAttackType === 'UP' || this.currentAttackType === 'boomerang_up') {
+                        if (this.currentAttackType === 'UP' || this.currentAttackType === 'AIR_UP' || this.currentAttack.type === 'boomerang_up') {
                             if (this.stateTimer < 5) { angleDeg = -80 + p * 60; } else shouldDrawSpear = false;
                         }
                         else if (this.currentAttackType === 'ground_shock') {
@@ -4950,7 +4957,6 @@ window.SMA.Fighter.prototype.draw = function (ctx) {
                             angleDeg = -20;
                             offsetX = Math.sin(p * Math.PI) * 40;
                         }
-                        else if (this.currentAttackType === 'AIR_UP') { angleDeg = -90; }
                         else if (this.currentAttackType === 'AIR_DOWN' || this.currentAttackType === 'boomerang_down') {
                             // NEW: Hide spear after throw
                             if (this.stateTimer < 5) angleDeg = 90;
@@ -4974,7 +4980,7 @@ window.SMA.Fighter.prototype.draw = function (ctx) {
 
                     if (!spearDrawn && !drawn) {
                         // Default Spear Position
-                        var isThrown = (this.currentAttack && (this.currentAttackType === 'SIDE' || this.currentAttackType === 'AIR_SIDE' || this.currentAttackType === 'UP' || this.currentAttackType === 'boomerang' || this.currentAttackType === 'boomerang_up' || this.currentAttackType === 'boomerang_down') && this.stateTimer >= 5);
+                        var isThrown = (this.currentAttack && (this.currentAttackType === 'SIDE' || this.currentAttackType === 'AIR_SIDE' || this.currentAttackType === 'UP' || this.currentAttackType === 'AIR_UP' || this.currentAttackType === 'boomerang' || this.currentAttackType === 'boomerang_up' || this.currentAttackType === 'boomerang_down') && this.stateTimer >= 5);
 
                         if (!isThrown) {
                             var angleDeg = -80;
