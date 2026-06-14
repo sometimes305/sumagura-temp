@@ -94,7 +94,20 @@ window.SMA.drawHammer = function (ctx, x, y, angleDeg, color, headColor) {
 };
 
 // --- Core game loop, simulation, fighters ---
-window.SMA.initCanvas = function () { if (!window.SMA.canvas) window.SMA.canvas = document.getElementById('gameCanvas'); if (window.SMA.canvas) { window.SMA.canvas.width = window.SMA.canvas.clientWidth || 1280; window.SMA.canvas.height = window.SMA.canvas.clientHeight || 720; window.SMA.SCREEN_W = window.SMA.canvas.width; window.SMA.SCREEN_H = window.SMA.canvas.height; if (!window.SMA.ctx) window.SMA.ctx = window.SMA.canvas.getContext('2d'); } };
+window.SMA.initCanvas = function () {
+    if (!window.SMA.canvas) window.SMA.canvas = document.getElementById('gameCanvas');
+    if (window.SMA.canvas) {
+        var cssW = Math.max(1, Math.round(window.SMA.canvas.clientWidth || 1280));
+        var cssH = Math.max(1, Math.round(window.SMA.canvas.clientHeight || 720));
+        var dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+        window.SMA.canvas.width = Math.round(cssW * dpr);
+        window.SMA.canvas.height = Math.round(cssH * dpr);
+        window.SMA.SCREEN_W = cssW;
+        window.SMA.SCREEN_H = cssH;
+        window.SMA.RENDER_SCALE = dpr;
+        if (!window.SMA.ctx) window.SMA.ctx = window.SMA.canvas.getContext('2d');
+    }
+};
 window.SMA.getTopExclusionHeight = function () {
     var h = window.innerHeight || document.documentElement.clientHeight || 0;
     return h >= 812 ? 98 : 74;
@@ -312,24 +325,34 @@ window.SMA.gameLoop = function () {
             if (winner) targets = [winner];
         }
         var tx = window.SMA.WORLD_W / 2; var ty = window.SMA.WORLD_H / 2; var tz = 1.0; if (window.SMA.gameState === 'COUNTDOWN') { tz = window.SMA.SCREEN_W / 1200; } else if (targets.length > 0) { var minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity; targets.forEach(function (p) { if (p.x < minX) minX = p.x; if (p.x > maxX) maxX = p.x; if (p.y < minY) minY = p.y; if (p.y > maxY) maxY = p.y; }); tx = (minX + maxX) / 2; ty = (minY + maxY) / 2; var zx = window.SMA.SCREEN_W / (maxX - minX + 500); var zy = window.SMA.SCREEN_H / (maxY - minY + 400); tz = Math.min(Math.min(zx, zy), 1.2); if (tz < 0.5) tz = 0.5; if (window.SMA.gameState === 'GAMEOVER') tz = 2.0; } if (!isNaN(tx)) window.SMA.camera.x += (tx - window.SMA.camera.x) * 0.1; if (!isNaN(ty)) window.SMA.camera.y += (ty - window.SMA.camera.y) * 0.1; if (!isNaN(tz)) window.SMA.camera.zoom += (tz - window.SMA.camera.zoom) * 0.05; if (isNaN(window.SMA.camera.x)) window.SMA.camera.x = 0; if (window.SMA.shake > 0) window.SMA.shake *= 0.9; if (window.SMA.shake < 0.5) window.SMA.shake = 0; if (window.SMA.ctx) {
-            window.SMA.ctx.setTransform(1, 0, 0, 1, 0, 0);
+            var renderScale = window.SMA.RENDER_SCALE || 1;
+            window.SMA.ctx.setTransform(renderScale, 0, 0, renderScale, 0, 0);
+            window.SMA.ctx.imageSmoothingEnabled = true;
+            if (window.SMA.ctx.imageSmoothingQuality !== undefined) window.SMA.ctx.imageSmoothingQuality = 'high';
 
             // BACKGROUND RENDER
             var stg = window.SMA.selectedStage;
             if (stg === 'final') {
-                var grad = window.SMA.ctx.createLinearGradient(0, 0, 0, window.SMA.canvas.height);
+                var grad = window.SMA.ctx.createLinearGradient(0, 0, 0, window.SMA.SCREEN_H);
                 grad.addColorStop(0, "#2c3e50");
                 grad.addColorStop(1, "#d35400");
                 window.SMA.ctx.fillStyle = grad;
-                window.SMA.ctx.fillRect(0, 0, window.SMA.canvas.width, window.SMA.canvas.height);
-                window.SMA.drawStageImageCover(window.SMA.ctx, window.SMA.STAGE_ASSETS.finalBg, 0, 0, window.SMA.canvas.width, window.SMA.canvas.height);
+                window.SMA.ctx.fillRect(0, 0, window.SMA.SCREEN_W, window.SMA.SCREEN_H);
+                window.SMA.drawStageImageCover(window.SMA.ctx, window.SMA.STAGE_ASSETS.finalBg, 0, 0, window.SMA.SCREEN_W, window.SMA.SCREEN_H);
             } else {
                 window.SMA.ctx.fillStyle = "#0f0f23";
-                window.SMA.ctx.fillRect(0, 0, window.SMA.canvas.width, window.SMA.canvas.height);
-                window.SMA.drawStageImageCover(window.SMA.ctx, window.SMA.STAGE_ASSETS.battlefieldBg, 0, 0, window.SMA.canvas.width, window.SMA.canvas.height);
+                window.SMA.ctx.fillRect(0, 0, window.SMA.SCREEN_W, window.SMA.SCREEN_H);
+                window.SMA.drawStageImageCover(window.SMA.ctx, window.SMA.STAGE_ASSETS.battlefieldBg, 0, 0, window.SMA.SCREEN_W, window.SMA.SCREEN_H);
             }
 
-            window.SMA.ctx.save(); window.SMA.ctx.translate(window.SMA.SCREEN_W / 2, window.SMA.SCREEN_H / 2); window.SMA.ctx.scale(window.SMA.camera.zoom, window.SMA.camera.zoom); window.SMA.ctx.translate(-window.SMA.camera.x + (Math.random() - 0.5) * window.SMA.shake, -window.SMA.camera.y + (Math.random() - 0.5) * window.SMA.shake); for (var i = 0; i < window.SMA.stars.length; i++) {
+            var shakeX = (Math.random() - 0.5) * window.SMA.shake;
+            var shakeY = (Math.random() - 0.5) * window.SMA.shake;
+            var viewX = window.SMA.camera.x - shakeX;
+            var viewY = window.SMA.camera.y - shakeY;
+            var snap = Math.max(1, window.SMA.camera.zoom * renderScale);
+            viewX = Math.round(viewX * snap) / snap;
+            viewY = Math.round(viewY * snap) / snap;
+            window.SMA.ctx.save(); window.SMA.ctx.translate(window.SMA.SCREEN_W / 2, window.SMA.SCREEN_H / 2); window.SMA.ctx.scale(window.SMA.camera.zoom, window.SMA.camera.zoom); window.SMA.ctx.translate(-viewX, -viewY); for (var i = 0; i < window.SMA.stars.length; i++) {
                 var s = window.SMA.stars[i];
                 if (stg === 'final' && (!window.SMA.STAGE_ASSETS || !window.SMA.getSpriteAsset(window.SMA.STAGE_ASSETS.finalBg.key, window.SMA.STAGE_ASSETS.finalBg.src).complete)) {
                     window.SMA.ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
