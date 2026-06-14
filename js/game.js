@@ -461,6 +461,7 @@ window.SMA.gameLoop = function () {
             } catch (e) { }
             for (var i = 0; i < window.SMA.projectiles.length; i++) {
                 var p = window.SMA.projectiles[i]; if (window.SMA.drawMageProjectileVfx && window.SMA.drawMageProjectileVfx(window.SMA.ctx, p)) { continue; } if (p.type === 'fire_trap') { window.SMA.ctx.save(); for (var k = 0; k < 3; k++) { window.SMA.ctx.fillStyle = "rgba(255, " + (Math.floor(Math.random() * 150) + 50) + ", 0, " + (0.5 + Math.random() * 0.5) + ")"; var w = p.w * (0.8 + Math.random() * 0.4); var h = p.h * (1.0 + Math.random() * 0.5); var fx = p.x + (Math.random() - 0.5) * 20; window.SMA.ctx.beginPath(); window.SMA.ctx.moveTo(fx - w / 2, p.y + 40); window.SMA.ctx.lineTo(fx + w / 2, p.y + 40); window.SMA.ctx.lineTo(fx, p.y - h); window.SMA.ctx.fill(); } window.SMA.ctx.restore(); } else if (p.type === 'spear_throw') { try { window.SMA.ctx.save(); window.SMA.ctx.translate(p.x, p.y); window.SMA.ctx.rotate(p.angle); window.SMA.ctx.translate(-35, 0); window.SMA.drawTrident(window.SMA.ctx, 0, 0, 0, p.color); window.SMA.ctx.restore(); } catch (e) { } } else if (p.type === 'shockwave') { window.SMA.ctx.fillStyle = "#ffeaa7"; window.SMA.ctx.beginPath(); window.SMA.ctx.arc(p.x, p.y, p.w / 2, 0, Math.PI, true); window.SMA.ctx.fill(); } else if (p.type === 'angel_arrow') {
+                    if (window.SMA.drawAngelArrowProjectile && window.SMA.drawAngelArrowProjectile(window.SMA.ctx, p)) { continue; }
                     // 繧ｨ繝ｳ繧ｸ繧ｧ繝ｫ蠑鍋泙: 遏｢縺ｮ蠖｢縺ｧ謠冗判
                     window.SMA.ctx.save();
                     window.SMA.ctx.translate(p.x, p.y);
@@ -1047,14 +1048,14 @@ window.SMA.CHAR_DATA = {
         maxJumps: 3,
         attacks: {
             // NA: 蜈峨・蠑鍋泙繧貞燕譁ｹ縺ｫ蟆・・・亥ｰ・ｨ・50px = WORLD_W/2・峨ゅメ繝｣繝ｼ繧ｸ縺ｧ3譛ｬ・育峩騾ｲ/譁懊ａ荳・譁懊ａ荳具ｼ・
-            NEUTRAL: { type: 'arrow_shot', spawnFrame: 6, dmg: 3, kb: 0.75, scale: 0.06, speed: 8, radius: 8, frames: 18, lag: 12, stun: 3, range: 750, color: '#ffe066' },
+            NEUTRAL: { type: 'arrow_shot', spawnFrame: 6, dmg: 3, kb: 0.75, scale: 0.06, speed: 8, radius: 8, frames: 18, lag: 12, stun: 3, range: 750, color: '#fff0a0' },
             // 讓ｪA: 鄒ｽ縺ｰ縺溘″謾ｻ謦・らｩｺ荳ｭ譎ゅ・閾ｪ蟾ｱ蠕梧婿繝弱ャ繧ｯ繝舌ャ繧ｯ
             SIDE: { type: 'wing_flap', dmg: 13, kb: 3, scale: 0.1, angle: -25, frames: 22, lag: 18, stun: 8, color: '#fff' },
             // 荳晦: 鬟帷ｿ疲判謦・ｼ域判謦・愛螳壻ｻ倥″荳頑・・・
             UP: { type: 'wing_rise', dmg: 11, kb: 3, scale: 0.1, angle: -85, frames: 30, lag: 20, stun: 6, color: '#ffe066', limit: true },
             // 荳帰: 蜀・ｽ｢陦晄茶豕｢・亥崋螳壼聖縺｣鬟帙・縺励∵茶蠅應ｸ榊庄・峨らｩｺ荳ｭ縺ｧ貊樒ｩｺ
             DOWN: { type: 'shockwave', dmg: 6, kb: 8.0, scale: 0, angle: -45, frames: 35, lag: 35, stun: 10, shockRadius: 140, color: '#ffe066' },
-            AIR_NEUTRAL: { type: 'arrow_shot', spawnFrame: 6, dmg: 3, kb: 0.75, scale: 0.06, speed: 8, radius: 8, frames: 18, lag: 12, stun: 3, range: 750, color: '#ffe066' },
+            AIR_NEUTRAL: { type: 'arrow_shot', spawnFrame: 6, dmg: 3, kb: 0.75, scale: 0.06, speed: 8, radius: 8, frames: 18, lag: 12, stun: 3, range: 750, color: '#fff0a0' },
             AIR_SIDE: { type: 'wing_flap', dmg: 12, kb: 3, scale: 0.1, angle: -30, frames: 22, lag: 18, stun: 7, color: '#fff', airKnockback: true },
             AIR_UP: { type: 'wing_rise', dmg: 11, kb: 3, scale: 0.1, angle: -90, frames: 28, lag: 18, stun: 5, color: '#ffe066', limit: true },
             AIR_DOWN: { type: 'shockwave', dmg: 6, kb: 8.0, scale: 0, angle: -45, frames: 35, lag: 35, stun: 10, shockRadius: 140, color: '#ffe066', hover: true },
@@ -1331,8 +1332,8 @@ window.SMA.Fighter.prototype.handleAttackFrame = function () {
             if (this.chargePower > 1.3) {
                 var angUp = -25 * Math.PI / 180;
                 var angDn = 25 * Math.PI / 180;
-                S.projectiles.push({ x: sx, y: sy, vx: spd * dir * Math.cos(angUp), vy: spd * Math.sin(angUp), w: r * 1.6, h: r * 1.6, ownerRole: this.playerRole, dmg: Math.round(atk.dmg * this.chargePower * 0.8), kb: atk.kb * this.chargePower * 0.8, scale: atkScale, type: 'angel_arrow', life: Math.ceil(maxDist / spd), angle: 0, color: '#fff5ba' });
-                S.projectiles.push({ x: sx, y: sy, vx: spd * dir * Math.cos(angDn), vy: spd * Math.sin(angDn), w: r * 1.6, h: r * 1.6, ownerRole: this.playerRole, dmg: Math.round(atk.dmg * this.chargePower * 0.8), kb: atk.kb * this.chargePower * 0.8, scale: atkScale, type: 'angel_arrow', life: Math.ceil(maxDist / spd), angle: 0, color: '#fff5ba' });
+                S.projectiles.push({ x: sx, y: sy, vx: spd * dir * Math.cos(angUp), vy: spd * Math.sin(angUp), w: r * 1.6, h: r * 1.6, ownerRole: this.playerRole, dmg: Math.round(atk.dmg * this.chargePower * 0.8), kb: atk.kb * this.chargePower * 0.8, scale: atkScale, type: 'angel_arrow', life: Math.ceil(maxDist / spd), angle: 0, color: '#fff8c8' });
+                S.projectiles.push({ x: sx, y: sy, vx: spd * dir * Math.cos(angDn), vy: spd * Math.sin(angDn), w: r * 1.6, h: r * 1.6, ownerRole: this.playerRole, dmg: Math.round(atk.dmg * this.chargePower * 0.8), kb: atk.kb * this.chargePower * 0.8, scale: atkScale, type: 'angel_arrow', life: Math.ceil(maxDist / spd), angle: 0, color: '#fff8c8' });
             }
             S.playSound('magic');
         }
@@ -1344,10 +1345,13 @@ window.SMA.Fighter.prototype.handleAttackFrame = function () {
         var hitStart = 8; var hitEnd = 14;
         if (this.stateTimer >= hitStart && this.stateTimer <= hitEnd) {
             var dir = this.facingRight ? 1 : -1;
+            var wingScale = 1 + Math.max(0, (this.chargePower || 1) - 1) * 0.45;
+            var hitW = 120 * wingScale;
+            var hitH = 75 * wingScale;
             this.hitbox.active = true;
-            this.hitbox.w = 120; this.hitbox.h = 75;
-            this.hitbox.x = this.x + this.w / 2 + dir * 30 - 60;
-            this.hitbox.y = this.y + 5;
+            this.hitbox.w = hitW; this.hitbox.h = hitH;
+            this.hitbox.x = this.x + this.w / 2 + dir * 30 - hitW / 2;
+            this.hitbox.y = this.y + 5 - (hitH - 75) * 0.35;
         } else { this.hitbox.active = false; }
         // 遨ｺ荳ｭ讓ｪA縺ｮ閾ｪ蟾ｱ蠕梧婿繝弱ャ繧ｯ繝舌ャ繧ｯ
         if (atk.airKnockback && !this.isGrounded && this.stateTimer === hitEnd) {
@@ -4098,12 +4102,311 @@ window.SMA.Fighter.prototype.drawMirrorChibiGhost = function (ctx, cloneCx, clon
     ctx.restore();
     return true;
 };
+window.SMA.ANGEL_CHIBI_FRAME = 192;
+window.SMA.ANGEL_CHIBI_FRAME_W = 192;
+window.SMA.ANGEL_CHIBI_BASELINE = 180;
+window.SMA.ANGEL_CHIBI_RENDER_SCALE = 0.43;
+window.SMA.ANGEL_CHIBI_ANIMS = {
+    idle: { key: 'angel_chibi_idle_match_attacks_v5', src: 'assets/characters/angel/angel_idle_sheet.png?v=5', frames: 4, frameMs: 220, baseline: 180 },
+    run: { key: 'angel_chibi_run_match_idle_v5', src: 'assets/characters/angel/angel_run_sheet.png?v=5', frames: 4, frameMs: 96, baseline: 180 },
+    jump: { key: 'angel_chibi_jump_match_idle_v2', src: 'assets/characters/angel/angel_jump_sheet.png?v=2', frames: 2, frameMs: 170, baseline: 180 },
+    fall: { key: 'angel_chibi_fall_match_idle_v2', src: 'assets/characters/angel/angel_fall_sheet.png?v=2', frames: 1, frameMs: 180, baseline: 180, frameW: 280, frameH: 192 },
+    hurt: { key: 'angel_chibi_hurt', src: 'assets/characters/angel/angel_hurt_sheet.png?v=1', frames: 3, frameMs: 90, baseline: 180 },
+    charge: { key: 'angel_chibi_charge_holy_aura_v2', src: 'assets/characters/angel/angel_charge_sheet.png?v=2', frames: 4, frameMs: 100, baseline: 226, frameW: 384, frameH: 248 },
+    attackNeutral: { key: 'angel_chibi_attack_neutral_v2', src: 'assets/characters/angel/angel_attack_neutral_sheet.png?v=2', frames: 4, frameMs: 48, baseline: 180 },
+    attackSide: { key: 'angel_chibi_attack_side_large_hitbox_v5', src: 'assets/characters/angel/angel_attack_side_large_hitbox_sheet.png?v=5', frames: 6, frameMs: 45, baseline: 196, frameW: 900, frameH: 216 },
+    attackUp: { key: 'angel_chibi_attack_up_airplane_v2', src: 'assets/characters/angel/angel_attack_up_sheet.png?v=2', frames: 4, frameMs: 62, baseline: 180, frameW: 360, frameH: 192 },
+    attackDown: { key: 'angel_chibi_attack_down_divine_v3', src: 'assets/characters/angel/angel_attack_down_sheet.png?v=3', frames: 4, frameMs: 70, baseline: 226, frameW: 384, frameH: 248 },
+    airNeutral: { key: 'angel_chibi_air_neutral_v2', src: 'assets/characters/angel/angel_air_neutral_sheet.png?v=2', frames: 4, frameMs: 48, baseline: 180 },
+    airSide: { key: 'angel_chibi_air_side_v7', src: 'assets/characters/angel/angel_air_side_sheet.png?v=7', frames: 6, frameMs: 45, baseline: 220, frameW: 900, frameH: 240 },
+    airUp: { key: 'angel_chibi_air_up_airplane_v2', src: 'assets/characters/angel/angel_air_up_sheet.png?v=2', frames: 4, frameMs: 62, baseline: 180, frameW: 360, frameH: 192 },
+    airDown: { key: 'angel_chibi_air_down_divine_v3', src: 'assets/characters/angel/angel_air_down_sheet.png?v=3', frames: 4, frameMs: 70, baseline: 226, frameW: 384, frameH: 248 },
+    grab: { key: 'angel_chibi_grab_holy_ring_v2', src: 'assets/characters/angel/angel_grab_sheet.png?v=2', frames: 4, frameMs: 62, baseline: 205, frameW: 320, frameH: 220 },
+    grabHold: { key: 'angel_chibi_grab_hold_holy_ring_v2', src: 'assets/characters/angel/angel_grab_hold_sheet.png?v=2', frames: 4, frameMs: 100, baseline: 205, frameW: 360, frameH: 220 },
+    throw: { key: 'angel_chibi_throw_holy_release_v2', src: 'assets/characters/angel/angel_throw_sheet.png?v=2', frames: 4, frameMs: 68, baseline: 205, frameW: 360, frameH: 220 },
+    dodge: { key: 'angel_chibi_dodge_graceful_v2', src: 'assets/characters/angel/angel_dodge_sheet.png?v=2', frames: 4, frameMs: 55, baseline: 205, frameW: 360, frameH: 220 },
+    ledge: { key: 'angel_chibi_ledge', src: 'assets/characters/angel/angel_ledge_sheet.png?v=1', frames: 4, frameMs: 110, baseline: 180 },
+    ledgeAttack: { key: 'angel_chibi_ledge_attack', src: 'assets/characters/angel/angel_ledge_attack_sheet.png?v=1', frames: 4, frameMs: 70, baseline: 180 },
+    ledgeRoll: { key: 'angel_chibi_ledge_roll', src: 'assets/characters/angel/angel_ledge_roll_sheet.png?v=1', frames: 4, frameMs: 55, baseline: 180 }
+};
+window.SMA.ANGEL_BOW_ASSET = {
+    key: 'angel_bow_v2',
+    src: 'assets/characters/angel/angel_bow.png?v=2',
+    drawH: 68,
+    gripXRatio: 0.66,
+    gripYRatio: 0.43
+};
+window.SMA.ANGEL_ARROW_ASSET = {
+    key: 'angel_arrow_light_generated_v3',
+    src: 'assets/characters/angel/angel_arrow.png?v=5',
+    drawW: 46,
+    drawH: 13
+};
+window.SMA.ANGEL_SHOCKWAVE_ASSET = {
+    key: 'angel_shockwave_v1',
+    src: 'assets/characters/angel/angel_shockwave_sheet.png?v=1',
+    frames: 6,
+    frameW: 320,
+    frameH: 320,
+    hitFrame: 18,
+    startFrame: 9,
+    frameStep: 3
+};
+window.SMA.ANGEL_SIDE_WING_CLAP_ASSET = {
+    key: 'angel_side_wing_clap_v1',
+    src: 'assets/characters/angel/angel_side_wing_clap_sheet.png?v=1',
+    frames: 4,
+    frameW: 288,
+    frameH: 192,
+    baseline: 180
+};
+for (var angelChibiAnimKey in window.SMA.ANGEL_CHIBI_ANIMS) {
+    if (Object.prototype.hasOwnProperty.call(window.SMA.ANGEL_CHIBI_ANIMS, angelChibiAnimKey)) {
+        if (!window.SMA.ANGEL_CHIBI_ANIMS[angelChibiAnimKey].frameW) window.SMA.ANGEL_CHIBI_ANIMS[angelChibiAnimKey].frameW = window.SMA.ANGEL_CHIBI_FRAME_W;
+        if (!window.SMA.ANGEL_CHIBI_ANIMS[angelChibiAnimKey].frameH) window.SMA.ANGEL_CHIBI_ANIMS[angelChibiAnimKey].frameH = window.SMA.ANGEL_CHIBI_FRAME;
+    }
+}
+window.SMA.preloadAngelChibiSprites = function () {
+    var anims = window.SMA.ANGEL_CHIBI_ANIMS || {};
+    for (var k in anims) {
+        if (Object.prototype.hasOwnProperty.call(anims, k)) {
+            window.SMA.getSpriteAsset(anims[k].key, anims[k].src);
+        }
+    }
+    var bow = window.SMA.ANGEL_BOW_ASSET;
+    if (bow) window.SMA.getSpriteAsset(bow.key, bow.src);
+    var arrow = window.SMA.ANGEL_ARROW_ASSET;
+    if (arrow) window.SMA.getSpriteAsset(arrow.key, arrow.src);
+    var shockwave = window.SMA.ANGEL_SHOCKWAVE_ASSET;
+    if (shockwave) window.SMA.getSpriteAsset(shockwave.key, shockwave.src);
+    var sideWings = window.SMA.ANGEL_SIDE_WING_CLAP_ASSET;
+    if (sideWings) window.SMA.getSpriteAsset(sideWings.key, sideWings.src);
+};
+window.SMA.drawAngelBowProp = function (ctx, x, y, facingRight, angleDeg, drawH, alpha) {
+    var asset = window.SMA.ANGEL_BOW_ASSET;
+    var img = asset && window.SMA.getSpriteAsset ? window.SMA.getSpriteAsset(asset.key, asset.src) : null;
+    if (!img || !img.complete || !img.naturalWidth) return;
+    var h = drawH || asset.drawH || 68;
+    var w = h * img.naturalWidth / img.naturalHeight;
+    var gripX = w * (asset.gripXRatio || 0.34);
+    var gripY = h * (asset.gripYRatio || 0.43);
+    ctx.save();
+    ctx.translate(x, y);
+    if (!facingRight) ctx.scale(-1, 1);
+    ctx.rotate((angleDeg || 0) * Math.PI / 180);
+    ctx.globalAlpha *= (alpha === undefined ? 1 : alpha);
+    ctx.imageSmoothingEnabled = true;
+    ctx.shadowColor = 'rgba(33, 28, 48, 0.55)';
+    ctx.shadowBlur = 2;
+    ctx.shadowOffsetX = facingRight ? -1 : 1;
+    ctx.shadowOffsetY = 1;
+    ctx.drawImage(img, -gripX, -gripY, w, h);
+    ctx.restore();
+};
+window.SMA.drawAngelArrowProjectile = function (ctx, p) {
+    var asset = window.SMA.ANGEL_ARROW_ASSET;
+    var img = asset && window.SMA.getSpriteAsset ? window.SMA.getSpriteAsset(asset.key, asset.src) : null;
+    if (!img || !img.complete || !img.naturalWidth) return false;
+    var angle = Math.atan2(p.vy || 0, p.vx || 1);
+    var speedScale = Math.max(0.85, Math.min(1.25, Math.sqrt((p.vx || 0) * (p.vx || 0) + (p.vy || 0) * (p.vy || 0)) / 8));
+    var w = (asset.drawW || 64) * speedScale;
+    var h = (asset.drawH || 13) * Math.max(0.9, Math.min(1.15, (p.w || 16) / 16));
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(angle);
+    ctx.imageSmoothingEnabled = true;
+    ctx.globalAlpha = 0.98;
+    ctx.shadowColor = 'rgba(255, 224, 70, 0.95)';
+    ctx.shadowBlur = 12;
+    ctx.drawImage(img, -w * 0.48, -h * 0.5, w, h);
+    ctx.restore();
+    return true;
+};
+window.SMA.Fighter.prototype.drawAngelSideWingClap = function (ctx, drawCx, drawFootY, spriteScale, frame) {
+    if (!(this.actionState === 'ATTACK' && this.currentAttack && this.currentAttack.type === 'wing_flap')) return;
+    if (this.currentAttackType === 'SIDE' || this.currentAttackType === 'AIR_SIDE') return;
+    var asset = window.SMA.ANGEL_SIDE_WING_CLAP_ASSET;
+    var img = asset && window.SMA.getSpriteAsset ? window.SMA.getSpriteAsset(asset.key, asset.src) : null;
+    if (!img || !img.complete || !img.naturalWidth) return;
+    var fw = asset.frameW || 288;
+    var fh = asset.frameH || 192;
+    var baseline = asset.baseline || 180;
+    var f = Math.max(0, Math.min((asset.frames || 4) - 1, frame || 0));
+    var charge = Math.max(1, this.chargePower || 1);
+    var boost = 0.9 + Math.max(0, charge - 1) * 0.45;
+    var frameAlpha = f === 2 ? 0.68 : (f === 1 ? 0.52 : 0.34);
+    var alpha = Math.min(0.96, frameAlpha + Math.max(0, charge - 1) * 0.5);
+    var s = (spriteScale || window.SMA.ANGEL_CHIBI_RENDER_SCALE || 1) * boost;
+    ctx.save();
+    ctx.imageSmoothingEnabled = true;
+    ctx.globalAlpha *= alpha;
+    ctx.translate(drawCx, drawFootY);
+    if (!this.facingRight) ctx.scale(-1, 1);
+    ctx.shadowColor = 'rgba(255, 238, 170, 0.8)';
+    ctx.shadowBlur = f === 2 ? 8 : 4;
+    ctx.drawImage(img, f * fw, 0, fw, fh, -fw * s / 2, -baseline * s, fw * s, fh * s);
+    ctx.restore();
+};
+window.SMA.resolveAngelChibiAnim = function (fighter) {
+    var A = window.SMA.ANGEL_CHIBI_ANIMS;
+    if (!A || !fighter || fighter.charId !== 'angel') return null;
+    if (fighter.actionState === 'STUN' || fighter.actionState === 'GRABBED') return A.hurt;
+    if (fighter.actionState === 'CHARGE') return A.charge;
+    if (fighter.actionState === 'DODGE') return A.dodge;
+    if (fighter.actionState === 'LEDGE_ROLL') return A.ledgeRoll || A.dodge;
+    if (fighter.actionState === 'LEDGE' || fighter.actionState === 'LEDGE_UP') return A.ledge;
+    if (fighter.actionState === 'LEDGE_ATK') return A.ledgeAttack || A.attackSide;
+    if (fighter.actionState === 'GRAB_ATTEMPT') return A.grab;
+    if (fighter.actionState === 'GRABBING') return A.grabHold || A.throw;
+    if (fighter.actionState === 'THROWING') return A.throw;
+    if (fighter.actionState === 'LAG') return A.idle;
+    if (fighter.actionState === 'ATTACK' && fighter.currentAttack) {
+        if (fighter.currentAttackType === 'AIR_NEUTRAL') return A.airNeutral;
+        if (fighter.currentAttackType === 'AIR_SIDE') return A.airSide;
+        if (fighter.currentAttackType === 'AIR_UP') return A.airUp;
+        if (fighter.currentAttackType === 'AIR_DOWN') return A.airDown;
+        if (fighter.currentAttackType === 'SIDE') return A.attackSide;
+        if (fighter.currentAttackType === 'UP') return A.attackUp;
+        if (fighter.currentAttackType === 'DOWN') return A.attackDown;
+        return A.attackNeutral;
+    }
+    if (!fighter.isGrounded) return fighter.vy < 0 ? A.jump : A.fall;
+    if (Math.abs(fighter.vx) > 0.6) return A.run;
+    return A.idle;
+};
+window.SMA.Fighter.prototype.getAngelChibiFrame = function (anim) {
+    var frames = anim.frames || 1;
+    if (frames <= 1) return 0;
+    var p = null;
+    if (this.actionState === 'STUN') {
+        var stunSpeed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+        if (!this.isGrounded || stunSpeed > 4) return Math.min(1, frames - 1);
+        return this.stateTimer > 20 ? Math.min(1, frames - 1) : Math.min(2, frames - 1);
+    }
+    if (this.actionState === 'GRABBED') return Math.min(1, frames - 1);
+    if (this.actionState === 'ATTACK' && this.currentAttack) {
+        p = Math.max(0, Math.min(0.999, this.stateTimer / Math.max(1, this.currentAttack.frames || frames)));
+    } else if (this.actionState === 'GRAB_ATTEMPT') {
+        p = Math.max(0, Math.min(0.999, this.stateTimer / 15));
+    } else if (this.actionState === 'GRABBING') {
+        return Math.floor(Date.now() / (anim.frameMs || 100)) % frames;
+    } else if (this.actionState === 'THROWING') {
+        p = Math.max(0, Math.min(0.999, (15 - this.stateTimer) / 15));
+    } else if (this.actionState === 'LEDGE') {
+        return 0;
+    } else if (this.actionState === 'LEDGE_UP') {
+        if (this.stateTimer > 12) return Math.min(1, frames - 1);
+        if (this.stateTimer > 6) return Math.min(2, frames - 1);
+        return Math.min(3, frames - 1);
+    } else if (this.actionState === 'LEDGE_ATK') {
+        p = Math.max(0, Math.min(0.999, (30 - this.stateTimer) / 30));
+    } else if (this.actionState === 'DODGE' || this.actionState === 'LEDGE_ROLL') {
+        p = Math.max(0, Math.min(0.999, (25 - this.stateTimer) / 25));
+    }
+    if (p !== null) return Math.floor(p * frames);
+    return Math.floor(Date.now() / (anim.frameMs || 100)) % frames;
+};
+window.SMA.Fighter.prototype.drawAngelChibiBow = function (ctx, drawCx, drawFootY, spriteScale) {
+    if (!(this.actionState === 'ATTACK' && this.currentAttack && this.currentAttack.type === 'arrow_shot')) return;
+    var sign = this.facingRight ? 1 : -1;
+    var total = Math.max(1, this.currentAttack.frames || 18);
+    var p = Math.max(0, Math.min(1, this.stateTimer / total));
+    var aim = p < 0.35 ? p / 0.35 : (p > 0.78 ? Math.max(0, (1 - p) / 0.22) : 1);
+    var s = spriteScale || window.SMA.ANGEL_CHIBI_RENDER_SCALE || 1;
+    var gripX = drawCx + sign * (42 + aim * 10) * s;
+    var gripY = drawFootY - (106 + aim * 4) * s;
+    var drawH = (154 + aim * 8) * s;
+    window.SMA.drawAngelBowProp(ctx, gripX, gripY, this.facingRight, -5, drawH, 1);
+};
+window.SMA.Fighter.prototype.drawAngelShockwaveVfx = function (ctx, drawCx) {
+    if (!(this.actionState === 'ATTACK' && this.currentAttack && this.currentAttack.type === 'shockwave')) return;
+    var asset = window.SMA.ANGEL_SHOCKWAVE_ASSET;
+    var img = asset && window.SMA.getSpriteAsset ? window.SMA.getSpriteAsset(asset.key, asset.src) : null;
+    if (!img || !img.complete || !img.naturalWidth) return;
+    var fw = asset.frameW || 320;
+    var fh = asset.frameH || 320;
+    var start = asset.startFrame || 9;
+    var step = asset.frameStep || 3;
+    var frame = Math.floor((this.stateTimer - start) / step);
+    if (frame < 0 || frame >= (asset.frames || 6)) return;
+    var sx = Math.min(frame, (asset.frames || 6) - 1) * fw;
+    var centerY = this.y + this.h / 2;
+    ctx.save();
+    ctx.imageSmoothingEnabled = true;
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.drawImage(img, sx, 0, fw, fh, drawCx - fw / 2, centerY - fh / 2, fw, fh);
+    ctx.restore();
+};
+window.SMA.Fighter.prototype.drawAngelChibiSprite = function (ctx, cx) {
+    var anim = window.SMA.resolveAngelChibiAnim(this);
+    if (!anim) return false;
+    var img = window.SMA.getSpriteAsset(anim.key, anim.src);
+    if (!img.complete || !img.naturalWidth) return true;
+
+    var fw = anim.frameW || window.SMA.ANGEL_CHIBI_FRAME_W || 192;
+    var fh = anim.frameH || window.SMA.ANGEL_CHIBI_FRAME || 192;
+    var baseline = anim.baseline || window.SMA.ANGEL_CHIBI_BASELINE || 180;
+    var spriteScale = anim.renderScale || window.SMA.ANGEL_CHIBI_RENDER_SCALE || 1;
+    var frame = this.getAngelChibiFrame(anim);
+    var sx = Math.min(frame, (anim.frames || 1) - 1) * fw;
+    var footY = this.y + this.h;
+    var drawCx = cx;
+    var drawFootY = footY;
+
+    if (this.actionState === 'LEDGE_UP' && this.ledgeGrabbed) {
+        var ledgePlatform = this.ledgeGrabbed.platform;
+        var ledgeDir = this.ledgeGrabbed.dir;
+        var ledgeTopX = (ledgeDir === 'left') ? ledgePlatform.x : (ledgePlatform.x + ledgePlatform.w - this.w);
+        var t = Math.max(0, Math.min(1, (20 - this.stateTimer) / 20));
+        var eased = t * t * (3 - 2 * t);
+        drawCx = cx + ((ledgeTopX + this.w / 2) - cx) * eased;
+        drawFootY = footY + (ledgePlatform.y - footY) * eased;
+    }
+
+    this.drawAngelShockwaveVfx(ctx, drawCx);
+
+    ctx.save();
+    ctx.imageSmoothingEnabled = true;
+    ctx.globalAlpha = 0.2;
+    ctx.strokeStyle = this.color;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.ellipse(drawCx, drawFootY - 3, 23 * spriteScale, 7 * spriteScale, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+    ctx.restore();
+
+    ctx.save();
+    ctx.imageSmoothingEnabled = true;
+    ctx.translate(drawCx, drawFootY);
+    if (!this.facingRight) {
+        ctx.scale(-1, 1);
+    }
+    ctx.drawImage(img, sx, 0, fw, fh, -fw * spriteScale / 2, -baseline * spriteScale, fw * spriteScale, fh * spriteScale);
+    ctx.restore();
+
+    this.drawAngelSideWingClap(ctx, drawCx, drawFootY, spriteScale, frame);
+    this.drawAngelChibiBow(ctx, drawCx, drawFootY, spriteScale);
+
+    if (this.actionState === 'SHIELD') {
+        ctx.save();
+        ctx.fillStyle = 'rgba(116, 185, 255, ' + (this.shieldHP / 150) + ')';
+        ctx.strokeStyle = '#0984e3';
+        ctx.beginPath();
+        ctx.arc(cx, this.y + this.h / 2, 45, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+    }
+    return true;
+};
 window.SMA.preloadSwordChibiSprites();
 window.SMA.preloadMageChibiSprites();
 window.SMA.preloadBrawlerChibiSprites();
 window.SMA.preloadHammerChibiSprites();
 window.SMA.preloadSpearChibiSprites();
 window.SMA.preloadMirrorChibiSprites();
+window.SMA.preloadAngelChibiSprites();
 window.SMA.preloadMageVfxSprites();
 window.SMA.Fighter.prototype.draw = function (ctx) {
     if (this.stocks <= 0 || this.actionState === 'DEAD' || this.actionState === 'RESPAWN') return;
@@ -4118,11 +4421,11 @@ window.SMA.Fighter.prototype.draw = function (ctx) {
     ctx.scale(this.animScale.x, this.animScale.y);
 
     var drawn = false;
-    if (this.actionState === 'LEDGE_ROLL' && this.charId !== 'brawler' && this.charId !== 'mage' && this.charId !== 'sword' && this.charId !== 'hammer' && this.charId !== 'spear' && this.charId !== 'mirror') {
+    if (this.actionState === 'LEDGE_ROLL' && this.charId !== 'brawler' && this.charId !== 'mage' && this.charId !== 'sword' && this.charId !== 'hammer' && this.charId !== 'spear' && this.charId !== 'mirror' && this.charId !== 'angel') {
         ctx.translate(0, -15); ctx.rotate(this.rotation); ctx.strokeStyle = this.color; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(0, 0, 15, 0, Math.PI * 2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(15, 0); ctx.stroke();
         drawn = true;
     } else {
-        if (!(this.actionState === 'LEDGE_ROLL' && (this.charId === 'brawler' || this.charId === 'mage' || this.charId === 'sword' || this.charId === 'hammer' || this.charId === 'spear' || this.charId === 'mirror'))) {
+        if (!(this.actionState === 'LEDGE_ROLL' && (this.charId === 'brawler' || this.charId === 'mage' || this.charId === 'sword' || this.charId === 'hammer' || this.charId === 'spear' || this.charId === 'mirror' || this.charId === 'angel'))) {
             ctx.rotate(this.rotation);
         }
         ctx.translate(-cx, -(this.y + this.h));
@@ -4166,6 +4469,13 @@ window.SMA.Fighter.prototype.draw = function (ctx) {
 
         if (this.charId === 'mirror') {
             this.drawMirrorChibiSprite(ctx, cx);
+            ctx.restore();
+            ctx.globalAlpha = 1.0;
+            return;
+        }
+
+        if (this.charId === 'angel') {
+            this.drawAngelChibiSprite(ctx, cx);
             ctx.restore();
             ctx.globalAlpha = 1.0;
             return;
