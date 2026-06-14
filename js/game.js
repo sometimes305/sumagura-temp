@@ -261,7 +261,7 @@ window.SMA.gameLoop = function () {
                                     if (owner) { var dx = owner.x + owner.w / 2 - p.x; var dy = owner.y + owner.h / 2 - p.y; var dist = Math.sqrt(dx * dx + dy * dy); if (dist < 30) { window.SMA.projectiles.splice(i, 1); continue; } p.vx += dx * 0.05; p.vy += dy * 0.05; }
                                 } p.angle += 0.5;
                             } p.x += p.vx; p.y += p.vy;
-                        } else { p.x += p.vx; p.y += p.vy; p.life--; if (p.type === 'fire') { for (var j = 0; j < window.SMA.platforms.length; j++) { var plat = window.SMA.platforms[j]; if (p.y > plat.y && p.y < plat.y + plat.h && p.x > plat.x && p.x < plat.x + plat.w) { p.type = 'fire_trap'; p.vx = 0; p.vy = 0; p.y = plat.y - 10; p.surfaceY = plat.y; p.life = 60; p.maxLife = 60; p.age = 0; p.w = 60; p.h = 40; window.SMA.playSound('special'); window.SMA.createParticles(p.x, p.surfaceY, 10, '#e17055'); break; } } } } if (p.life <= 0) window.SMA.projectiles.splice(i, 1);
+                        } else { p.x += p.vx; p.y += p.vy; p.life--; if (p.type === 'fire') { for (var j = 0; j < window.SMA.platforms.length; j++) { var plat = window.SMA.platforms[j]; if (p.y > plat.y && p.y < plat.y + plat.h && p.x > plat.x && p.x < plat.x + plat.w) { p.type = 'fire_trap'; p.vx = 0; p.vy = 0; p.y = plat.y - 10; p.surfaceY = plat.y; p.life = 60; p.maxLife = 60; p.age = 0; p.w = 60; p.h = 40; p.hitW = 82; p.hitH = 125; p.hitOffsetX = 0; p.hitOffsetY = -62.5; window.SMA.playSound('special'); window.SMA.createParticles(p.x, p.surfaceY, 10, '#e17055'); break; } } } } if (p.life <= 0) window.SMA.projectiles.splice(i, 1);
                     }
                     // 繝偵ャ繝亥愛螳・ 蜈ｨ繝励Ξ繧､繝､繝ｼ縺ｮ邨・∩蜷医ｏ縺・
                     for (var ai = 0; ai < pc; ai++) {
@@ -561,7 +561,11 @@ window.SMA.checkHit = function (atk, vic) {
             if (owner === vic) continue;
             var hit = false;
             if (p.type === 'fire_trap') {
-                if (p.x + p.w / 2 > vic.x && p.x - p.w / 2 < vic.x + vic.w && p.y + 40 > vic.y && p.y - p.h < vic.y + vic.h) hit = true;
+                var trapW = p.hitW || p.w;
+                var trapH = p.hitH || p.h;
+                var trapCx = p.x + (p.hitOffsetX || 0);
+                var trapCy = p.y + (p.hitOffsetY || 0);
+                if (trapCx + trapW / 2 > vic.x && trapCx - trapW / 2 < vic.x + vic.w && trapCy + trapH / 2 > vic.y && trapCy - trapH / 2 < vic.y + vic.h) hit = true;
             } else {
                 var hitW = p.hitW || p.w;
                 var hitH = p.hitH || p.h || p.w;
@@ -1666,7 +1670,7 @@ window.SMA.Fighter.prototype.handleAttackFrame = function () {
                 var visualH = visualW * 0.72;
                 var frontExtend = Math.max(0, visualW / 2 - r);
                 p.hitW = (r * 2) + frontExtend;
-                p.hitH = Math.max(r * 2, visualH * 0.82);
+                p.hitH = Math.max(r * 2, visualH * (r >= 22.5 ? 0.58 : 0.82));
                 p.hitOffsetX = (this.facingRight ? 1 : -1) * (frontExtend / 2);
             }
             if (atk.type === 'fire_shot') {
@@ -1691,6 +1695,11 @@ window.SMA.Fighter.prototype.handleAttackFrame = function () {
                 p.y = this.y + 20;
                 // Adjust X forward
                 p.x = this.x + this.w / 2 + (this.facingRight ? 45 : -45);
+                var fireW = Math.max(56, Math.min(104, Math.max(p.w || 0, p.h || 0) * 4.2));
+                var fireH = fireW * 0.68;
+                p.hitW = fireW * 0.58;
+                p.hitH = fireH * 0.58;
+                p.hitOffsetX = (this.facingRight ? 1 : -1) * (Math.max(0, fireW / 2 - r) * 0.16);
             }
             S.projectiles.push(p);
         }
