@@ -275,7 +275,7 @@ window.SMA.gameLoop = function () {
                     window.SMA.checkGameSet();
                     // 繝阪ャ繝医Ρ繝ｼ繧ｯ蜷梧悄
                     if (window.SMA.isOnline) {
-                        var pkt = { type: 'sync', stg: window.SMA.selectedStage, gState: window.SMA.gameState, cd: window.SMA.countdownTimer, playerCount: pc, events: window.SMA.syncEvents, projs: window.SMA.projectiles.map(function (p) { return { x: p.x, y: p.y, vx: p.vx, vy: p.vy, type: p.type, w: p.w, h: p.h, color: p.color, angle: p.angle || 0, age: p.age || 0, maxLife: p.maxLife || p.life || 0, surfaceY: p.surfaceY }; }), win: (window.SMA.gameState === 'GAMEOVER' ? document.getElementById('result-text').innerText : null) };
+                        var pkt = { type: 'sync', stg: window.SMA.selectedStage, gState: window.SMA.gameState, cd: window.SMA.countdownTimer, playerCount: pc, events: window.SMA.syncEvents, projs: window.SMA.projectiles.map(function (p) { return { x: p.x, y: p.y, vx: p.vx, vy: p.vy, type: p.type, w: p.w, h: p.h, hitW: p.hitW, hitH: p.hitH, hitOffsetX: p.hitOffsetX, hitOffsetY: p.hitOffsetY, color: p.color, angle: p.angle || 0, age: p.age || 0, maxLife: p.maxLife || p.life || 0, surfaceY: p.surfaceY }; }), win: (window.SMA.gameState === 'GAMEOVER' ? document.getElementById('result-text').innerText : null) };
                         // 蜷・・繝ｬ繧､繝､繝ｼ縺ｮ迥ｶ諷九ｒ霑ｽ蜉
                         for (var si = 0; si < pc; si++) {
                             pkt['p' + (si + 1)] = allPlayers[si].serialize();
@@ -560,7 +560,17 @@ window.SMA.checkHit = function (atk, vic) {
             }
             if (owner === vic) continue;
             var hit = false;
-            if (p.type === 'fire_trap') { if (p.x + p.w / 2 > vic.x && p.x - p.w / 2 < vic.x + vic.w && p.y + 40 > vic.y && p.y - p.h < vic.y + vic.h) hit = true; } else { if (p.x + p.w / 2 > vic.x && p.x - p.w / 2 < vic.x + vic.w && p.y + p.w / 2 > vic.y && p.y - p.w / 2 < vic.y + vic.h) hit = true; }
+            if (p.type === 'fire_trap') {
+                if (p.x + p.w / 2 > vic.x && p.x - p.w / 2 < vic.x + vic.w && p.y + 40 > vic.y && p.y - p.h < vic.y + vic.h) hit = true;
+            } else {
+                var hitW = p.hitW || p.w;
+                var hitH = p.hitH || p.h || p.w;
+                var hitOffsetX = p.hitOffsetX || 0;
+                var hitOffsetY = p.hitOffsetY || 0;
+                var hitCx = p.x + hitOffsetX;
+                var hitCy = p.y + hitOffsetY;
+                if (hitCx + hitW / 2 > vic.x && hitCx - hitW / 2 < vic.x + vic.w && hitCy + hitH / 2 > vic.y && hitCy - hitH / 2 < vic.y + vic.h) hit = true;
+            }
             if (hit) {
                 if (vic.actionState === 'DODGE') continue;
                 if (vic.superArmor) {
@@ -1647,8 +1657,18 @@ window.SMA.Fighter.prototype.handleAttackFrame = function () {
                 life: 60,
                 maxLife: 60,
                 age: 0,
-                color: '#a29bfe'
+                color: '#73f1bf'
             };
+            if (atk.type === 'shot') {
+                var visualW = r >= 22.5
+                    ? Math.max(120, Math.min(270, (r * 2) * 3.15))
+                    : Math.max(46, Math.min(104, (r * 2) * 2.7));
+                var visualH = visualW * 0.72;
+                var frontExtend = Math.max(0, visualW / 2 - r);
+                p.hitW = (r * 2) + frontExtend;
+                p.hitH = Math.max(r * 2, visualH * 0.82);
+                p.hitOffsetX = (this.facingRight ? 1 : -1) * (frontExtend / 2);
+            }
             if (atk.type === 'fire_shot') {
                 p.type = 'fire';
                 p.color = '#e17055';
@@ -1971,7 +1991,11 @@ window.SMA.drawMageProjectileVfx = function (ctx, p) {
     var A = window.SMA.MAGE_VFX_ANIMS || {};
     if (p.type === 'magic') {
         var magicFrame = Math.floor((p.age || 0) / 5) % A.magicProjectile.frames;
-        var magicW = Math.max(46, Math.min(118, Math.max(p.w || 0, p.h || 0) * 2.7));
+        var magicHitSize = Math.max(p.w || 0, p.h || 0);
+        var isLargeMagicShot = magicHitSize >= 45;
+        var magicW = isLargeMagicShot
+            ? Math.max(120, Math.min(270, magicHitSize * 3.15))
+            : Math.max(46, Math.min(104, magicHitSize * 2.7));
         var magicH = magicW * 0.72;
         var magicAngle = Math.atan2(p.vy || 0, p.vx || 1);
         return window.SMA.drawMageVfxSheet(ctx, A.magicProjectile, magicFrame, p.x, p.y, magicW, magicH, magicAngle, false);
@@ -2795,7 +2819,7 @@ window.SMA.Fighter.prototype.drawMageChibiSprite = function (ctx, cx) {
 window.SMA.BRAWLER_CHIBI_FRAME = 128;
 window.SMA.BRAWLER_CHIBI_FRAME_W = 224;
 window.SMA.BRAWLER_CHIBI_BASELINE = 116;
-window.SMA.BRAWLER_CHIBI_RENDER_SCALE = 0.8;
+window.SMA.BRAWLER_CHIBI_RENDER_SCALE = 0.745;
 window.SMA.BRAWLER_CHIBI_ANIMS = {
     idle: { key: 'brawler_chibi_idle', src: 'assets/characters/brawler/brawler_idle_sheet.png?v=18', frames: 4, frameMs: 260, baseline: 118 },
     run: { key: 'brawler_chibi_run', src: 'assets/characters/brawler/brawler_run_sheet.png?v=22', frames: 8, frameMs: 36, baseline: 118 },
