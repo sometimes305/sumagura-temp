@@ -17,6 +17,7 @@ window.SMA.SPEAR_WEAPON_ASSET = {
     key: 'spear_weapon_v4',
     src: 'assets/characters/spear/spear_weapon.png?v=4',
     drawW: 110,
+    thicknessScale: 1.3,
     gripXRatio: 0.18,
     gripYRatio: 0.52
 };
@@ -40,7 +41,7 @@ window.SMA.drawTrident = function (ctx, x, y, angleDeg, color, tipColor) {
     }
 
     var drawW = asset.drawW || 132;
-    var drawH = drawW * img.naturalHeight / img.naturalWidth;
+    var drawH = drawW * img.naturalHeight / img.naturalWidth * (asset.thicknessScale || 1);
     var gripX = drawW * (asset.gripXRatio || 0.18);
     var gripY = drawH * (asset.gripYRatio || 0.5);
     ctx.save();
@@ -2195,7 +2196,7 @@ window.SMA.SWORD_CHIBI_FRAME_W = 128;
 window.SMA.SWORD_CHIBI_BASELINE = 116;
 window.SMA.SWORD_CHIBI_RENDER_SCALE = 0.78;
 window.SMA.SWORD_CHIBI_BLADE_LEN = 72;
-window.SMA.SWORD_CHIBI_BLADE_WIDTH_SCALE = 0.78;
+window.SMA.SWORD_CHIBI_BLADE_WIDTH_SCALE = 0.9;
 window.SMA.SWORD_CHIBI_REACH_SCALE = 0.9;
 window.SMA.SWORD_CHIBI_WEAPON_ASSET = {
     key: 'sword_chibi_weapon',
