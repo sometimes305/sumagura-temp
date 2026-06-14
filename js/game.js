@@ -321,21 +321,24 @@ window.SMA.gameLoop = function () {
                 grad.addColorStop(0, "#2c3e50");
                 grad.addColorStop(1, "#d35400");
                 window.SMA.ctx.fillStyle = grad;
+                window.SMA.ctx.fillRect(0, 0, window.SMA.canvas.width, window.SMA.canvas.height);
+                window.SMA.drawStageImageCover(window.SMA.ctx, window.SMA.STAGE_ASSETS.finalBg, 0, 0, window.SMA.canvas.width, window.SMA.canvas.height);
             } else {
                 window.SMA.ctx.fillStyle = "#0f0f23";
+                window.SMA.ctx.fillRect(0, 0, window.SMA.canvas.width, window.SMA.canvas.height);
+                window.SMA.drawStageImageCover(window.SMA.ctx, window.SMA.STAGE_ASSETS.battlefieldBg, 0, 0, window.SMA.canvas.width, window.SMA.canvas.height);
             }
-            window.SMA.ctx.fillRect(0, 0, window.SMA.canvas.width, window.SMA.canvas.height);
 
             window.SMA.ctx.save(); window.SMA.ctx.translate(window.SMA.SCREEN_W / 2, window.SMA.SCREEN_H / 2); window.SMA.ctx.scale(window.SMA.camera.zoom, window.SMA.camera.zoom); window.SMA.ctx.translate(-window.SMA.camera.x + (Math.random() - 0.5) * window.SMA.shake, -window.SMA.camera.y + (Math.random() - 0.5) * window.SMA.shake); for (var i = 0; i < window.SMA.stars.length; i++) {
                 var s = window.SMA.stars[i];
-                if (stg === 'final') {
+                if (stg === 'final' && (!window.SMA.STAGE_ASSETS || !window.SMA.getSpriteAsset(window.SMA.STAGE_ASSETS.finalBg.key, window.SMA.STAGE_ASSETS.finalBg.src).complete)) {
                     window.SMA.ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
                     window.SMA.ctx.beginPath(); window.SMA.ctx.ellipse(s.x, s.y, s.s, s.s / 2, 0, 0, Math.PI * 2); window.SMA.ctx.fill();
-                } else {
+                } else if (stg !== 'final' && (!window.SMA.STAGE_ASSETS || !window.SMA.getSpriteAsset(window.SMA.STAGE_ASSETS.battlefieldBg.key, window.SMA.STAGE_ASSETS.battlefieldBg.src).complete)) {
                     window.SMA.ctx.fillStyle = "rgba(255, 255, 200, " + (0.5 + Math.random() * 0.5) + ")";
                     window.SMA.ctx.beginPath(); window.SMA.ctx.arc(s.x, s.y, s.s, 0, Math.PI * 2); window.SMA.ctx.fill();
                 }
-            } if (window.SMA.platforms.length > 0) { var m = window.SMA.platforms[0]; window.SMA.ctx.fillStyle = "#3e2723"; window.SMA.ctx.beginPath(); window.SMA.ctx.moveTo(m.x, m.y); window.SMA.ctx.lineTo(m.x + m.w, m.y); window.SMA.ctx.lineTo(m.x + m.w / 2, m.y + 200); window.SMA.ctx.fill(); for (var i = 0; i < window.SMA.platforms.length; i++) { var p = window.SMA.platforms[i]; window.SMA.ctx.fillStyle = "#3e2723"; window.SMA.ctx.fillRect(p.x, p.y, p.w, p.h); window.SMA.ctx.fillStyle = "#a1887f"; window.SMA.ctx.fillRect(p.x, p.y, p.w, 5); } }
+            } if (window.SMA.platforms.length > 0) { if (stg === 'final' && window.SMA.drawFinalMainPlatformArt(window.SMA.ctx, window.SMA.platforms[0])) { } else if (stg === 'battlefield' && window.SMA.drawBattlefieldMainPlatformArt(window.SMA.ctx, window.SMA.platforms[0])) { for (var i = 1; i < window.SMA.platforms.length; i++) { var p = window.SMA.platforms[i]; if (!window.SMA.drawBattlefieldSmallPlatformArt(window.SMA.ctx, p)) { window.SMA.ctx.fillStyle = "#3e2723"; window.SMA.ctx.fillRect(p.x, p.y, p.w, p.h); window.SMA.ctx.fillStyle = "#a1887f"; window.SMA.ctx.fillRect(p.x, p.y, p.w, 5); } } } else { window.SMA.drawVectorStagePlatforms(window.SMA.ctx); } }
             // 蜈ｨ繝励Ξ繧､繝､繝ｼ謠冗判
             window.SMA.players.forEach(function (p) { try { if (p) p.draw(window.SMA.ctx); } catch (e) { } });
             // 髀｡繧ｪ繝悶ず繧ｧ繧ｯ繝医→髀｡蜒上・謠冗判
@@ -1964,6 +1967,68 @@ window.SMA.getSpriteAsset = function (key, src) {
         window.SMA.spriteAssets[key] = img;
     }
     return img;
+};
+window.SMA.STAGE_ASSETS = {
+    battlefieldBg: { key: 'stage_battlefield_bg_mobile_v1', src: 'assets/stages/battlefield_background_mobile.png?v=1' },
+    battlefieldMain: { key: 'stage_battlefield_main_platform_v1', src: 'assets/stages/battlefield_platform_main.png?v=1' },
+    battlefieldSmallWide: { key: 'stage_battlefield_small_wide_surface_v2', src: 'assets/stages/battlefield_platform_small_wide_surface_v2.png?v=2' },
+    battlefieldSmallShort: { key: 'stage_battlefield_small_short_surface_v2', src: 'assets/stages/battlefield_platform_small_short_surface_v2.png?v=2' },
+    finalBg: { key: 'stage_final_bg_mobile_v1', src: 'assets/stages/final_background_mobile.png?v=1' },
+    finalMain: { key: 'stage_final_main_platform_v1', src: 'assets/stages/final_platform_main.png?v=1' }
+};
+window.SMA.drawStageImageCover = function (ctx, asset, x, y, w, h) {
+    var img = asset && window.SMA.getSpriteAsset ? window.SMA.getSpriteAsset(asset.key, asset.src) : null;
+    if (!img || !img.complete || !img.naturalWidth) return false;
+    var scale = Math.max(w / img.naturalWidth, h / img.naturalHeight);
+    var dw = img.naturalWidth * scale;
+    var dh = img.naturalHeight * scale;
+    ctx.drawImage(img, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
+    return true;
+};
+window.SMA.drawBattlefieldMainPlatformArt = function (ctx, plat) {
+    var asset = window.SMA.STAGE_ASSETS && window.SMA.STAGE_ASSETS.battlefieldMain;
+    var img = asset && window.SMA.getSpriteAsset ? window.SMA.getSpriteAsset(asset.key, asset.src) : null;
+    if (!img || !img.complete || !img.naturalWidth) return false;
+    var drawW = plat.w * 1.03;
+    var drawH = drawW * img.naturalHeight / img.naturalWidth;
+    ctx.drawImage(img, plat.x - (drawW - plat.w) / 2, plat.y - 25, drawW, drawH);
+    return true;
+};
+window.SMA.drawFinalMainPlatformArt = function (ctx, plat) {
+    var asset = window.SMA.STAGE_ASSETS && window.SMA.STAGE_ASSETS.finalMain;
+    var img = asset && window.SMA.getSpriteAsset ? window.SMA.getSpriteAsset(asset.key, asset.src) : null;
+    if (!img || !img.complete || !img.naturalWidth) return false;
+    var drawW = plat.w * 1.04;
+    var drawH = drawW * img.naturalHeight / img.naturalWidth;
+    ctx.drawImage(img, plat.x - (drawW - plat.w) / 2, plat.y - 28, drawW, drawH);
+    return true;
+};
+window.SMA.drawBattlefieldSmallPlatformArt = function (ctx, plat) {
+    var isWide = plat.w >= 260;
+    var asset = window.SMA.STAGE_ASSETS && (isWide ? window.SMA.STAGE_ASSETS.battlefieldSmallWide : window.SMA.STAGE_ASSETS.battlefieldSmallShort);
+    var img = asset && window.SMA.getSpriteAsset ? window.SMA.getSpriteAsset(asset.key, asset.src) : null;
+    if (!img || !img.complete || !img.naturalWidth) return false;
+    var drawW = plat.w * 1.16;
+    var drawH = drawW * img.naturalHeight / img.naturalWidth;
+    ctx.drawImage(img, plat.x - (drawW - plat.w) / 2, plat.y - 10, drawW, drawH);
+    return true;
+};
+window.SMA.drawVectorStagePlatforms = function (ctx) {
+    if (window.SMA.platforms.length <= 0) return;
+    var m = window.SMA.platforms[0];
+    ctx.fillStyle = "#3e2723";
+    ctx.beginPath();
+    ctx.moveTo(m.x, m.y);
+    ctx.lineTo(m.x + m.w, m.y);
+    ctx.lineTo(m.x + m.w / 2, m.y + 200);
+    ctx.fill();
+    for (var i = 0; i < window.SMA.platforms.length; i++) {
+        var p = window.SMA.platforms[i];
+        ctx.fillStyle = "#3e2723";
+        ctx.fillRect(p.x, p.y, p.w, p.h);
+        ctx.fillStyle = "#a1887f";
+        ctx.fillRect(p.x, p.y, p.w, 5);
+    }
 };
 window.SMA.MAGE_VFX_FRAME = 128;
 window.SMA.MAGE_VFX_ANIMS = {
