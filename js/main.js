@@ -75,6 +75,7 @@ window.SMA.lockstepFrame = 0;
 window.SMA.lockstepRemoteFrame = 0;
 window.SMA.lockstepInputBuffer = {};
 window.SMA.lockstepLastInputs = { p1: {}, p2: {}, p3: {}, p4: {} };
+window.SMA.lockstepLastInputFrame = { p1: -1, p2: -1, p3: -1, p4: -1 };
 window.SMA.lockstepLocalTriggers = {};
 window.SMA.lockstepStallStartAt = 0;
 
@@ -99,6 +100,16 @@ window.SMA.cloneInputKeys = function (keys) {
         triggerGrab: !!keys.triggerGrab,
         attackType: keys.attackType || null
     };
+};
+
+window.SMA.stripInputTriggers = function (keys) {
+    var out = window.SMA.cloneInputKeys(keys);
+    out.triggerJump = false;
+    out.triggerStartCharge = false;
+    out.triggerReleaseAttack = false;
+    out.triggerGrab = false;
+    out.attackType = null;
+    return out;
 };
 
 window.SMA.mergeInputKeys = function (base, incoming) {
@@ -131,6 +142,7 @@ window.SMA.resetLockstepState = function () {
     window.SMA.lockstepRemoteFrame = 0;
     window.SMA.lockstepInputBuffer = {};
     window.SMA.lockstepLastInputs = { p1: {}, p2: {}, p3: {}, p4: {} };
+    window.SMA.lockstepLastInputFrame = { p1: -1, p2: -1, p3: -1, p4: -1 };
     window.SMA.lockstepLocalTriggers = {};
     window.SMA.lockstepStallStartAt = 0;
     var roles = window.SMA.getLockstepActiveRoles();
@@ -148,6 +160,19 @@ window.SMA.storeLockstepInput = function (role, keys, frame) {
     var targetFrame = parseInt(frame, 10);
     if (!isFinite(targetFrame)) targetFrame = window.SMA.getLocalInputTargetFrame();
     if (window.SMA.isHost && targetFrame < window.SMA.lockstepFrame) targetFrame = window.SMA.lockstepFrame;
+    if (window.SMA.isHost && role !== 'p1') {
+        var lastFrame = window.SMA.lockstepLastInputFrame[role];
+        if (!isFinite(lastFrame)) lastFrame = -1;
+        var fillStart = Math.max(window.SMA.lockstepFrame || 0, lastFrame + 1);
+        var holdKeys = window.SMA.stripInputTriggers(keys);
+        for (var fillFrame = fillStart; fillFrame < targetFrame; fillFrame++) {
+            if (!window.SMA.lockstepInputBuffer[fillFrame]) window.SMA.lockstepInputBuffer[fillFrame] = {};
+            if (!window.SMA.lockstepInputBuffer[fillFrame][role]) {
+                window.SMA.lockstepInputBuffer[fillFrame][role] = window.SMA.mergeInputKeys(window.SMA.lockstepLastInputs[role], holdKeys);
+            }
+        }
+        if (targetFrame > lastFrame) window.SMA.lockstepLastInputFrame[role] = targetFrame;
+    }
     if (!window.SMA.lockstepInputBuffer[targetFrame]) window.SMA.lockstepInputBuffer[targetFrame] = {};
     window.SMA.lockstepInputBuffer[targetFrame][role] = window.SMA.mergeInputKeys(window.SMA.lockstepInputBuffer[targetFrame][role], keys);
     return true;
