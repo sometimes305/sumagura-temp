@@ -39,6 +39,106 @@ window.SMA.stopGravityRealtime = function () {
     window.SMA.gravityRtOutbox = [];
 };
 
+window.SMA.getLocalClientId = function () {
+    if (window.SMA.localClientId) return window.SMA.localClientId;
+    var id = null;
+    try {
+        id = sessionStorage.getItem('sma_client_id');
+        if (!id) {
+            id = 'c_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 10);
+            sessionStorage.setItem('sma_client_id', id);
+        }
+    } catch (e) {
+        id = 'c_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 10);
+    }
+    window.SMA.localClientId = id;
+    return id;
+};
+
+window.SMA.isPlayerRole = function (role) {
+    return role === 'p2' || role === 'p3' || role === 'p4';
+};
+
+window.SMA.findPlayerEntryByIdentity = function (data) {
+    data = data || {};
+    var clientId = data.clientId ? String(data.clientId) : null;
+    var name = data.name || '';
+    var icon = data.icon || null;
+    if (clientId) {
+        return window.SMA.connections.find(function (x) {
+            return window.SMA.isPlayerRole(x.role) && x.clientId && String(x.clientId) === clientId;
+        }) || null;
+    }
+    if (!name) return null;
+    return window.SMA.connections.find(function (x) {
+        if (!window.SMA.isPlayerRole(x.role) || x.clientId) return false;
+        if (x.name !== name) return false;
+        return !icon || !x.icon || x.icon === icon;
+    }) || null;
+};
+
+window.SMA.findOpenPlayerRoleEntry = function (role) {
+    return window.SMA.connections.find(function (x) {
+        return x.role === role && x.conn && x.conn.open;
+    }) || null;
+};
+
+window.SMA.getAvailablePlayerRole = function () {
+    var roles = ['p2', 'p3', 'p4'];
+    for (var i = 0; i < roles.length; i++) {
+        if (!window.SMA.findOpenPlayerRoleEntry(roles[i])) return roles[i];
+    }
+    return null;
+};
+
+window.SMA.upsertPlayerConnection = function (conn, data) {
+    data = data || {};
+    var existingByIdentity = window.SMA.findPlayerEntryByIdentity(data);
+    var role = existingByIdentity ? existingByIdentity.role : window.SMA.getAvailablePlayerRole();
+    if (!role) return null;
+
+    var entry = existingByIdentity || window.SMA.connections.find(function (x) { return x.role === role; });
+    if (entry) {
+        if (entry.conn && entry.conn !== conn && entry.conn.open && conn && conn.open) {
+            try { entry.conn.close(); } catch (e) { }
+        }
+        entry.conn = conn;
+        entry.name = data.name || entry.name;
+        entry.icon = data.icon || entry.icon;
+        entry.clientId = data.clientId || entry.clientId || null;
+    } else {
+        entry = { conn: conn, role: role, name: data.name, icon: data.icon, clientId: data.clientId || null };
+        window.SMA.connections.push(entry);
+    }
+    if (conn) conn._rtRole = role;
+    window.SMA.dedupePlayerConnections();
+    return { entry: entry, role: role, reused: !!existingByIdentity };
+};
+
+window.SMA.dedupePlayerConnections = function () {
+    var seen = {};
+    window.SMA.connections = window.SMA.connections.filter(function (entry) {
+        if (!entry || !window.SMA.isPlayerRole(entry.role)) return true;
+        var key = entry.clientId ? ('id:' + entry.clientId) : (entry.name ? ('name:' + entry.name + '|icon:' + (entry.icon || '')) : null);
+        if (!key) return true;
+        if (!seen[key]) {
+            seen[key] = entry;
+            return true;
+        }
+        var kept = seen[key];
+        if ((!kept.conn || !kept.conn.open) && entry.conn && entry.conn.open) {
+            kept.conn = entry.conn;
+            kept.name = entry.name || kept.name;
+            kept.icon = entry.icon || kept.icon;
+            kept.clientId = entry.clientId || kept.clientId;
+            if (kept.conn) kept.conn._rtRole = kept.role;
+        } else if (entry.conn && entry.conn !== kept.conn && entry.conn.open) {
+            try { entry.conn.close(); } catch (e) { }
+        }
+        return false;
+    });
+};
+
 window.SMA.handleGravityPeerHostMessage = function (c, d) {
     if (!d || typeof d !== 'object') return;
     if (d.ver && d.ver !== window.SMA.VERSION) {
@@ -49,19 +149,7 @@ window.SMA.handleGravityPeerHostMessage = function (c, d) {
     }
 
     if (d.type === 'handshake') {
-        var existingEntry = null;
-        var assignedRole = null;
-        if (d.role === 'join') {
-            var roles = ['p2', 'p3', 'p4'];
-            for (var ri = 0; ri < roles.length; ri++) {
-                var entry = window.SMA.connections.find(function (x) { return x.role === roles[ri]; });
-                if (entry && entry.name === d.name && (!entry.conn || !entry.conn.open)) {
-                    existingEntry = entry;
-                    assignedRole = roles[ri];
-                    break;
-                }
-            }
-        }
+        var existingEntry = (d.role === 'join') ? window.SMA.findPlayerEntryByIdentity(d) : null;
 
         var isLocked = window.SMA.gameRunning || window.SMA.isInCSS;
         if (isLocked && d.role !== 'spec' && !existingEntry) {
@@ -70,38 +158,16 @@ window.SMA.handleGravityPeerHostMessage = function (c, d) {
             return;
         }
 
-        if (existingEntry) {
-            existingEntry.conn = c;
-            existingEntry.name = d.name;
-            c._rtRole = assignedRole;
-            try { c.send({ type: 'assign_role', role: assignedRole }); } catch (e) { }
-            window.SMA.showNotification(assignedRole.toUpperCase() + "が再接続しました", 2000);
-        } else if (d.role === 'join') {
-            var p2 = window.SMA.connections.find(function (x) { return x.role === 'p2'; });
-            var p3 = window.SMA.connections.find(function (x) { return x.role === 'p3'; });
-            var p4 = window.SMA.connections.find(function (x) { return x.role === 'p4'; });
-            var newRole = null;
-            if (!p2 || !p2.conn || !p2.conn.open) newRole = 'p2';
-            else if (!p3 || !p3.conn || !p3.conn.open) newRole = 'p3';
-            else if (!p4 || !p4.conn || !p4.conn.open) newRole = 'p4';
-
-            if (!newRole) {
+        if (d.role === 'join') {
+            var assigned = window.SMA.upsertPlayerConnection(c, d);
+            if (!assigned) {
                 try { c.send({ type: 'error', msg: 'ROOM_FULL' }); } catch (e) { }
                 setTimeout(function () { try { c.close(); } catch (e) { } }, 500);
                 return;
             }
-            var existing = window.SMA.connections.find(function (x) { return x.role === newRole; });
-            if (existing) {
-                existing.conn = c;
-                existing.name = d.name;
-                existing.icon = d.icon;
-            } else {
-                window.SMA.connections.push({ conn: c, role: newRole, name: d.name, icon: d.icon });
-            }
-            c._rtRole = newRole;
-            try { c.send({ type: 'assign_role', role: newRole }); } catch (e) { }
+            try { c.send({ type: 'assign_role', role: assigned.role }); } catch (e) { }
             window.SMA.broadcastLobby();
-            window.SMA.showNotification(newRole.toUpperCase() + "が入室しました！", 2000);
+            window.SMA.showNotification(assigned.role.toUpperCase() + (assigned.reused ? "が再接続しました" : "が入室しました！"), 2000);
         } else {
             var existingSpec = window.SMA.connections.find(function (x) { return x.role === 'spec' && x.name === d.name; });
             if (existingSpec) {
@@ -344,9 +410,9 @@ window.addEventListener('message', function (event) {
                 // Route Handshake directly for Host
                 if (parsed.type === 'handshake' && window.SMA.isHost) {
                     var mockConn = { open: true, send: function (msg) { window.SMA.broadcast(msg); } };
-                    var existingEntry = null;
-                    var assignedRole = null;
-                    if (parsed.role === 'join') {
+                    var existingEntry = (parsed.role === 'join') ? window.SMA.findPlayerEntryByIdentity(parsed) : null;
+                    var assignedRole = existingEntry ? existingEntry.role : null;
+                    if (parsed.role === 'join' && !existingEntry) {
                         var roles = ['p2', 'p3', 'p4'];
                         for (var ri = 0; ri < roles.length; ri++) {
                             var entry = window.SMA.connections.find(function (x) { return x.role === roles[ri]; });
@@ -369,7 +435,7 @@ window.addEventListener('message', function (event) {
                             window.SMA.broadcast({ type: 'error', msg: 'ROOM_FULL', alignTo: parsed.name });
                             return;
                         }
-                        window.SMA.connections.push({ conn: mockConn, role: newRole, name: parsed.name, icon: parsed.icon });
+                        window.SMA.connections.push({ conn: mockConn, role: newRole, name: parsed.name, icon: parsed.icon, clientId: parsed.clientId || null });
                         window.SMA.broadcast({ type: 'assign_role', role: newRole, alignTo: parsed.name });
                         window.SMA.broadcastLobby();
                         window.SMA.showNotification(newRole.toUpperCase() + "が入室しました！", 2000);
@@ -815,7 +881,7 @@ window.SMA.showGravityJoinRoom = async function (roomIdParam, joinRole) {
             window.SMA.showNotification("部屋に入室しました", 2000);
 
             // Handshake送信（リトライ付き: assign_roleを受け取るまで繰り返す）
-            var handshakeMsg = { type: 'handshake', role: window.SMA.myRole, name: window.SMA.localPlayerName, icon: window.SMA.localPlayerIcon, ver: window.SMA.VERSION };
+            var handshakeMsg = { type: 'handshake', role: window.SMA.myRole, name: window.SMA.localPlayerName, icon: window.SMA.localPlayerIcon, clientId: window.SMA.getLocalClientId(), ver: window.SMA.VERSION };
             console.log("[SMA] Broadcasting handshake from guest");
             window.SMA.broadcast(handshakeMsg);
 
@@ -895,7 +961,7 @@ window.SMA.joinRoom = function (role) {
 
 window.SMA.setupClientConn = function (conn, role) {
     conn.on('open', function () {
-        conn.send({ type: 'handshake', role: role, name: window.SMA.localPlayerName, icon: window.SMA.localPlayerIcon, ver: window.SMA.VERSION });
+        conn.send({ type: 'handshake', role: role, name: window.SMA.localPlayerName, icon: window.SMA.localPlayerIcon, clientId: window.SMA.getLocalClientId(), ver: window.SMA.VERSION });
     });
     conn.on('data', function (d) {
         if (d.type === 'error' && d.msg === 'MATCH_IN_PROGRESS') {
@@ -1217,6 +1283,7 @@ window.SMA.startGameMulti = function () {
 
 window.SMA.broadcastLobby = function () {
     window.SMA.connections = window.SMA.connections.filter(function (x) { return x.conn.open || x.role === 'p2' || x.role === 'p3' || x.role === 'p4'; });
+    if (window.SMA.dedupePlayerConnections) window.SMA.dedupePlayerConnections();
 
     var p2 = window.SMA.connections.find(function (x) { return x.role === 'p2'; });
     var p3 = window.SMA.connections.find(function (x) { return x.role === 'p3'; });
@@ -1407,10 +1474,10 @@ window.SMA.handleConn = function (c) {
         if (d.ver && d.ver !== window.SMA.VERSION) { if (window.SMA.isHost) c.send({ type: 'error', msg: 'VERSION MISMATCH' }); document.getElementById('overlay-msg').innerText = "VERSION MISMATCH\nP2 has diff ver"; return; }
         if (d.type === 'handshake') {
             // プレイヤーロールの検索（再接続チェック含む）
-            var existingEntry = null;
-            var assignedRole = null;
+            var existingEntry = (d.role === 'join') ? window.SMA.findPlayerEntryByIdentity(d) : null;
+            var assignedRole = existingEntry ? existingEntry.role : null;
 
-            if (d.role === 'join') {
+            if (d.role === 'join' && !existingEntry) {
                 // まず既存のプレイヤーを検索（再接続判定）
                 var roles = ['p2', 'p3', 'p4'];
                 for (var ri = 0; ri < roles.length; ri++) {
@@ -1438,6 +1505,9 @@ window.SMA.handleConn = function (c) {
             if (existingEntry) {
                 existingEntry.conn = c;
                 existingEntry.name = d.name;
+                existingEntry.icon = d.icon || existingEntry.icon;
+                existingEntry.clientId = d.clientId || existingEntry.clientId || null;
+                c._rtRole = assignedRole;
                 c.send({ type: 'assign_role', role: assignedRole });
                 window.SMA.showNotification(assignedRole.toUpperCase() + "が再接続しました", 2000);
                 if (window.SMA.gameRunning) {
@@ -1466,9 +1536,12 @@ window.SMA.handleConn = function (c) {
                 if (existing) {
                     existing.conn = c;
                     existing.name = d.name;
+                    existing.icon = d.icon || existing.icon;
+                    existing.clientId = d.clientId || existing.clientId || null;
                 } else {
-                    window.SMA.connections.push({ conn: c, role: newRole, name: d.name, icon: d.icon });
+                    window.SMA.connections.push({ conn: c, role: newRole, name: d.name, icon: d.icon, clientId: d.clientId || null });
                 }
+                c._rtRole = newRole;
                 c.send({ type: 'assign_role', role: newRole });
                 window.SMA.broadcastLobby();
                 window.SMA.showNotification(newRole.toUpperCase() + "が入室しました！", 2000);
