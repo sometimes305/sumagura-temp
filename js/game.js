@@ -54,6 +54,12 @@ window.SMA.drawDebugHitboxes = function (ctx) {
     ctx.restore();
 };
 window.SMA.mageVfx = window.SMA.mageVfx || [];
+window.SMA.LEDGE_INPUT_LOCK_FRAMES = 45;
+window.SMA.LEDGE_MAX_INVINCIBLE_FRAMES = 150;
+window.SMA.getLedgeInvincibleFrames = function (airborneFrames) {
+    var airborneSeconds = Math.max(0, airborneFrames || 0) / 60;
+    return Math.min(window.SMA.LEDGE_MAX_INVINCIBLE_FRAMES, Math.floor(airborneSeconds * 0.75 * 60));
+};
 window.SMA.SPEAR_WEAPON_ASSET = {
     key: 'spear_weapon_v4',
     src: 'assets/characters/spear/spear_weapon.png?v=4',
@@ -325,18 +331,20 @@ window.SMA.gameLoop = function () {
 
                         if (lockstepInputs) {
                             var lKeys = lockstepInputs[role] || S.emptyInputKeys();
-                            if (lKeys.triggerStartCharge) player.startCharge();
-                            if (lKeys.triggerReleaseAttack) player.releaseAttack(lKeys.attackType);
-                            if (lKeys.triggerJump) player.triggerJump(lKeys);
-                            if (lKeys.triggerGrab) player.tryGrab(nearestEnemy);
+                            var localLedgeLocked = player.actionState === 'LEDGE' && player.ledgeInputLock > 0;
+                            if (!localLedgeLocked && lKeys.triggerStartCharge) player.startCharge();
+                            if (!localLedgeLocked && lKeys.triggerReleaseAttack) player.releaseAttack(lKeys.attackType);
+                            if (!localLedgeLocked && lKeys.triggerJump) player.triggerJump(lKeys);
+                            if (!localLedgeLocked && lKeys.triggerGrab) player.tryGrab(nearestEnemy);
                             player.update(lKeys, nearestEnemy);
                         } else if (pi === 0) {
                             // 1P: 繝帙せ繝医・蜈･蜉・
                             var p1Keys = soloDelayedInput || S.myKeys;
-                            if (p1Keys.triggerStartCharge) player.startCharge();
-                            if (p1Keys.triggerReleaseAttack) player.releaseAttack(p1Keys.attackType);
-                            if (p1Keys.triggerJump) player.triggerJump(p1Keys);
-                            if (p1Keys.triggerGrab) player.tryGrab(nearestEnemy);
+                            var p1LedgeLocked = player.actionState === 'LEDGE' && player.ledgeInputLock > 0;
+                            if (!p1LedgeLocked && p1Keys.triggerStartCharge) player.startCharge();
+                            if (!p1LedgeLocked && p1Keys.triggerReleaseAttack) player.releaseAttack(p1Keys.attackType);
+                            if (!p1LedgeLocked && p1Keys.triggerJump) player.triggerJump(p1Keys);
+                            if (!p1LedgeLocked && p1Keys.triggerGrab) player.tryGrab(nearestEnemy);
                             player.update(p1Keys, nearestEnemy);
                         } else if (S.isOnline) {
                             // 繧ｪ繝ｳ繝ｩ繧､繝ｳ: 繝ｪ繝｢繝ｼ繝亥・蜉・
@@ -349,10 +357,11 @@ window.SMA.gameLoop = function () {
                             var events = S.remoteEventsMap[role] || [];
                             while (events.length > 0) {
                                 var ev = events.shift();
-                                if (ev.triggerStartCharge) player.startCharge();
-                                if (ev.triggerReleaseAttack) player.releaseAttack(ev.attackType);
-                                if (ev.triggerJump) player.triggerJump(ev);
-                                if (ev.triggerGrab) player.tryGrab(nearestEnemy);
+                                var remoteLedgeLocked = player.actionState === 'LEDGE' && player.ledgeInputLock > 0;
+                                if (!remoteLedgeLocked && ev.triggerStartCharge) player.startCharge();
+                                if (!remoteLedgeLocked && ev.triggerReleaseAttack) player.releaseAttack(ev.attackType);
+                                if (!remoteLedgeLocked && ev.triggerJump) player.triggerJump(ev);
+                                if (!remoteLedgeLocked && ev.triggerGrab) player.tryGrab(nearestEnemy);
                             }
                             player.update(rKeys, nearestEnemy);
                         } else {
@@ -1058,6 +1067,7 @@ window.SMA.Fighter = function (x, y, color, isP2, charId) {
     this.ledgeGrabbed = null;
     this.cpuTimer = 0; this.dodgeCooldown = 0; this.grabInvincible = 0;
     this.animScale = { x: 1, y: 1 }; this.rotation = 0; this.currentPlatform = null; this.ledgeCooldown = 0;
+    this.airborneFrames = 0; this.ledgeInputLock = 0;
     this.charId = charId || 'sword';
     this.hasAirDodged = false;
     this.hasUpSpecial = false;
@@ -1248,14 +1258,8 @@ window.SMA.Fighter.prototype.update = function (inputKeys, opponent) {
         this.vx = 0; this.vy = 0; this.isGrounded = false; this.jumps = 0;
         this.stateTimer++; // Count time on ledge
 
-        // V410: Ledge Invincibility Limit (150 frames = 2.5 seconds)
-        if (this.stateTimer > 150) {
-            this.invincible = 0; // Remove invincibility
-        } else {
-            this.invincible = 5; // Maintain invincibility
-        }
-
         if (!this.ledgeGrabbed) { this.actionState = 'IDLE'; return; }
+        if (this.ledgeInputLock > 0) { this.ledgeInputLock--; return; }
         if (inputKeys.jump) { this.actionState = 'IDLE'; this.vy = -12; this.y -= 10; this.invincible = 20; } else if (inputKeys.down || (this.facingRight && inputKeys.left) || (!this.facingRight && inputKeys.right)) { this.actionState = 'IDLE'; this.y += 10; this.invincible = 10; this.ledgeCooldown = 30; } else if (inputKeys.attack) { this.enterState('LEDGE_ATK', 30); this.invincible = 20; this.hasHit = false; var set = S.CHAR_DATA[this.charId].attacks; this.currentAttack = set.LEDGE_ATK; var p = this.ledgeGrabbed.platform; var dir = this.ledgeGrabbed.dir; this.y = p.y - this.h; this.x = (dir === 'left') ? p.x : (p.x + p.w - this.w); } else if (inputKeys.shield) { this.enterState('LEDGE_ROLL', 25); this.invincible = 25; var p = this.ledgeGrabbed.platform; var dir = this.ledgeGrabbed.dir; this.y = p.y - this.h; this.x = (dir === 'left') ? p.x : (p.x + p.w - this.w); } else if (inputKeys.up || (this.facingRight && inputKeys.right) || (!this.facingRight && inputKeys.left)) { this.actionState = 'LEDGE_UP'; this.stateTimer = 20; this.invincible = 30; } return;
     }
     if (this.actionState === 'LEDGE_UP') { this.stateTimer--; this.vx = 0; this.vy = 0; if (this.stateTimer <= 0) { this.actionState = 'IDLE'; if (this.ledgeGrabbed) { var p = this.ledgeGrabbed.platform; var dir = this.ledgeGrabbed.dir; this.y = p.y - this.h; this.x = (dir === 'left') ? p.x : (p.x + p.w - this.w); } } return; }
@@ -1371,9 +1375,14 @@ window.SMA.Fighter.prototype.update = function (inputKeys, opponent) {
             }
         }
     }
+    if (this.isGrounded || this.actionState === 'LEDGE' || this.actionState === 'LEDGE_UP' || this.actionState === 'LEDGE_ATK' || this.actionState === 'LEDGE_ROLL') {
+        this.airborneFrames = 0;
+    } else {
+        this.airborneFrames = (this.airborneFrames || 0) + 1;
+    }
 };
-window.SMA.Fighter.prototype.serialize = function () { return { x: this.x, y: this.y, vx: this.vx, vy: this.vy, state: this.actionState, timer: this.stateTimer, atkType: this.currentAttackType, grounded: this.isGrounded, pct: this.percent, st: this.stocks, face: this.facingRight, chg: this.chargePower, sh: this.shieldHP, inv: this.invincible, grInv: this.grabInvincible, mirror: this.mirror, mirrorClone: this.mirrorClone, mirrorCooldown: this.mirrorCooldown, mirrorPlaceRange: this.mirrorPlaceRange, mirrorChibiDownVariant: this._mirrorChibiDownVariant || null, hitboxActive: this.hitbox.active, hitboxX: this.hitbox.x, hitboxY: this.hitbox.y, hitboxW: this.hitbox.w, hitboxH: this.hitbox.h }; };
-window.SMA.Fighter.prototype.deserialize = function (data) { var S = window.SMA; if (!data) return; this.x = data.x; this.y = data.y; this.vx = data.vx; this.vy = data.vy; this.actionState = data.state; this.stateTimer = data.timer; this.isGrounded = data.grounded; this.currentAttackType = data.atkType; if (this.currentAttackType) { var set = S.CHAR_DATA[this.charId]; if (set.attacks[this.currentAttackType]) this.currentAttack = set.attacks[this.currentAttackType]; else if (set.throws[this.currentAttackType]) this.currentAttack = set.throws[this.currentAttackType]; } else this.currentAttack = null; this.percent = data.pct; this.stocks = data.st; this.facingRight = data.face; this.chargePower = data.chg; this.shieldHP = data.sh; this.invincible = data.inv; this.grabInvincible = data.grInv || 0; this.mirror = data.mirror || null; this.mirrorClone = data.mirrorClone || null; this.mirrorCooldown = data.mirrorCooldown || 0; this.mirrorPlaceRange = data.mirrorPlaceRange || 0; this._mirrorChibiDownVariant = data.mirrorChibiDownVariant || null; if (data.hitboxActive !== undefined) { this.hitbox.active = data.hitboxActive; this.hitbox.x = data.hitboxX; this.hitbox.y = data.hitboxY; this.hitbox.w = data.hitboxW; this.hitbox.h = data.hitboxH; } };
+window.SMA.Fighter.prototype.serialize = function () { return { x: this.x, y: this.y, vx: this.vx, vy: this.vy, state: this.actionState, timer: this.stateTimer, atkType: this.currentAttackType, grounded: this.isGrounded, pct: this.percent, st: this.stocks, face: this.facingRight, chg: this.chargePower, sh: this.shieldHP, inv: this.invincible, grInv: this.grabInvincible, air: this.airborneFrames || 0, ledgeLock: this.ledgeInputLock || 0, mirror: this.mirror, mirrorClone: this.mirrorClone, mirrorCooldown: this.mirrorCooldown, mirrorPlaceRange: this.mirrorPlaceRange, mirrorChibiDownVariant: this._mirrorChibiDownVariant || null, hitboxActive: this.hitbox.active, hitboxX: this.hitbox.x, hitboxY: this.hitbox.y, hitboxW: this.hitbox.w, hitboxH: this.hitbox.h }; };
+window.SMA.Fighter.prototype.deserialize = function (data) { var S = window.SMA; if (!data) return; this.x = data.x; this.y = data.y; this.vx = data.vx; this.vy = data.vy; this.actionState = data.state; this.stateTimer = data.timer; this.isGrounded = data.grounded; this.currentAttackType = data.atkType; if (this.currentAttackType) { var set = S.CHAR_DATA[this.charId]; if (set.attacks[this.currentAttackType]) this.currentAttack = set.attacks[this.currentAttackType]; else if (set.throws[this.currentAttackType]) this.currentAttack = set.throws[this.currentAttackType]; } else this.currentAttack = null; this.percent = data.pct; this.stocks = data.st; this.facingRight = data.face; this.chargePower = data.chg; this.shieldHP = data.sh; this.invincible = data.inv; this.grabInvincible = data.grInv || 0; this.airborneFrames = data.air || 0; this.ledgeInputLock = data.ledgeLock || 0; this.mirror = data.mirror || null; this.mirrorClone = data.mirrorClone || null; this.mirrorCooldown = data.mirrorCooldown || 0; this.mirrorPlaceRange = data.mirrorPlaceRange || 0; this._mirrorChibiDownVariant = data.mirrorChibiDownVariant || null; if (data.hitboxActive !== undefined) { this.hitbox.active = data.hitboxActive; this.hitbox.x = data.hitboxX; this.hitbox.y = data.hitboxY; this.hitbox.w = data.hitboxW; this.hitbox.h = data.hitboxH; } };
 window.SMA.Fighter.prototype.enterState = function (state, duration) { this.actionState = state; this.stateTimer = duration; this.hitbox.active = false; };
 window.SMA.Fighter.prototype.faceOpponent = function (opponent) { if (opponent && opponent.stocks > 0 && opponent.actionState !== 'RESPAWN' && this.actionState !== 'ATTACK') { if (this.x < opponent.x - 10) this.facingRight = true; if (this.x > opponent.x + 10) this.facingRight = false; } };
 window.SMA.Fighter.prototype.applyPhysics = function () { var S = window.SMA; if (this.actionState === 'ATTACK' && this.currentAttack && (this.currentAttack.type === 'meteor' || this.currentAttack.type === 'dive' || this.currentAttack.type === 'axe' || this.currentAttack.type === 'stall_fall' || this.currentAttack.type === 'up_rush')) { if (this.vy > 30) this.vy = 30; } else { var cap = S.MAX_FALL_SPEED; if (this.actionState === 'STUN' && this.vy > cap) cap = 40; if (this.vy > cap) this.vy = cap; } if (this.actionState === 'STUN') { var speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy); if (speed < 4.0) { this.vx *= S.FRICTION; this.vy += S.GRAVITY; } else { this.vx *= S.KB_FRICTION; this.vy *= S.KB_FRICTION; } } else { this.vx *= S.FRICTION; this.vy += S.GRAVITY; } if (isNaN(this.x)) this.x = 0; if (isNaN(this.y)) this.y = 0; if (isNaN(this.vx)) this.vx = 0; if (isNaN(this.vy)) this.vy = 0; this.x += this.vx; this.y += this.vy; };
@@ -1383,11 +1392,13 @@ window.SMA.Fighter.prototype.checkLedgeGrab = function () {
         for (var i = 0; i < S.platforms.length; i++) {
             var p = S.platforms[i]; if (p.type === 'main') {
                 if (Math.abs((this.x + this.w) - p.x) < 40 && Math.abs(this.y - p.y) < 50) {
-                    this.actionState = 'LEDGE'; this.chargePower = 1.0; this.ledgeGrabbed = { platform: p, dir: 'left' }; this.x = p.x - this.w; this.y = p.y; this.vx = 0; this.vy = 0; this.facingRight = true; this.invincible = 20; this.hasAirDodged = false; this.hasUpSpecial = false;
+                    var ledgeInv = S.getLedgeInvincibleFrames(this.airborneFrames);
+                    this.actionState = 'LEDGE'; this.chargePower = 1.0; this.ledgeGrabbed = { platform: p, dir: 'left' }; this.x = p.x - this.w; this.y = p.y; this.vx = 0; this.vy = 0; this.facingRight = true; this.invincible = ledgeInv; this.ledgeInputLock = S.LEDGE_INPUT_LOCK_FRAMES; this.airborneFrames = 0; this.hasAirDodged = false; this.hasUpSpecial = false;
                     this.stateTimer = 0; // RESET TIMER ON GRAB
                     return;
                 } if (Math.abs(this.x - (p.x + p.w)) < 40 && Math.abs(this.y - p.y) < 50) {
-                    this.actionState = 'LEDGE'; this.chargePower = 1.0; this.ledgeGrabbed = { platform: p, dir: 'right' }; this.x = p.x + p.w; this.y = p.y; this.vx = 0; this.vy = 0; this.facingRight = false; this.invincible = 20; this.hasAirDodged = false; this.hasUpSpecial = false;
+                    var ledgeInvR = S.getLedgeInvincibleFrames(this.airborneFrames);
+                    this.actionState = 'LEDGE'; this.chargePower = 1.0; this.ledgeGrabbed = { platform: p, dir: 'right' }; this.x = p.x + p.w; this.y = p.y; this.vx = 0; this.vy = 0; this.facingRight = false; this.invincible = ledgeInvR; this.ledgeInputLock = S.LEDGE_INPUT_LOCK_FRAMES; this.airborneFrames = 0; this.hasAirDodged = false; this.hasUpSpecial = false;
                     this.stateTimer = 0; // RESET TIMER ON GRAB
                     return;
                 }
@@ -1410,7 +1421,7 @@ window.SMA.Fighter.prototype.tryGrab = function (opponent) {
 window.SMA.Fighter.prototype.handleGrabbing = function (inputKeys) { if (!this.grabbedTarget) { this.actionState = 'IDLE'; return; } this.grabbedTarget.x = this.x + (this.facingRight ? 25 : -25); this.grabbedTarget.y = this.y - 5; this.stateTimer--; if (this.stateTimer > 108) return; var throwType = null; if (inputKeys.left) throwType = this.facingRight ? 'THROW_BK' : 'THROW_FW'; else if (inputKeys.right) throwType = this.facingRight ? 'THROW_FW' : 'THROW_BK'; else if (inputKeys.up) throwType = 'THROW_UP'; else if (inputKeys.down) throwType = 'THROW_DN'; else if (this.stateTimer <= 0) throwType = 'THROW_FW'; if (throwType) this.performThrow(throwType); };
 window.SMA.Fighter.prototype.performThrow = function (typeStr) { var S = window.SMA; var vic = this.grabbedTarget; if (!vic) return; this.actionState = 'THROWING'; this.stateTimer = 15; var data = S.CHAR_DATA[this.charId].throws[typeStr]; vic.percent += data.dmg; var rad = data.angle * (Math.PI / 180); var force = data.kb + (vic.percent * data.scale); var vx = Math.cos(rad) * force; var vy = Math.sin(rad) * force; if (!this.facingRight) vx *= -1; vic.vx = vx; vic.vy = vy; vic.enterState('STUN', 40); vic.grabInvincible = 60; vic.chargePower = 1.0; this.grabbedTarget = null; S.createParticles(vic.x + 15, vic.y + 30, 15, '#fff'); S.shake = 10; S.updateHud(); S.playSound('hit'); };
 window.SMA.Fighter.prototype.die = function (direction, dx, dy) { var S = window.SMA; this.stocks--; if (this.charId === 'mirror') { this.mirror = null; this.mirrorClone = null; this.mirrorCooldown = 300; } S.updateHud(); this.chargePower = 1.0; this.hitbox.active = false; S.playSound('hit'); S.triggerComet(dx, dy, direction, this.color); S.freezeFrame = 10; this.actionState = 'DEAD'; this.percent = 0; if (this.stocks > 0) { this.actionState = 'RESPAWN'; this.respawnTimer = 90; this.x = -9999; } else { S.checkGameSet(); } };
-window.SMA.Fighter.prototype.respawn = function () { var S = window.SMA; this.actionState = 'IDLE'; this.x = S.WORLD_W / 2 - this.w / 2; this.y = (S.WORLD_H * 0.7) - 300; this.vx = 0; this.vy = 0; this.percent = 0; this.shieldHP = 100; this.chargePower = 1.0; this.invincible = 180; this.isGrounded = false; this.hitbox.active = false; };
+window.SMA.Fighter.prototype.respawn = function () { var S = window.SMA; this.actionState = 'IDLE'; this.x = S.WORLD_W / 2 - this.w / 2; this.y = (S.WORLD_H * 0.7) - 300; this.vx = 0; this.vy = 0; this.percent = 0; this.shieldHP = 100; this.chargePower = 1.0; this.invincible = 180; this.isGrounded = false; this.airborneFrames = 0; this.ledgeInputLock = 0; this.hitbox.active = false; };
 window.SMA.Fighter.prototype.triggerJump = function (keys) { var S = window.SMA; if (this.actionState === 'LEDGE') return; if (keys && keys.down && this.isGrounded) { if (this.currentPlatform && this.currentPlatform.type === 'main') { this.vy = S.JUMP_FORCE * 0.6; this.jumps++; this.animScale.x = 0.7; this.animScale.y = 1.3; S.playSound('jump'); return; } else { this.dropThrough = true; this.isGrounded = false; this.y += 1; return; } } var maxJ = (window.SMA.CHAR_DATA[this.charId] && window.SMA.CHAR_DATA[this.charId].maxJumps) || 2; if (this.actionState === 'IDLE' && this.jumps < maxJ) { var force = keys && keys.down ? S.JUMP_FORCE * 0.6 : S.JUMP_FORCE; var jm = S.CHAR_DATA[this.charId].jumpMult || 1.0; this.vy = force * jm; this.jumps++; this.animScale.x = 0.7; this.animScale.y = 1.3; if (this.jumps === 2) { this.vx *= 0.8; S.createParticles(this.x + this.w / 2, this.y + this.h, 10, '#fff'); } S.playSound('jump'); } };
 window.SMA.Fighter.prototype.startCharge = function () {
     if (this.actionState === 'IDLE' || this.actionState === 'CHARGE') {
