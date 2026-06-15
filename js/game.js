@@ -1182,11 +1182,11 @@ window.SMA.CHAR_DATA = {
         jumpMult: 1.1, speed: 1.05, kbMult: 1.15,
         attacks: {
             NEUTRAL: { type: 'mirror_slash', range: 50, dmg: 4, kb: 1.44, scale: 0.06, angle: -30, frames: 10, lag: 6, stun: 3, color: '#81ecec' },
-            SIDE: { type: 'mirror_throw', dmg: 8, kb: 1.8, scale: 0.06, angle: -20, frames: 22, lag: 12, stun: 5, color: '#81ecec' },
+            SIDE: { type: 'mirror_throw', dmg: 8, kb: 1.8, scale: 0.06, angle: -20, frames: 22, lag: 11, stun: 5, color: '#81ecec' },
             UP: { type: 'mirror_throw_up', dmg: 7, kb: 2.16, scale: 0.08, angle: -80, frames: 22, lag: 12, stun: 5, color: '#81ecec' },
             DOWN: { type: 'mirror_place', dmg: 0, kb: 0, scale: 0, angle: 0, frames: 200, lag: 12, stun: 0, color: '#dfe6e9' },
             AIR_NEUTRAL: { type: 'mirror_spin', dmg: 8, kb: 1.92, scale: 0.08, angle: -45, frames: 24, lag: 10, stun: 5, color: '#81ecec' },
-            AIR_SIDE: { type: 'mirror_throw', dmg: 8, kb: 1.8, scale: 0.06, angle: -20, frames: 22, lag: 12, stun: 5, color: '#81ecec' },
+            AIR_SIDE: { type: 'mirror_throw', dmg: 8, kb: 1.8, scale: 0.06, angle: -20, frames: 22, lag: 11, stun: 5, color: '#81ecec' },
             AIR_UP: { type: 'mirror_throw_up', dmg: 7, kb: 2.16, scale: 0.08, angle: -80, frames: 22, lag: 12, stun: 5, color: '#81ecec' },
             AIR_DOWN: { type: 'mirror_place', dmg: 0, kb: 0, scale: 0, angle: 0, frames: 200, lag: 12, stun: 0, color: '#dfe6e9' },
             LEDGE_ATK: { dmg: 6, kb: 10.8, scale: 0.01, angle: -45, frames: 30, lag: 10, stun: 10 }
@@ -1728,12 +1728,12 @@ window.SMA.Fighter.prototype.handleAttackFrame = function () {
         var p = this.chargePower || 1.0;
         var chargeRatio = Math.max(0, (p - 1.0) / 0.7);
         var szMult = chargeRatio * 0.2 + 1.0;
-        var curW = 105 * szMult; var curH = 87 * szMult;
+        var curW = 105 * szMult; var curH = 70 * szMult;
         if (this.stateTimer >= 4 && this.stateTimer <= 18) {
             this.hitbox.active = true;
             this.hitbox.w = curW; this.hitbox.h = curH;
             this.hitbox.x = this.x + (this.facingRight ? -5 : -5 - curW) + this.w / 2;
-            this.hitbox.y = this.y - (curH - 70) / 2;
+            this.hitbox.y = this.y + 35 - curH / 2;
 
             // 縺溘ａ驥上↓蠢懊§縺ｦ蜑肴婿縺ｫ繧ｭ繝｣繝ｩ荳菴灘・・・his.w・牙燕騾ｲ
             var fwMove = (this.w * chargeRatio) / 15;
