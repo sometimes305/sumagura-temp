@@ -968,6 +968,45 @@ window.SMA.myStageId = null;
 window.SMA.myCharId = null;
 window.SMA.amIReady = false;
 
+window.SMA.getHubPlayerRole = function () {
+    if (window.SMA.myRole === 'host') return 'p1';
+    if (window.SMA.myRole === 'p1' || window.SMA.myRole === 'p2' || window.SMA.myRole === 'p3' || window.SMA.myRole === 'p4') return window.SMA.myRole;
+    return null;
+};
+
+window.SMA.sendHubReadyMessage = function (msg) {
+    if (!msg || !msg.role) return false;
+    if (window.SMA.isHost) {
+        window.SMA.updateHubState(msg);
+        window.SMA.broadcast(msg);
+        return true;
+    }
+    if (window.SMA.isGravity && window.SMA.gravityUsePeerInMatch) {
+        window.SMA.broadcast(msg);
+        return true;
+    }
+    if (window.SMA.netConn) {
+        window.SMA.netConn.send(msg);
+        return true;
+    }
+    return false;
+};
+
+window.SMA.flushPendingHubReady = function () {
+    if (!window.SMA.pendingHubReady) return;
+    var hubRole = window.SMA.getHubPlayerRole();
+    if (!hubRole) return;
+    var pending = window.SMA.pendingHubReady;
+    window.SMA.pendingHubReady = null;
+    window.SMA.sendHubReadyMessage({
+        type: 'hub_ready',
+        role: hubRole,
+        ready: pending.ready,
+        stageId: pending.stageId,
+        charId: pending.charId
+    });
+};
+
 window.SMA.selectStage = function (id) {
     if (window.SMA.myRole === 'spec' || window.SMA.amIReady) return;
     window.SMA.myStageId = id;
@@ -1004,7 +1043,15 @@ window.SMA.toggleHubReady = function (isForceReady) {
 
     if (window.SMA.isOnline) {
         // ホストのroleは'host'だが、hubDataでは'p1'として扱う
-        var hubRole = (window.SMA.myRole === 'host') ? 'p1' : window.SMA.myRole;
+        var hubRole = window.SMA.getHubPlayerRole();
+        if (!hubRole) {
+            window.SMA.pendingHubReady = {
+                ready: window.SMA.amIReady,
+                stageId: window.SMA.myStageId,
+                charId: window.SMA.myCharId
+            };
+            return;
+        }
         var msg = {
             type: 'hub_ready',
             role: hubRole,
@@ -1012,13 +1059,7 @@ window.SMA.toggleHubReady = function (isForceReady) {
             stageId: window.SMA.myStageId,
             charId: window.SMA.myCharId
         };
-        if (window.SMA.isHost) {
-            window.SMA.updateHubState(msg);
-            window.SMA.broadcast(msg);
-        } else {
-            if (window.SMA.isGravity && window.SMA.gravityUsePeerInMatch) window.SMA.broadcast(msg);
-            else if (window.SMA.netConn) window.SMA.netConn.send(msg);
-        }
+        window.SMA.sendHubReadyMessage(msg);
     } else {
         // ソロモード: READYにしてUIも更新してからゲーム開始
         var btn2 = document.getElementById('btn-hub-ready');
@@ -1160,6 +1201,7 @@ window.SMA.showHubSelectPanel = function () {
     if (gotoBtn) gotoBtn.style.display = 'none';
 
     window.SMA.amIReady = false;
+    window.SMA.pendingHubReady = null;
     window.SMA.hubData = { p1: {}, p2: {}, p3: {}, p4: {} };
     window.SMA.refreshHubUI();
 
@@ -1363,6 +1405,10 @@ window.SMA.handleClient = async function (d) {
     }
     if (d.type === 'assign_role') {
         window.SMA.myRole = d.role;
+        if (window.SMA.gravityRtConn && window.SMA.gravityRtConn.open) {
+            try { window.SMA.gravityRtConn.send({ type: 'rt_hello', role: window.SMA.myRole }); } catch (e) { }
+        }
+        window.SMA.flushPendingHubReady();
     }
     if (d.type === 'goto_hub_select') {
         console.log("[SMA] handleClient: received goto_hub_select");

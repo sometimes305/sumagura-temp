@@ -68,4 +68,4 @@ window.SMA.gravityRtConns = [];  // host -> guests
 window.SMA.gravityRtHostPeerId = null;
 window.SMA.lastGravityRtSyncAt = 0;
 window.SMA.gravityRtOutbox = [];
-
+window.SMA.pendingHubReady = null;

@@ -270,9 +270,18 @@ window.onload = function () {
         var btnReady = document.getElementById('btn-hub-ready');
         if (btnReady) { btnReady.innerText = "準備完了！"; btnReady.style.background = ""; btnReady.style.borderColor = ""; }
         if (window.SMA.isOnline) {
-            var hubRole = (window.SMA.myRole === 'host') ? 'p1' : window.SMA.myRole;
+            var hubRole = window.SMA.getHubPlayerRole ? window.SMA.getHubPlayerRole() : ((window.SMA.myRole === 'host') ? 'p1' : window.SMA.myRole);
+            if (!hubRole) {
+                window.SMA.pendingHubReady = {
+                    ready: false,
+                    stageId: window.SMA.myStageId,
+                    charId: window.SMA.myCharId
+                };
+                return;
+            }
             var msg = { type: 'hub_ready', role: hubRole, ready: false, stageId: window.SMA.myStageId, charId: window.SMA.myCharId };
-            if (window.SMA.isHost) { window.SMA.updateHubState(msg); window.SMA.broadcast(msg); }
+            if (window.SMA.sendHubReadyMessage) window.SMA.sendHubReadyMessage(msg);
+            else if (window.SMA.isHost) { window.SMA.updateHubState(msg); window.SMA.broadcast(msg); }
             else { if (window.SMA.isGravity && window.SMA.gravityUsePeerInMatch) window.SMA.broadcast(msg); else if (window.SMA.netConn) window.SMA.netConn.send(msg); }
         }
     });
