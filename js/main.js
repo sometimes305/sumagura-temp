@@ -70,6 +70,7 @@ window.SMA.lastGravityRtSyncAt = 0;
 window.SMA.gravityRtOutbox = [];
 window.SMA.pendingHubReady = null;
 window.SMA.ONLINE_INPUT_DELAY_FRAMES = 5;
+window.SMA.LOCKSTEP_STALL_FILL_MS = 300;
 window.SMA.onlineStrictLockstep = true;
 window.SMA.lockstepFrame = 0;
 window.SMA.lockstepRemoteFrame = 0;
@@ -137,6 +138,12 @@ window.SMA.getLockstepActiveRoles = function () {
     return window.SMA.PLAYER_ROLES.slice(0, pc);
 };
 
+window.SMA.normalizeRemotePlayerRole = function (role) {
+    if (role === 'p2' || role === 'p3' || role === 'p4') return role;
+    var activeRoles = window.SMA.getLockstepActiveRoles().filter(function (r) { return r !== 'p1'; });
+    return activeRoles[0] || 'p2';
+};
+
 window.SMA.resetLockstepState = function () {
     window.SMA.lockstepFrame = 0;
     window.SMA.lockstepRemoteFrame = 0;
@@ -156,6 +163,7 @@ window.SMA.resetLockstepState = function () {
 
 window.SMA.storeLockstepInput = function (role, keys, frame) {
     if (role === 'host') role = 'p1';
+    if (role !== 'p1') role = window.SMA.normalizeRemotePlayerRole(role);
     if (window.SMA.PLAYER_ROLES.indexOf(role) === -1) return false;
     var targetFrame = parseInt(frame, 10);
     if (!isFinite(targetFrame)) targetFrame = window.SMA.getLocalInputTargetFrame();
@@ -179,6 +187,7 @@ window.SMA.storeLockstepInput = function (role, keys, frame) {
 };
 
 window.SMA.receiveRemoteInput = function (role, keys, frame) {
+    role = window.SMA.normalizeRemotePlayerRole(role);
     if (window.SMA.onlineStrictLockstep && window.SMA.isHost && window.SMA.isOnline && window.SMA.gameRunning) {
         return window.SMA.storeLockstepInput(role, keys, frame);
     }
@@ -211,12 +220,18 @@ window.SMA.prepareHostLockstepInputs = function () {
     var frame = window.SMA.lockstepFrame || 0;
     window.SMA.storeLockstepInput('p1', window.SMA.captureLocalLockstepInput(), frame + window.SMA.ONLINE_INPUT_DELAY_FRAMES);
     var bucket = window.SMA.lockstepInputBuffer[frame] || {};
+    window.SMA.lockstepInputBuffer[frame] = bucket;
     var roles = window.SMA.getLockstepActiveRoles();
+    var missingRoles = [];
     for (var i = 0; i < roles.length; i++) {
-        if (!bucket[roles[i]]) {
-            if (!window.SMA.lockstepStallStartAt) window.SMA.lockstepStallStartAt = Date.now();
-            return false;
-        }
+        if (!bucket[roles[i]]) missingRoles.push(roles[i]);
+    }
+    if (missingRoles.length > 0) {
+        if (!window.SMA.lockstepStallStartAt) window.SMA.lockstepStallStartAt = Date.now();
+        if ((Date.now() - window.SMA.lockstepStallStartAt) < window.SMA.LOCKSTEP_STALL_FILL_MS) return false;
+        missingRoles.forEach(function (role) {
+            bucket[role] = window.SMA.stripInputTriggers(window.SMA.lockstepLastInputs[role] || window.SMA.emptyInputKeys());
+        });
     }
     window.SMA.lockstepStallStartAt = 0;
     var inputs = {};

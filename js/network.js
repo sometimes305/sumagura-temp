@@ -173,7 +173,7 @@ window.SMA.startGravityRealtimeHost = function (roomId) {
                     return;
                 }
                 if (d.type === 'rt_input' && window.SMA.isHost) {
-                    var role = (d.role === 'p2' || d.role === 'p3' || d.role === 'p4') ? d.role : (c._rtRole || 'p2');
+                    var role = window.SMA.normalizeRemotePlayerRole((d.role === 'p2' || d.role === 'p3' || d.role === 'p4') ? d.role : c._rtRole);
                     var keys = d.keys || {};
                     window.SMA.receiveRemoteInput(role, keys, d.frame);
                     return;
