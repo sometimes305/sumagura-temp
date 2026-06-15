@@ -252,6 +252,7 @@ window.SMA.bootGame = function () {
     window.SMA.pTwo = window.SMA.players[1];
     window.SMA.projectiles = [];
     window.SMA.mageVfx = [];
+    if (window.SMA.resetLockstepState) window.SMA.resetLockstepState();
     // HUD蜷榊燕險ｭ螳・
     if (window.SMA.isHost) {
         document.getElementById('p1-name').innerText = window.SMA.localPlayerName;
@@ -284,6 +285,14 @@ window.SMA.gameLoop = function () {
     if (!window.SMA.gameRunning) return;
     try {
         if (window.SMA.hitStop > 0) { window.SMA.hitStop--; } else {
+            var lockstepInputs = null;
+            if (window.SMA.onlineStrictLockstep && window.SMA.isHost && window.SMA.isOnline && window.SMA.gameState === 'PLAYING') {
+                lockstepInputs = window.SMA.prepareHostLockstepInputs();
+                if (lockstepInputs === false) {
+                    window.SMA.animationFrameId = requestAnimationFrame(window.SMA.gameLoop);
+                    return;
+                }
+            }
             if (window.SMA.gameState === 'COUNTDOWN') { window.SMA.countdownTimer--; if (window.SMA.isHost && window.SMA.countdownTimer <= 0) window.SMA.gameState = 'PLAYING'; } else if (window.SMA.gameState === 'PLAYING' && window.SMA.isHost) { window.SMA.countdownTimer--; }
 
             if (window.SMA.isHost) {
@@ -306,7 +315,14 @@ window.SMA.gameLoop = function () {
                         }
                         if (!nearestEnemy) nearestEnemy = allPlayers[(pi + 1) % pc];
 
-                        if (pi === 0) {
+                        if (lockstepInputs) {
+                            var lKeys = lockstepInputs[role] || S.emptyInputKeys();
+                            if (lKeys.triggerStartCharge) player.startCharge();
+                            if (lKeys.triggerReleaseAttack) player.releaseAttack(lKeys.attackType);
+                            if (lKeys.triggerJump) player.triggerJump(lKeys);
+                            if (lKeys.triggerGrab) player.tryGrab(nearestEnemy);
+                            player.update(lKeys, nearestEnemy);
+                        } else if (pi === 0) {
                             // 1P: 繝帙せ繝医・蜈･蜉・
                             player.update(S.myKeys, nearestEnemy);
                         } else if (S.isOnline) {
@@ -369,7 +385,7 @@ window.SMA.gameLoop = function () {
                     window.SMA.checkGameSet();
                     // 繝阪ャ繝医Ρ繝ｼ繧ｯ蜷梧悄
                     if (window.SMA.isOnline) {
-                        var pkt = { type: 'sync', stg: window.SMA.selectedStage, gState: window.SMA.gameState, cd: window.SMA.countdownTimer, playerCount: pc, events: window.SMA.syncEvents, projs: window.SMA.projectiles.map(function (p) { return { x: p.x, y: p.y, vx: p.vx, vy: p.vy, type: p.type, w: p.w, h: p.h, hitW: p.hitW, hitH: p.hitH, hitOffsetX: p.hitOffsetX, hitOffsetY: p.hitOffsetY, visualKind: p.visualKind, color: p.color, particleColor: p.particleColor, angle: p.angle || 0, age: p.age || 0, maxLife: p.maxLife || p.life || 0, surfaceY: p.surfaceY }; }), win: (window.SMA.gameState === 'GAMEOVER' ? document.getElementById('result-text').innerText : null) };
+                        var pkt = { type: 'sync', frame: window.SMA.lockstepFrame || 0, inputDelayFrames: window.SMA.ONLINE_INPUT_DELAY_FRAMES, stg: window.SMA.selectedStage, gState: window.SMA.gameState, cd: window.SMA.countdownTimer, playerCount: pc, events: window.SMA.syncEvents, projs: window.SMA.projectiles.map(function (p) { return { x: p.x, y: p.y, vx: p.vx, vy: p.vy, type: p.type, w: p.w, h: p.h, hitW: p.hitW, hitH: p.hitH, hitOffsetX: p.hitOffsetX, hitOffsetY: p.hitOffsetY, visualKind: p.visualKind, color: p.color, particleColor: p.particleColor, angle: p.angle || 0, age: p.age || 0, maxLife: p.maxLife || p.life || 0, surfaceY: p.surfaceY }; }), win: (window.SMA.gameState === 'GAMEOVER' ? document.getElementById('result-text').innerText : null) };
                         // 蜷・・繝ｬ繧､繝､繝ｼ縺ｮ迥ｶ諷九ｒ霑ｽ蜉
                         for (var si = 0; si < pc; si++) {
                             pkt['p' + (si + 1)] = allPlayers[si].serialize();
@@ -379,10 +395,11 @@ window.SMA.gameLoop = function () {
                         if (window.SMA.isGravity) window.SMA.sendGravitySync(pkt);
                         window.SMA.syncEvents = [];
                     }
+                    if (lockstepInputs && window.SMA.advanceLockstepFrame) window.SMA.advanceLockstepFrame();
                 }
             } else {
                 if (window.SMA.netConn && window.SMA.netConn.open && !(window.SMA.isGravity && window.SMA.gravityUsePeerInMatch)) {
-                    window.SMA.netConn.send({ type: 'input', keys: window.SMA.myKeys });
+                    window.SMA.netConn.send({ type: 'input', frame: window.SMA.getLocalInputTargetFrame(), keys: window.SMA.cloneInputKeys(window.SMA.myKeys) });
                 }
                 // Gravity蜈･蜉幃∽ｿ｡
                 if (window.SMA.isGravity && !window.SMA.isHost) {
@@ -975,6 +992,8 @@ window.SMA.updateHud = function () {
 };
 window.SMA.applySync = function (d) {
     if (d.data) { try { d = JSON.parse(d.data); } catch (e) { return; } }
+    if (typeof d.frame === 'number') window.SMA.lockstepRemoteFrame = d.frame;
+    if (typeof d.inputDelayFrames === 'number') window.SMA.ONLINE_INPUT_DELAY_FRAMES = d.inputDelayFrames;
     window.SMA.gameState = d.gState; window.SMA.countdownTimer = d.cd;
     // 蜈ｨ繝励Ξ繧､繝､繝ｼ縺ｮ迥ｶ諷九ｒ蜿肴丐
     var pc = d.playerCount || 2;

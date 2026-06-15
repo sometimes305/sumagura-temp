@@ -149,13 +149,7 @@ window.SMA.handleGravityPeerHostMessage = function (c, d) {
         var sender = window.SMA.connections.find(function (x) { return x.conn === c; });
         var role = (sender && sender.role) ? sender.role : (c._rtRole || d.role || 'p2');
         if (role === 'p2' || role === 'p3' || role === 'p4') {
-            window.SMA.remoteKeysMap[role] = d.keys || {};
-            window.SMA.remoteLastInputTimeMap[role] = Date.now();
-            var k = d.keys || {};
-            if (k.triggerJump || k.triggerStartCharge || k.triggerReleaseAttack || k.triggerGrab) {
-                if (!window.SMA.remoteEventsMap[role]) window.SMA.remoteEventsMap[role] = [];
-                window.SMA.remoteEventsMap[role].push(k);
-            }
+            window.SMA.receiveRemoteInput(role, d.keys || {}, d.frame);
         }
         return;
     }
@@ -181,12 +175,7 @@ window.SMA.startGravityRealtimeHost = function (roomId) {
                 if (d.type === 'rt_input' && window.SMA.isHost) {
                     var role = d.role || c._rtRole || 'p2';
                     var keys = d.keys || {};
-                    window.SMA.remoteKeysMap[role] = keys;
-                    window.SMA.remoteLastInputTimeMap[role] = Date.now();
-                    if (keys.triggerJump || keys.triggerStartCharge || keys.triggerReleaseAttack || keys.triggerGrab) {
-                        if (!window.SMA.remoteEventsMap[role]) window.SMA.remoteEventsMap[role] = [];
-                        window.SMA.remoteEventsMap[role].push(keys);
-                    }
+                    window.SMA.receiveRemoteInput(role, keys, d.frame);
                     return;
                 }
                 if (window.SMA.handleGravityPeerHostMessage) window.SMA.handleGravityPeerHostMessage(c, d);
@@ -260,7 +249,7 @@ window.SMA.startGravityRealtimeGuest = function (roomId) {
 window.SMA.sendGravityInput = function (keys) {
     if (window.SMA.gravityUsePeerInMatch && window.SMA.gravityRtConn && window.SMA.gravityRtConn.open) {
         try {
-            window.SMA.gravityRtConn.send({ type: 'rt_input', role: window.SMA.myRole, keys: keys });
+            window.SMA.gravityRtConn.send({ type: 'rt_input', role: window.SMA.myRole, frame: window.SMA.getLocalInputTargetFrame(), keys: window.SMA.cloneInputKeys(keys) });
             return true;
         } catch (e) { }
     }
@@ -403,18 +392,7 @@ window.addEventListener('message', function (event) {
                         return;
                     }
                     var role = parsed.senderRole || 'p2';
-                    window.SMA.remoteKeysMap[role] = parsed.keys;
-                    window.SMA.remoteLastInputTimeMap[role] = Date.now();
-                    if (parsed.keys.triggerJump || parsed.keys.triggerStartCharge || parsed.keys.triggerReleaseAttack || parsed.keys.triggerGrab) {
-                        if (!window.SMA.remoteEventsMap[role]) window.SMA.remoteEventsMap[role] = [];
-                        window.SMA.remoteEventsMap[role].push(parsed.keys);
-                    }
-                    // Legacy fallback p2
-                    if (role === 'p2') {
-                        window.SMA.remoteKeys = parsed.keys;
-                        window.SMA.remoteLastInputTime = Date.now();
-                        if (parsed.keys.triggerJump) window.SMA.remoteEvents.push(parsed.keys);
-                    }
+                    window.SMA.receiveRemoteInput(role, parsed.keys || {}, parsed.frame);
                 } else {
                     if (parsed.alignTo && parsed.alignTo !== window.SMA.localPlayerName) return;
                     window.SMA.handleClient(parsed);
@@ -434,17 +412,7 @@ window.addEventListener('message', function (event) {
                         return;
                     }
                     var roleL = parsedL.role || 'p2';
-                    window.SMA.remoteKeysMap[roleL] = parsedL.keys;
-                    window.SMA.remoteLastInputTimeMap[roleL] = Date.now();
-                    if (parsedL.keys.triggerJump || parsedL.keys.triggerStartCharge || parsedL.keys.triggerReleaseAttack || parsedL.keys.triggerGrab) {
-                        if (!window.SMA.remoteEventsMap[roleL]) window.SMA.remoteEventsMap[roleL] = [];
-                        window.SMA.remoteEventsMap[roleL].push(parsedL.keys);
-                    }
-                    if (roleL === 'p2') {
-                        window.SMA.remoteKeys = parsedL.keys;
-                        window.SMA.remoteLastInputTime = Date.now();
-                        if (parsedL.keys.triggerJump) window.SMA.remoteEvents.push(parsedL.keys);
-                    }
+                    window.SMA.receiveRemoteInput(roleL, parsedL.keys || {}, parsedL.frame);
                 } else {
                     window.SMA.handleClient(parsedL);
                 }
@@ -1570,18 +1538,7 @@ window.SMA.handleConn = function (c) {
             var sender = window.SMA.connections.find(function (x) { return x.conn === c; });
             if (sender && (sender.role === 'p2' || sender.role === 'p3' || sender.role === 'p4')) {
                 var role = sender.role;
-                window.SMA.remoteKeysMap[role] = d.keys;
-                window.SMA.remoteLastInputTimeMap[role] = Date.now();
-                if (d.keys.triggerJump || d.keys.triggerStartCharge || d.keys.triggerReleaseAttack || d.keys.triggerGrab) {
-                    if (!window.SMA.remoteEventsMap[role]) window.SMA.remoteEventsMap[role] = [];
-                    window.SMA.remoteEventsMap[role].push(d.keys);
-                }
-                // 後方互換: p2の入力はremoteKeysにも入れる
-                if (role === 'p2') {
-                    window.SMA.remoteKeys = d.keys;
-                    window.SMA.remoteLastInputTime = Date.now();
-                    if (d.keys.triggerJump || d.keys.triggerStartCharge || d.keys.triggerReleaseAttack || d.keys.triggerGrab) window.SMA.remoteEvents.push(d.keys);
-                }
+                window.SMA.receiveRemoteInput(role, d.keys || {}, d.frame);
             }
         }
     });

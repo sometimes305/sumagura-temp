@@ -69,3 +69,142 @@ window.SMA.gravityRtHostPeerId = null;
 window.SMA.lastGravityRtSyncAt = 0;
 window.SMA.gravityRtOutbox = [];
 window.SMA.pendingHubReady = null;
+window.SMA.ONLINE_INPUT_DELAY_FRAMES = 5;
+window.SMA.onlineStrictLockstep = true;
+window.SMA.lockstepFrame = 0;
+window.SMA.lockstepRemoteFrame = 0;
+window.SMA.lockstepInputBuffer = {};
+window.SMA.lockstepLastInputs = { p1: {}, p2: {}, p3: {}, p4: {} };
+window.SMA.lockstepLocalTriggers = {};
+window.SMA.lockstepStallStartAt = 0;
+
+window.SMA.emptyInputKeys = function () {
+    return { left: false, right: false, up: false, down: false, shield: false, attack: false, jump: false, grab: false };
+};
+
+window.SMA.cloneInputKeys = function (keys) {
+    keys = keys || {};
+    return {
+        left: !!keys.left,
+        right: !!keys.right,
+        up: !!keys.up,
+        down: !!keys.down,
+        shield: !!keys.shield,
+        attack: !!keys.attack,
+        jump: !!keys.jump,
+        grab: !!keys.grab,
+        triggerJump: !!keys.triggerJump,
+        triggerStartCharge: !!keys.triggerStartCharge,
+        triggerReleaseAttack: !!keys.triggerReleaseAttack,
+        triggerGrab: !!keys.triggerGrab,
+        attackType: keys.attackType || null
+    };
+};
+
+window.SMA.mergeInputKeys = function (base, incoming) {
+    var out = window.SMA.cloneInputKeys(base);
+    incoming = incoming || {};
+    ['left', 'right', 'up', 'down', 'shield', 'attack', 'jump', 'grab'].forEach(function (key) {
+        if (Object.prototype.hasOwnProperty.call(incoming, key)) out[key] = !!incoming[key];
+    });
+    out.triggerJump = out.triggerJump || !!incoming.triggerJump;
+    out.triggerStartCharge = out.triggerStartCharge || !!incoming.triggerStartCharge;
+    out.triggerReleaseAttack = out.triggerReleaseAttack || !!incoming.triggerReleaseAttack;
+    out.triggerGrab = out.triggerGrab || !!incoming.triggerGrab;
+    out.attackType = incoming.attackType || out.attackType;
+    return out;
+};
+
+window.SMA.getLocalInputTargetFrame = function () {
+    var base = window.SMA.isHost ? (window.SMA.lockstepFrame || 0) : (window.SMA.lockstepRemoteFrame || 0);
+    return Math.max(0, Math.floor(base + window.SMA.ONLINE_INPUT_DELAY_FRAMES));
+};
+
+window.SMA.getLockstepActiveRoles = function () {
+    var pc = window.SMA.playerCount || (window.SMA.players && window.SMA.players.length) || 2;
+    pc = Math.max(1, Math.min(pc, window.SMA.PLAYER_ROLES.length));
+    return window.SMA.PLAYER_ROLES.slice(0, pc);
+};
+
+window.SMA.resetLockstepState = function () {
+    window.SMA.lockstepFrame = 0;
+    window.SMA.lockstepRemoteFrame = 0;
+    window.SMA.lockstepInputBuffer = {};
+    window.SMA.lockstepLastInputs = { p1: {}, p2: {}, p3: {}, p4: {} };
+    window.SMA.lockstepLocalTriggers = {};
+    window.SMA.lockstepStallStartAt = 0;
+    var roles = window.SMA.getLockstepActiveRoles();
+    for (var frame = 0; frame < window.SMA.ONLINE_INPUT_DELAY_FRAMES; frame++) {
+        window.SMA.lockstepInputBuffer[frame] = {};
+        roles.forEach(function (role) {
+            window.SMA.lockstepInputBuffer[frame][role] = window.SMA.emptyInputKeys();
+        });
+    }
+};
+
+window.SMA.storeLockstepInput = function (role, keys, frame) {
+    if (role === 'host') role = 'p1';
+    if (window.SMA.PLAYER_ROLES.indexOf(role) === -1) return false;
+    var targetFrame = parseInt(frame, 10);
+    if (!isFinite(targetFrame)) targetFrame = window.SMA.getLocalInputTargetFrame();
+    if (window.SMA.isHost && targetFrame < window.SMA.lockstepFrame) targetFrame = window.SMA.lockstepFrame;
+    if (!window.SMA.lockstepInputBuffer[targetFrame]) window.SMA.lockstepInputBuffer[targetFrame] = {};
+    window.SMA.lockstepInputBuffer[targetFrame][role] = window.SMA.mergeInputKeys(window.SMA.lockstepInputBuffer[targetFrame][role], keys);
+    return true;
+};
+
+window.SMA.receiveRemoteInput = function (role, keys, frame) {
+    if (window.SMA.onlineStrictLockstep && window.SMA.isHost && window.SMA.isOnline && window.SMA.gameRunning) {
+        return window.SMA.storeLockstepInput(role, keys, frame);
+    }
+    window.SMA.remoteKeysMap[role] = keys || {};
+    window.SMA.remoteLastInputTimeMap[role] = Date.now();
+    if (keys && (keys.triggerJump || keys.triggerStartCharge || keys.triggerReleaseAttack || keys.triggerGrab)) {
+        if (!window.SMA.remoteEventsMap[role]) window.SMA.remoteEventsMap[role] = [];
+        window.SMA.remoteEventsMap[role].push(keys);
+    }
+    if (role === 'p2') {
+        window.SMA.remoteKeys = keys || {};
+        window.SMA.remoteLastInputTime = Date.now();
+        if (keys && (keys.triggerJump || keys.triggerStartCharge || keys.triggerReleaseAttack || keys.triggerGrab)) window.SMA.remoteEvents.push(keys);
+    }
+    return true;
+};
+
+window.SMA.queueLocalInputEvent = function (keys) {
+    window.SMA.lockstepLocalTriggers = window.SMA.mergeInputKeys(window.SMA.lockstepLocalTriggers, keys);
+};
+
+window.SMA.captureLocalLockstepInput = function () {
+    var keys = window.SMA.mergeInputKeys(window.SMA.myKeys, window.SMA.lockstepLocalTriggers);
+    window.SMA.lockstepLocalTriggers = {};
+    return keys;
+};
+
+window.SMA.prepareHostLockstepInputs = function () {
+    if (!window.SMA.onlineStrictLockstep || !window.SMA.isHost || !window.SMA.isOnline || !window.SMA.gameRunning || window.SMA.gameState !== 'PLAYING') return null;
+    var frame = window.SMA.lockstepFrame || 0;
+    window.SMA.storeLockstepInput('p1', window.SMA.captureLocalLockstepInput(), frame + window.SMA.ONLINE_INPUT_DELAY_FRAMES);
+    var bucket = window.SMA.lockstepInputBuffer[frame] || {};
+    var roles = window.SMA.getLockstepActiveRoles();
+    for (var i = 0; i < roles.length; i++) {
+        if (!bucket[roles[i]]) {
+            if (!window.SMA.lockstepStallStartAt) window.SMA.lockstepStallStartAt = Date.now();
+            return false;
+        }
+    }
+    window.SMA.lockstepStallStartAt = 0;
+    var inputs = {};
+    roles.forEach(function (role) {
+        inputs[role] = window.SMA.cloneInputKeys(bucket[role]);
+        window.SMA.lockstepLastInputs[role] = inputs[role];
+    });
+    Object.keys(window.SMA.lockstepInputBuffer).forEach(function (k) {
+        if (parseInt(k, 10) < frame - 30) delete window.SMA.lockstepInputBuffer[k];
+    });
+    return inputs;
+};
+
+window.SMA.advanceLockstepFrame = function () {
+    window.SMA.lockstepFrame = (window.SMA.lockstepFrame || 0) + 1;
+};

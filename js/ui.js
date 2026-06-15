@@ -351,9 +351,14 @@ window.onload = function () {
         window.SMA.myKeys[k] = true;
         if (window.SMA.gameRunning) {
             if (window.SMA.isHost && window.SMA.pOne) {
-                if (k === 'jump') window.SMA.pOne.triggerJump(window.SMA.myKeys);
-                if (k === 'attack') window.SMA.pOne.startCharge();
-                if (k === 'grab') {
+                if (window.SMA.isOnline && window.SMA.onlineStrictLockstep) {
+                    if (k === 'jump') window.SMA.queueLocalInputEvent(Object.assign({}, window.SMA.myKeys, { triggerJump: true }));
+                    if (k === 'attack') window.SMA.queueLocalInputEvent(Object.assign({}, window.SMA.myKeys, { triggerStartCharge: true }));
+                    if (k === 'grab') window.SMA.queueLocalInputEvent(Object.assign({}, window.SMA.myKeys, { triggerGrab: true }));
+                } else {
+                    if (k === 'jump') window.SMA.pOne.triggerJump(window.SMA.myKeys);
+                    if (k === 'attack') window.SMA.pOne.startCharge();
+                    if (k === 'grab') {
                     var target = null; var minDist = Infinity;
                     window.SMA.players.forEach(function (p) {
                         if (p === window.SMA.pOne || p.stocks <= 0) return;
@@ -361,6 +366,7 @@ window.onload = function () {
                         if (d < minDist) { minDist = d; target = p; }
                     });
                     window.SMA.pOne.tryGrab(target);
+                    }
                 }
             }
         }
@@ -369,9 +375,9 @@ window.onload = function () {
             if (k === 'attack') window.SMA.sendGravityInput({ ...window.SMA.myKeys, triggerStartCharge: true });
             if (k === 'grab') window.SMA.sendGravityInput({ ...window.SMA.myKeys, triggerGrab: true });
         } else if (window.SMA.netConn && window.SMA.netConn.open) {
-            if (k === 'jump') window.SMA.netConn.send({ type: 'input', keys: { ...window.SMA.myKeys, triggerJump: true } });
-            if (k === 'attack') window.SMA.netConn.send({ type: 'input', keys: { ...window.SMA.myKeys, triggerStartCharge: true } });
-            if (k === 'grab') window.SMA.netConn.send({ type: 'input', keys: { ...window.SMA.myKeys, triggerGrab: true } });
+            if (k === 'jump') window.SMA.netConn.send({ type: 'input', frame: window.SMA.getLocalInputTargetFrame(), keys: window.SMA.cloneInputKeys({ ...window.SMA.myKeys, triggerJump: true }) });
+            if (k === 'attack') window.SMA.netConn.send({ type: 'input', frame: window.SMA.getLocalInputTargetFrame(), keys: window.SMA.cloneInputKeys({ ...window.SMA.myKeys, triggerStartCharge: true }) });
+            if (k === 'grab') window.SMA.netConn.send({ type: 'input', frame: window.SMA.getLocalInputTargetFrame(), keys: window.SMA.cloneInputKeys({ ...window.SMA.myKeys, triggerGrab: true }) });
         }
     };
     var releaseControl = function (k, e) {
@@ -385,11 +391,14 @@ window.onload = function () {
         else if (window.SMA.myKeys.left || window.SMA.myKeys.right) type = 'SIDE';
         if (!wasHeld) return;
         if (window.SMA.gameRunning && window.SMA.isHost && window.SMA.pOne) {
-            if (k === 'attack') window.SMA.pOne.releaseAttack(type);
+            if (k === 'attack') {
+                if (window.SMA.isOnline && window.SMA.onlineStrictLockstep) window.SMA.queueLocalInputEvent(Object.assign({}, window.SMA.myKeys, { triggerReleaseAttack: true, attackType: type }));
+                else window.SMA.pOne.releaseAttack(type);
+            }
         }
         if (k === 'attack') {
             if (window.SMA.isGravity && window.SMA.gravityUsePeerInMatch) window.SMA.sendGravityInput({ ...window.SMA.myKeys, triggerReleaseAttack: true, attackType: type });
-            else if (window.SMA.netConn && window.SMA.netConn.open) window.SMA.netConn.send({ type: 'input', keys: { ...window.SMA.myKeys, triggerReleaseAttack: true, attackType: type } });
+            else if (window.SMA.netConn && window.SMA.netConn.open) window.SMA.netConn.send({ type: 'input', frame: window.SMA.getLocalInputTargetFrame(), keys: window.SMA.cloneInputKeys({ ...window.SMA.myKeys, triggerReleaseAttack: true, attackType: type }) });
         }
     };
     var bind = function (id, k) {
@@ -420,7 +429,8 @@ window.onload = function () {
         var attackWasHeld = !!window.SMA.myKeys.attack;
         var type = getAttackType();
         if (attackWasHeld && window.SMA.gameRunning && window.SMA.isHost && window.SMA.pOne) {
-            window.SMA.pOne.releaseAttack(type);
+            if (window.SMA.isOnline && window.SMA.onlineStrictLockstep) window.SMA.queueLocalInputEvent(Object.assign({}, window.SMA.myKeys, { attack: false, triggerReleaseAttack: true, attackType: type }));
+            else window.SMA.pOne.releaseAttack(type);
         }
         window.SMA.myKeys.left = false;
         window.SMA.myKeys.right = false;
