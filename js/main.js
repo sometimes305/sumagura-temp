@@ -70,7 +70,7 @@ window.SMA.lastGravityRtSyncAt = 0;
 window.SMA.gravityRtOutbox = [];
 window.SMA.pendingHubReady = null;
 window.SMA.ONLINE_INPUT_DELAY_FRAMES = 4;
-window.SMA.LOCKSTEP_STALL_FILL_MS = 150;
+window.SMA.LOCKSTEP_STALL_FILL_MS = null; // null keeps the host stopped until every frame input arrives.
 window.SMA.onlineStrictLockstep = true;
 window.SMA.lockstepFrame = 0;
 window.SMA.lockstepRemoteFrame = 0;
@@ -228,7 +228,9 @@ window.SMA.prepareHostLockstepInputs = function () {
     }
     if (missingRoles.length > 0) {
         if (!window.SMA.lockstepStallStartAt) window.SMA.lockstepStallStartAt = Date.now();
-        if ((Date.now() - window.SMA.lockstepStallStartAt) < window.SMA.LOCKSTEP_STALL_FILL_MS) return false;
+        var fillMs = window.SMA.LOCKSTEP_STALL_FILL_MS;
+        if (fillMs == null || !isFinite(fillMs) || fillMs < 0) return false;
+        if ((Date.now() - window.SMA.lockstepStallStartAt) < fillMs) return false;
         missingRoles.forEach(function (role) {
             bucket[role] = window.SMA.stripInputTriggers(window.SMA.lockstepLastInputs[role] || window.SMA.emptyInputKeys());
         });
