@@ -922,6 +922,11 @@ select {
     background-position: center 52%;
 }
 
+.preview-day {
+    background-image: url('../assets/stages/stage_select_day.png?v=3');
+    background-position: center 52%;
+}
+
 .stage-preview .plat,
 .stage-preview .sun {
     display: none !important;

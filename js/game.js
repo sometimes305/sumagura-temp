@@ -12,6 +12,47 @@ window.SMA.triggerComet = function (x, y, dir, col) { if (window.SMA.isHost && w
 window.SMA.drawComets = function (ctx) { for (var i = window.SMA.comets.length - 1; i >= 0; i--) { var c = window.SMA.comets[i]; ctx.fillStyle = c.color; ctx.save(); ctx.shadowBlur = 20; ctx.shadowColor = c.color; ctx.beginPath(); ctx.arc(c.x, c.y, 20, 0, Math.PI * 2); ctx.fill(); ctx.beginPath(); ctx.strokeStyle = c.color; ctx.lineWidth = 10; ctx.moveTo(c.x, c.y); ctx.lineTo(c.x - c.vx * 4, c.y - c.vy * 4); ctx.stroke(); ctx.restore(); } };
 window.SMA.createParticles = function (x, y, n, c) { if (window.SMA.isHost && window.SMA.isOnline) window.SMA.syncEvents.push({ type: 'part', x: x, y: y, n: n, c: c }); for (var i = 0; i < n; i++) window.SMA.particles.push({ x: x, y: y, vx: (Math.random() - 0.5) * 10, vy: (Math.random() - 0.5) * 10, color: c, l: 20 }); };
 window.SMA.updateParticles = function (ctx) { for (var i = window.SMA.particles.length - 1; i >= 0; i--) { var p = window.SMA.particles[i]; ctx.fillStyle = p.color; ctx.globalAlpha = p.life / 30; ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1; } };
+window.SMA.debugHitboxes = window.SMA.debugHitboxes || false;
+window.SMA.drawDebugHitboxes = function (ctx) {
+    if (!window.SMA.debugHitboxes || !ctx) return;
+    ctx.save();
+    ctx.lineWidth = 2;
+    ctx.font = '12px sans-serif';
+    var players = window.SMA.players || [];
+    for (var i = 0; i < players.length; i++) {
+        var f = players[i];
+        if (!f || f.stocks <= 0) continue;
+        var isStunned = f.actionState === 'STUN';
+        ctx.strokeStyle = isStunned ? 'rgba(210, 70, 255, 0.95)' : 'rgba(80, 170, 255, 0.9)';
+        ctx.fillStyle = isStunned ? 'rgba(210, 70, 255, 0.16)' : 'rgba(80, 170, 255, 0.08)';
+        ctx.strokeRect(f.x, f.y, f.w, f.h);
+        ctx.fillRect(f.x, f.y, f.w, f.h);
+        if (f.hitbox && f.hitbox.active) {
+            var hb = f.hitbox;
+            ctx.strokeStyle = 'rgba(255, 35, 35, 0.95)';
+            ctx.fillStyle = 'rgba(255, 35, 35, 0.25)';
+            ctx.fillRect(hb.x, hb.y, hb.w, hb.h);
+            ctx.strokeRect(hb.x, hb.y, hb.w, hb.h);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+            var label = (f.charId || '') + ' ' + (f.currentAttackType || '') + ' f' + (f.stateTimer || 0) + ' ' + Math.round(hb.w) + 'x' + Math.round(hb.h);
+            ctx.fillText(label, hb.x, hb.y - 5);
+        }
+    }
+    var projectiles = window.SMA.projectiles || [];
+    for (var j = 0; j < projectiles.length; j++) {
+        var p = projectiles[j];
+        if (!p) continue;
+        var hitW = p.hitW || p.w;
+        var hitH = p.hitH || p.h || p.w;
+        var hitCx = p.x + (p.hitOffsetX || 0);
+        var hitCy = p.y + (p.hitOffsetY || 0);
+        ctx.strokeStyle = 'rgba(255, 230, 80, 0.95)';
+        ctx.fillStyle = 'rgba(255, 230, 80, 0.18)';
+        ctx.fillRect(hitCx - hitW / 2, hitCy - hitH / 2, hitW, hitH);
+        ctx.strokeRect(hitCx - hitW / 2, hitCy - hitH / 2, hitW, hitH);
+    }
+    ctx.restore();
+};
 window.SMA.mageVfx = window.SMA.mageVfx || [];
 window.SMA.SPEAR_WEAPON_ASSET = {
     key: 'spear_weapon_v4',
@@ -54,6 +95,42 @@ window.SMA.drawTrident = function (ctx, x, y, angleDeg, color, tipColor) {
     }
     ctx.drawImage(img, -gripX, -gripY, drawW, drawH);
     ctx.restore();
+};
+window.SMA.SPEAR_GROUND_SHOCKWAVE_ASSET = {
+    key: 'spear_ground_shockwave_powerwave_black_v1',
+    src: 'assets/characters/spear/spear_down_shockwave_powerwave_black_sheet.png?v=1',
+    frames: 4,
+    frameW: 543,
+    frameH: 724,
+    cropY: 190,
+    cropH: 365,
+    drawW: 120,
+    drawH: 82,
+    frameStep: 5,
+    bottomOffset: 10
+};
+window.SMA.drawSpearGroundShockwave = function (ctx, p) {
+    if (!p || p.type !== 'shockwave' || p.visualKind !== 'spear_ground_shock') return false;
+    var asset = window.SMA.SPEAR_GROUND_SHOCKWAVE_ASSET;
+    var img = asset && window.SMA.getSpriteAsset ? window.SMA.getSpriteAsset(asset.key, asset.src) : null;
+    if (!img || !img.complete || !img.naturalWidth) return false;
+    var frames = asset.frames || 4;
+    var frame = Math.max(0, Math.min(frames - 1, Math.floor((p.age || 0) / (asset.frameStep || 5))));
+    var sx = frame * asset.frameW;
+    var sy = asset.cropY || 0;
+    var sw = asset.frameW;
+    var sh = asset.cropH || asset.frameH;
+    var drawW = asset.drawW || 170;
+    var drawH = asset.drawH || 116;
+    var dir = (p.vx || 0) < 0 ? -1 : 1;
+    var bottomY = p.y + (asset.bottomOffset || 0);
+    ctx.save();
+    ctx.translate(p.x, bottomY);
+    if (dir < 0) ctx.scale(-1, 1);
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(img, sx, sy, sw, sh, -drawW * 0.22, -drawH, drawW, drawH);
+    ctx.restore();
+    return true;
 };
 window.SMA.HAMMER_WEAPON_ASSET = {
     key: 'hammer_weapon',
@@ -131,6 +208,9 @@ window.SMA.bootGame = function () {
     if (stg === 'final') {
         // Final Destination: One big platform (FIXED WIDTH: 900)
         window.SMA.platforms.push({ x: window.SMA.WORLD_W / 2 - 450, y: my, w: 900, h: 40, type: 'main' });
+    } else if (stg === 'day') {
+        window.SMA.platforms.push({ x: mx, y: my, w: 900, h: 40, type: 'main' });
+        window.SMA.platforms.push({ x: mx + 225, y: my - 135, w: 450, h: 10, type: 'plat' });
     } else {
         // Battlefield
         window.SMA.platforms.push({ x: mx, y: my, w: 900, h: 40, type: 'main' });
@@ -141,7 +221,7 @@ window.SMA.bootGame = function () {
 
     // Stars / Background setup
     window.SMA.stars = [];
-    if (stg === 'final') {
+    if (stg === 'final' || stg === 'day') {
         // Day: Clouds
         for (var i = 0; i < 20; i++) { window.SMA.stars.push({ x: Math.random() * (window.SMA.WORLD_W + 1000) - 500, y: Math.random() * (window.SMA.WORLD_H / 2), s: Math.random() * 50 + 30, type: 'cloud' }); }
     } else {
@@ -289,7 +369,7 @@ window.SMA.gameLoop = function () {
                     window.SMA.checkGameSet();
                     // 繝阪ャ繝医Ρ繝ｼ繧ｯ蜷梧悄
                     if (window.SMA.isOnline) {
-                        var pkt = { type: 'sync', stg: window.SMA.selectedStage, gState: window.SMA.gameState, cd: window.SMA.countdownTimer, playerCount: pc, events: window.SMA.syncEvents, projs: window.SMA.projectiles.map(function (p) { return { x: p.x, y: p.y, vx: p.vx, vy: p.vy, type: p.type, w: p.w, h: p.h, hitW: p.hitW, hitH: p.hitH, hitOffsetX: p.hitOffsetX, hitOffsetY: p.hitOffsetY, color: p.color, particleColor: p.particleColor, angle: p.angle || 0, age: p.age || 0, maxLife: p.maxLife || p.life || 0, surfaceY: p.surfaceY }; }), win: (window.SMA.gameState === 'GAMEOVER' ? document.getElementById('result-text').innerText : null) };
+                        var pkt = { type: 'sync', stg: window.SMA.selectedStage, gState: window.SMA.gameState, cd: window.SMA.countdownTimer, playerCount: pc, events: window.SMA.syncEvents, projs: window.SMA.projectiles.map(function (p) { return { x: p.x, y: p.y, vx: p.vx, vy: p.vy, type: p.type, w: p.w, h: p.h, hitW: p.hitW, hitH: p.hitH, hitOffsetX: p.hitOffsetX, hitOffsetY: p.hitOffsetY, visualKind: p.visualKind, color: p.color, particleColor: p.particleColor, angle: p.angle || 0, age: p.age || 0, maxLife: p.maxLife || p.life || 0, surfaceY: p.surfaceY }; }), win: (window.SMA.gameState === 'GAMEOVER' ? document.getElementById('result-text').innerText : null) };
                         // 蜷・・繝ｬ繧､繝､繝ｼ縺ｮ迥ｶ諷九ｒ霑ｽ蜉
                         for (var si = 0; si < pc; si++) {
                             pkt['p' + (si + 1)] = allPlayers[si].serialize();
@@ -340,6 +420,10 @@ window.SMA.gameLoop = function () {
                 window.SMA.ctx.fillStyle = grad;
                 window.SMA.ctx.fillRect(0, 0, window.SMA.SCREEN_W, window.SMA.SCREEN_H);
                 window.SMA.drawStageImageCover(window.SMA.ctx, window.SMA.STAGE_ASSETS.finalBg, 0, 0, window.SMA.SCREEN_W, window.SMA.SCREEN_H);
+            } else if (stg === 'day') {
+                window.SMA.ctx.fillStyle = "#79cfff";
+                window.SMA.ctx.fillRect(0, 0, window.SMA.SCREEN_W, window.SMA.SCREEN_H);
+                window.SMA.drawStageImageCover(window.SMA.ctx, window.SMA.STAGE_ASSETS.dayBg, 0, 0, window.SMA.SCREEN_W, window.SMA.SCREEN_H);
             } else {
                 window.SMA.ctx.fillStyle = "#0f0f23";
                 window.SMA.ctx.fillRect(0, 0, window.SMA.SCREEN_W, window.SMA.SCREEN_H);
@@ -355,14 +439,14 @@ window.SMA.gameLoop = function () {
             viewY = Math.round(viewY * snap) / snap;
             window.SMA.ctx.save(); window.SMA.ctx.translate(window.SMA.SCREEN_W / 2, window.SMA.SCREEN_H / 2); window.SMA.ctx.scale(window.SMA.camera.zoom, window.SMA.camera.zoom); window.SMA.ctx.translate(-viewX, -viewY); for (var i = 0; i < window.SMA.stars.length; i++) {
                 var s = window.SMA.stars[i];
-                if (stg === 'final' && (!window.SMA.STAGE_ASSETS || !window.SMA.getSpriteAsset(window.SMA.STAGE_ASSETS.finalBg.key, window.SMA.STAGE_ASSETS.finalBg.src).complete)) {
+                if ((stg === 'final' || stg === 'day') && (!window.SMA.STAGE_ASSETS || !window.SMA.getSpriteAsset((stg === 'day' ? window.SMA.STAGE_ASSETS.dayBg : window.SMA.STAGE_ASSETS.finalBg).key, (stg === 'day' ? window.SMA.STAGE_ASSETS.dayBg : window.SMA.STAGE_ASSETS.finalBg).src).complete)) {
                     window.SMA.ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
                     window.SMA.ctx.beginPath(); window.SMA.ctx.ellipse(s.x, s.y, s.s, s.s / 2, 0, 0, Math.PI * 2); window.SMA.ctx.fill();
-                } else if (stg !== 'final' && (!window.SMA.STAGE_ASSETS || !window.SMA.getSpriteAsset(window.SMA.STAGE_ASSETS.battlefieldBg.key, window.SMA.STAGE_ASSETS.battlefieldBg.src).complete)) {
+                } else if (stg !== 'final' && stg !== 'day' && (!window.SMA.STAGE_ASSETS || !window.SMA.getSpriteAsset(window.SMA.STAGE_ASSETS.battlefieldBg.key, window.SMA.STAGE_ASSETS.battlefieldBg.src).complete)) {
                     window.SMA.ctx.fillStyle = "rgba(255, 255, 200, " + (0.5 + Math.random() * 0.5) + ")";
                     window.SMA.ctx.beginPath(); window.SMA.ctx.arc(s.x, s.y, s.s, 0, Math.PI * 2); window.SMA.ctx.fill();
                 }
-            } if (window.SMA.platforms.length > 0) { if (stg === 'final' && window.SMA.drawFinalMainPlatformArt(window.SMA.ctx, window.SMA.platforms[0])) { } else if (stg === 'battlefield' && window.SMA.drawBattlefieldMainPlatformArt(window.SMA.ctx, window.SMA.platforms[0])) { for (var i = 1; i < window.SMA.platforms.length; i++) { var p = window.SMA.platforms[i]; if (!window.SMA.drawBattlefieldSmallPlatformArt(window.SMA.ctx, p)) { window.SMA.ctx.fillStyle = "#3e2723"; window.SMA.ctx.fillRect(p.x, p.y, p.w, p.h); window.SMA.ctx.fillStyle = "#a1887f"; window.SMA.ctx.fillRect(p.x, p.y, p.w, 5); } } } else { window.SMA.drawVectorStagePlatforms(window.SMA.ctx); } }
+            } if (window.SMA.platforms.length > 0) { if (stg === 'final' && window.SMA.drawFinalMainPlatformArt(window.SMA.ctx, window.SMA.platforms[0])) { } else if (stg === 'day' && window.SMA.drawDayMainPlatformArt(window.SMA.ctx, window.SMA.platforms[0])) { for (var i = 1; i < window.SMA.platforms.length; i++) { var p = window.SMA.platforms[i]; if (!window.SMA.drawDayFloatPlatformArt(window.SMA.ctx, p)) { window.SMA.ctx.fillStyle = "#3e2723"; window.SMA.ctx.fillRect(p.x, p.y, p.w, p.h); window.SMA.ctx.fillStyle = "#a1887f"; window.SMA.ctx.fillRect(p.x, p.y, p.w, 5); } } } else if (stg === 'battlefield' && window.SMA.drawBattlefieldMainPlatformArt(window.SMA.ctx, window.SMA.platforms[0])) { for (var i = 1; i < window.SMA.platforms.length; i++) { var p = window.SMA.platforms[i]; if (!window.SMA.drawBattlefieldSmallPlatformArt(window.SMA.ctx, p)) { window.SMA.ctx.fillStyle = "#3e2723"; window.SMA.ctx.fillRect(p.x, p.y, p.w, p.h); window.SMA.ctx.fillStyle = "#a1887f"; window.SMA.ctx.fillRect(p.x, p.y, p.w, 5); } } } else { window.SMA.drawVectorStagePlatforms(window.SMA.ctx); } }
             // 蜈ｨ繝励Ξ繧､繝､繝ｼ謠冗判
             window.SMA.players.forEach(function (p) { try { if (p) p.draw(window.SMA.ctx); } catch (e) { } });
             // 髀｡繧ｪ繝悶ず繧ｧ繧ｯ繝医→髀｡蜒上・謠冗判
@@ -487,7 +571,7 @@ window.SMA.gameLoop = function () {
                 });
             } catch (e) { }
             for (var i = 0; i < window.SMA.projectiles.length; i++) {
-                var p = window.SMA.projectiles[i]; if (window.SMA.drawMageProjectileVfx && window.SMA.drawMageProjectileVfx(window.SMA.ctx, p)) { continue; } if (p.type === 'fire_trap') { window.SMA.ctx.save(); for (var k = 0; k < 3; k++) { window.SMA.ctx.fillStyle = "rgba(255, " + (Math.floor(Math.random() * 150) + 50) + ", 0, " + (0.5 + Math.random() * 0.5) + ")"; var w = p.w * (0.8 + Math.random() * 0.4); var h = p.h * (1.0 + Math.random() * 0.5); var fx = p.x + (Math.random() - 0.5) * 20; window.SMA.ctx.beginPath(); window.SMA.ctx.moveTo(fx - w / 2, p.y + 40); window.SMA.ctx.lineTo(fx + w / 2, p.y + 40); window.SMA.ctx.lineTo(fx, p.y - h); window.SMA.ctx.fill(); } window.SMA.ctx.restore(); } else if (p.type === 'spear_throw') { try { window.SMA.ctx.save(); window.SMA.ctx.translate(p.x, p.y); window.SMA.ctx.rotate(p.angle); window.SMA.ctx.translate(-35, 0); window.SMA.drawTrident(window.SMA.ctx, 0, 0, 0, p.color); window.SMA.ctx.restore(); } catch (e) { } } else if (p.type === 'shockwave') { window.SMA.ctx.fillStyle = "#ffeaa7"; window.SMA.ctx.beginPath(); window.SMA.ctx.arc(p.x, p.y, p.w / 2, 0, Math.PI, true); window.SMA.ctx.fill(); } else if (p.type === 'angel_arrow') {
+                var p = window.SMA.projectiles[i]; if (window.SMA.drawMageProjectileVfx && window.SMA.drawMageProjectileVfx(window.SMA.ctx, p)) { continue; } if (p.type === 'fire_trap') { window.SMA.ctx.save(); for (var k = 0; k < 3; k++) { window.SMA.ctx.fillStyle = "rgba(255, " + (Math.floor(Math.random() * 150) + 50) + ", 0, " + (0.5 + Math.random() * 0.5) + ")"; var w = p.w * (0.8 + Math.random() * 0.4); var h = p.h * (1.0 + Math.random() * 0.5); var fx = p.x + (Math.random() - 0.5) * 20; window.SMA.ctx.beginPath(); window.SMA.ctx.moveTo(fx - w / 2, p.y + 40); window.SMA.ctx.lineTo(fx + w / 2, p.y + 40); window.SMA.ctx.lineTo(fx, p.y - h); window.SMA.ctx.fill(); } window.SMA.ctx.restore(); } else if (p.type === 'spear_throw') { try { window.SMA.ctx.save(); window.SMA.ctx.translate(p.x, p.y); window.SMA.ctx.rotate(p.angle); window.SMA.ctx.translate(-35, 0); window.SMA.drawTrident(window.SMA.ctx, 0, 0, 0, p.color); window.SMA.ctx.restore(); } catch (e) { } } else if (p.type === 'shockwave') { if (window.SMA.drawSpearGroundShockwave && window.SMA.drawSpearGroundShockwave(window.SMA.ctx, p)) { continue; } window.SMA.ctx.fillStyle = "#ffeaa7"; window.SMA.ctx.beginPath(); window.SMA.ctx.arc(p.x, p.y, p.w / 2, 0, Math.PI, true); window.SMA.ctx.fill(); } else if (p.type === 'angel_arrow') {
                     if (window.SMA.drawAngelArrowProjectile && window.SMA.drawAngelArrowProjectile(window.SMA.ctx, p)) { continue; }
                     // 繧ｨ繝ｳ繧ｸ繧ｧ繝ｫ蠑鍋泙: 遏｢縺ｮ蠖｢縺ｧ謠冗判
                     window.SMA.ctx.save();
@@ -517,7 +601,7 @@ window.SMA.gameLoop = function () {
                     window.SMA.ctx.shadowBlur = 0;
                     window.SMA.ctx.restore();
                 } else { window.SMA.ctx.fillStyle = p.color; window.SMA.ctx.beginPath(); window.SMA.ctx.arc(p.x, p.y, p.w / 2, 0, Math.PI * 2); window.SMA.ctx.fill(); }
-            } window.SMA.drawMageTransientVfx(window.SMA.ctx); window.SMA.drawComets(window.SMA.ctx); window.SMA.updateParticles(window.SMA.ctx); window.SMA.ctx.restore();
+            } window.SMA.drawMageTransientVfx(window.SMA.ctx); window.SMA.drawComets(window.SMA.ctx); window.SMA.updateParticles(window.SMA.ctx); window.SMA.drawDebugHitboxes(window.SMA.ctx); window.SMA.ctx.restore();
         } window.SMA.updateHud();
     } catch (e) { reportError("Loop Error: " + e); } window.SMA.animationFrameId = requestAnimationFrame(window.SMA.gameLoop);
 };
@@ -979,12 +1063,12 @@ window.SMA.CHAR_DATA = {
         airAttackMoveMult: 0.9,
         attacks: {
             NEUTRAL: { type: 'shot', spawnFrame: 5, dmg: 3, kb: 3.0, scale: 0, speed: 11.34, radius: 10, frames: 21, lag: 0, stun: 2, hitstun: 15 },
-            SIDE: { type: 'shot', spawnFrame: 12, dmg: 12, kb: 3.0, scale: 0.1, speed: 3.5, radius: 25, frames: 25, lag: 35, stun: 10 },
-            UP: { dmg: 10, kb: 1.6, scale: 0.1, angle: -90, frames: 25, lag: 20, stun: 5 },
-            DOWN: { type: 'fire_shot', spawnFrame: 10, dmg: 8, kb: 1.5, scale: 0.08, angle: -45, frames: 25, lag: 18, stun: 5, radius: 10 },
+            SIDE: { type: 'shot', spawnFrame: 12, dmg: 13, kb: 3.0, scale: 0.1, speed: 3.5, radius: 25, frames: 25, lag: 35, stun: 10 },
+            UP: { dmg: 13.5, kb: 1.6, scale: 0.1, angle: -90, frames: 25, lag: 20, stun: 5 },
+            DOWN: { type: 'fire_shot', spawnFrame: 10, dmg: 9, kb: 1.5, scale: 0.08, angle: -45, frames: 25, lag: 18, stun: 5, radius: 10 },
             AIR_NEUTRAL: { type: 'shot', spawnFrame: 5, dmg: 3, kb: 3.0, scale: 0, speed: 11.34, radius: 10, frames: 21, lag: 0, stun: 2, hitstun: 15 },
-            AIR_SIDE: { type: 'shot', spawnFrame: 12, dmg: 12, kb: 3.0, scale: 0.1, speed: 3.5, radius: 25, frames: 25, lag: 35, stun: 10 },
-            AIR_DOWN: { type: 'fire_shot', spawnFrame: 10, dmg: 8, kb: 1.5, scale: 0.08, angle: -45, frames: 25, lag: 18, stun: 5, radius: 10 },
+            AIR_SIDE: { type: 'shot', spawnFrame: 12, dmg: 13, kb: 3.0, scale: 0.1, speed: 3.5, radius: 25, frames: 25, lag: 35, stun: 10 },
+            AIR_DOWN: { type: 'fire_shot', spawnFrame: 10, dmg: 9, kb: 1.5, scale: 0.08, angle: -45, frames: 25, lag: 18, stun: 5, radius: 10 },
             LEDGE_ATK: { dmg: 8, kb: 12.0, scale: 0.01, angle: -45, frames: 30, lag: 10, stun: 10 }
         },
         throws: {
@@ -1001,7 +1085,7 @@ window.SMA.CHAR_DATA = {
             NEUTRAL: { dmg: 3, kb: 0.5, scale: 0.02, angle: -30, frames: 8, lag: 4, stun: 4, color: '#f1c40f' },
             SIDE: { type: 'lunge', dmg: 14, kb: 2.8, scale: 0.12, angle: -30, frames: 25, lag: 20, stun: 10, color: '#e67e22' },
             UP: { type: 'shoryu', dmg: 12, kb: 3.0, scale: 0.1, angle: -90, frames: 35, lag: 25, stun: 8, color: '#e74c3c' },
-            DOWN: { type: 'low_kick', dmg: 6, kb: 3.0, scale: 0.01, angle: -90, frames: 15, lag: 6, stun: 8, hitstun: 45, color: '#d35400' },
+            DOWN: { type: 'low_kick', dmg: 6, kb: 3.0, scale: 0.01, angle: -90, frames: 15, lag: 6, stun: 8, hitstun: 41, color: '#d35400' },
             AIR_NEUTRAL: { type: 'sex_kick', dmg: 6, kb: 1.0, scale: 0.05, angle: -45, frames: 25, lag: 1, stun: 5, hitstun: 33, color: '#f39c12' },
             AIR_SIDE: { type: 'axe', dmg: 18, kb: 16.0, scale: 0.2, angle: 90, frames: 40, lag: 16, stun: 12, color: '#c0392b' },
             AIR_UP: { type: 'shoryu', dmg: 10, kb: 2.5, scale: 0.1, angle: -90, frames: 20, lag: 15, stun: 8, color: '#e74c3c' },
@@ -1042,7 +1126,7 @@ window.SMA.CHAR_DATA = {
         kbMult: 0.85,
         jumpMult: 0.9,
         attacks: {
-            NEUTRAL: { dmg: 14, kb: 5.6, scale: 0.15, angle: -45, frames: 45, lag: 10, stun: 15, color: '#b2bec3' },
+            NEUTRAL: { dmg: 16, kb: 5.6, scale: 0.15, angle: -45, frames: 45, lag: 10, stun: 15, color: '#b2bec3' },
             SIDE: { type: 'spin_hammer', dmg: 12, kb: 3.5, scale: 0.15, angle: -30, frames: 50, lag: 25, stun: 10, color: '#636e72' },
             UP: { dmg: 13, kb: 4.4, scale: 0.15, angle: -90, frames: 40, lag: 15, stun: 12, color: '#b2bec3' },
             DOWN: { type: 'tornado', dmg: 1.6, kb: 0.2, scale: 0.05, angle: -45, frames: 90, lag: 30, stun: 30, hitstun: 30, color: '#dfe6e9' },
@@ -1091,15 +1175,15 @@ window.SMA.CHAR_DATA = {
             // NA: 蜈峨・蠑鍋泙繧貞燕譁ｹ縺ｫ蟆・・・亥ｰ・ｨ・50px = WORLD_W/2・峨ゅメ繝｣繝ｼ繧ｸ縺ｧ3譛ｬ・育峩騾ｲ/譁懊ａ荳・譁懊ａ荳具ｼ・
             NEUTRAL: { type: 'arrow_shot', spawnFrame: 6, dmg: 3, kb: 0.75, scale: 0.06, speed: 8, radius: 8, frames: 18, lag: 12, stun: 3, range: 750, color: '#fff0a0' },
             // 讓ｪA: 鄒ｽ縺ｰ縺溘″謾ｻ謦・らｩｺ荳ｭ譎ゅ・閾ｪ蟾ｱ蠕梧婿繝弱ャ繧ｯ繝舌ャ繧ｯ
-            SIDE: { type: 'wing_flap', dmg: 13, kb: 3, scale: 0.1, angle: -25, frames: 22, lag: 18, stun: 8, color: '#fff' },
+            SIDE: { type: 'wing_flap', dmg: 14, kb: 3, scale: 0.1, angle: -25, frames: 22, lag: 18, stun: 8, color: '#fff' },
             // 荳晦: 鬟帷ｿ疲判謦・ｼ域判謦・愛螳壻ｻ倥″荳頑・・・
             UP: { type: 'wing_rise', dmg: 11, kb: 3, scale: 0.1, angle: -85, frames: 30, lag: 20, stun: 6, color: '#ffe066', limit: true },
             // 荳帰: 蜀・ｽ｢陦晄茶豕｢・亥崋螳壼聖縺｣鬟帙・縺励∵茶蠅應ｸ榊庄・峨らｩｺ荳ｭ縺ｧ貊樒ｩｺ
-            DOWN: { type: 'shockwave', dmg: 6, kb: 8.0, scale: 0, angle: -45, frames: 35, lag: 35, stun: 10, shockRadius: 140, color: '#ffe066' },
+            DOWN: { type: 'shockwave', shockFrame: 17, dmg: 6, kb: 8.0, scale: 0, angle: -45, frames: 35, lag: 34, stun: 10, shockRadius: 140, color: '#ffe066' },
             AIR_NEUTRAL: { type: 'arrow_shot', spawnFrame: 6, dmg: 3, kb: 0.75, scale: 0.06, speed: 8, radius: 8, frames: 18, lag: 12, stun: 3, range: 750, color: '#fff0a0' },
-            AIR_SIDE: { type: 'wing_flap', dmg: 12, kb: 3, scale: 0.1, angle: -30, frames: 22, lag: 18, stun: 7, color: '#fff', airKnockback: true },
+            AIR_SIDE: { type: 'wing_flap', dmg: 13, kb: 3, scale: 0.1, angle: -30, frames: 22, lag: 18, stun: 7, color: '#fff', airKnockback: true },
             AIR_UP: { type: 'wing_rise', dmg: 11, kb: 3, scale: 0.1, angle: -90, frames: 28, lag: 18, stun: 5, color: '#ffe066', limit: true },
-            AIR_DOWN: { type: 'shockwave', dmg: 6, kb: 8.0, scale: 0, angle: -45, frames: 35, lag: 35, stun: 10, shockRadius: 140, color: '#ffe066', hover: true },
+            AIR_DOWN: { type: 'shockwave', shockFrame: 17, dmg: 6, kb: 8.0, scale: 0, angle: -45, frames: 35, lag: 34, stun: 10, shockRadius: 140, color: '#ffe066', hover: true },
             LEDGE_ATK: { dmg: 7, kb: 10.0, scale: 0.01, angle: -45, frames: 30, lag: 10, stun: 10 }
         },
         throws: {
@@ -1234,18 +1318,21 @@ window.SMA.Fighter.prototype.update = function (inputKeys, opponent) {
                 this.actionState = 'LAG';
                 this.stateTimer = 5; // 5F landing lag
                 this.currentAttack = null;
+                this.chargePower = 1.0;
                 this.hitbox.active = false;
                 this.rotation = 0;
             } else if (this.charId === 'hammer') {
                 this.actionState = 'LAG';
                 this.stateTimer = 9; // 9F landing lag
                 this.currentAttack = null;
+                this.chargePower = 1.0;
                 this.hitbox.active = false;
                 this.rotation = 0;
             } else if (this.charId === 'brawler') {
                 this.actionState = 'LAG';
                 this.stateTimer = 3; // 3F landing lag
                 this.currentAttack = null;
+                this.chargePower = 1.0;
                 this.hitbox.active = false;
                 this.rotation = 0;
             }
@@ -1345,7 +1432,7 @@ window.SMA.Fighter.prototype.releaseAttack = function (typeStr) {
         } else if (this.charId === 'mirror') {
             this._mirrorChibiDownVariant = null;
         }
-        this.chargePower = power; this.hasHit = false; this.mirrorHasHit = false; this.stateTimer = 0; if (this.currentAttack) { if (this.currentAttack.type === 'arrow_shot') S.playSound('magic'); else if (this.currentAttack.type === 'shot') S.playSound('magic'); else if (this.currentAttack.type === 'fire_shot') S.playSound('magic'); else if (this.currentAttack.type === 'up_rush') S.playSound('jump'); else if (this.currentAttack.type === 'ground_shock') { } else if (this.currentAttack.type === 'boomerang' || this.currentAttack.type === 'boomerang_up') S.playSound('sword'); else if (this.currentAttackType === 'UP' && this.charId === 'mage') S.playSound('spin'); else S.playSound('sword'); }
+        this.chargePower = power; this.hasHit = false; this.mirrorHasHit = false; this._mageUpHitbox = null; this.stateTimer = 0; if (this.currentAttack) { if (this.currentAttack.type === 'arrow_shot') S.playSound('magic'); else if (this.currentAttack.type === 'shot') S.playSound('magic'); else if (this.currentAttack.type === 'fire_shot') S.playSound('magic'); else if (this.currentAttack.type === 'up_rush') S.playSound('jump'); else if (this.currentAttack.type === 'ground_shock') { } else if (this.currentAttack.type === 'boomerang' || this.currentAttack.type === 'boomerang_up') S.playSound('sword'); else if ((this.currentAttackType === 'UP' || this.currentAttackType === 'AIR_UP') && this.charId === 'mage') S.playSound('spin'); else S.playSound('sword'); }
     }
 };
 window.SMA.Fighter.prototype.handleAttackFrame = function () {
@@ -1430,8 +1517,8 @@ window.SMA.Fighter.prototype.handleAttackFrame = function () {
                 this.vy = -9.6;
                 this.vx *= 0.5;
                 this.hitbox.active = true;
-                this.hitbox.w = 50; this.hitbox.h = 70;
-                this.hitbox.x = this.x + this.w / 2 - 25;
+                this.hitbox.w = 110; this.hitbox.h = 70;
+                this.hitbox.x = this.x + this.w / 2 - this.hitbox.w / 2;
                 this.hitbox.y = this.y - 20;
             } else {
                 // 萓幃､・ 繝｢繝ｼ繧ｷ繝ｧ繝ｳ縺縺大・縺ｦ驥榊鴨關ｽ荳具ｼ域判謦・愛螳壹↑縺暦ｼ・
@@ -1447,7 +1534,7 @@ window.SMA.Fighter.prototype.handleAttackFrame = function () {
         if (atk.hover && !this.isGrounded) {
             this.vy = 0; this.vx *= 0.8;
         }
-        var shockFrame = 18;
+        var shockFrame = atk.shockFrame || 18;
         if (this.stateTimer === shockFrame) {
             // 陦晄茶豕｢繝偵ャ繝医ヵ繝ｬ繝ｼ繝・・蝗槭・縺ｿ蛻､螳・
             var sr = atk.shockRadius || 200;
@@ -1789,7 +1876,7 @@ window.SMA.Fighter.prototype.handleAttackFrame = function () {
     if (atk.type === 'spin_hammer') {
         if (this.stateTimer === 1) this.vx = (this.facingRight ? 6.4 : -6.4); // 蜑埼ｲ霍晞屬80%縺ｫ邵ｮ蟆・
         if (this.stateTimer % 10 === 0 && this.stateTimer < 40) {
-            this.hitbox.active = true; this.hitbox.w = 140; this.hitbox.h = 60; this.hitbox.x = this.x + this.w / 2 - 70; this.hitbox.y = this.y + 20;
+            this.hitbox.active = true; this.hitbox.w = 105; this.hitbox.h = 80; this.hitbox.x = this.facingRight ? this.x + this.w / 2 - 5 : this.x + this.w / 2 + 5 - this.hitbox.w; this.hitbox.y = this.y;
             this.hasHit = false; // Multi hit reset
             S.playSound('sword');
         } else { this.hitbox.active = false; }
@@ -1803,7 +1890,7 @@ window.SMA.Fighter.prototype.handleAttackFrame = function () {
         if (this.stateTimer >= 5 && this.stateTimer <= 35) {
             this.hitbox.active = true;
             this.hitbox.w = 60;
-            this.hitbox.h = 60;
+            this.hitbox.h = 70;
             this.hitbox.x = this.x + this.w / 2 - 30;
             this.hitbox.y = this.y + this.h / 2 - 10;
             // No hasHit reset (single hit)
@@ -1837,11 +1924,15 @@ window.SMA.Fighter.prototype.handleAttackFrame = function () {
     }
     if (atk.type === 'ground_shock') {
         if (this.stateTimer === 10) {
-            var startX = this.x + this.w / 2 + (this.facingRight ? 30 : -30); var startY = this.y + 50;
-            var vx = this.facingRight ? 10 : -10;
+            var startY = this.y + 50;
+            var baseX = this.x + this.w / 2;
             // FIX: Pass scale
             var atkScale = (atk.scale !== undefined) ? atk.scale : 0.1;
-            S.projectiles.push({ x: startX, y: startY, vx: vx, vy: 0, w: 40, h: 30, ownerRole: this.playerRole, dmg: atk.dmg, kb: atk.kb, scale: atkScale, type: 'shockwave', life: 30, color: '#ffeaa7' });
+            var spawnSpearShockwave = function (dir) {
+                S.projectiles.push({ x: baseX + dir * 30, y: startY, vx: dir * 10, vy: 0, w: 40, h: 30, hitW: 115, hitH: 30, hitOffsetX: dir * 37.5, ownerRole: this.playerRole, dmg: atk.dmg, kb: atk.kb, scale: atkScale, type: 'shockwave', life: 30, color: '#ffeaa7', visualKind: 'spear_ground_shock' });
+            }.bind(this);
+            spawnSpearShockwave(this.facingRight ? 1 : -1);
+            spawnSpearShockwave(this.facingRight ? -1 : 1);
             S.playSound('special');
             S.shake = 10;
         }
@@ -1880,13 +1971,13 @@ window.SMA.Fighter.prototype.handleAttackFrame = function () {
             this.hitbox.active = true;
             this.hitbox.w = 60;
             this.hitbox.h = 80;
-            this.hitbox.x = this.x + (this.facingRight ? 10 : -80);
+            this.hitbox.x = this.facingRight ? this.x + 10 : this.x + this.w - 10 - this.hitbox.w;
             this.hitbox.y = this.y;
         } else { this.hitbox.active = false; }
         if (this.stateTimer >= atk.frames) { this.actionState = 'LAG'; this.stateTimer = atk.lag; this.chargePower = 1.0; this.hitbox.active = false; this.currentAttack = null; }
         return;
     }
-    if (atk.type === 'blast') { if (this.stateTimer === 15) { S.createParticles(this.x + (this.facingRight ? 50 : -20), this.y + 20, 20, '#e67e22'); S.playSound('special'); } if (this.stateTimer >= 15 && this.stateTimer <= 25) { this.hitbox.active = true; this.hitbox.w = 80 * (1 + (this.chargePower - 1)); this.hitbox.h = 80 * (1 + (this.chargePower - 1)); this.hitbox.x = this.x + (this.facingRight ? 20 : -20 - this.hitbox.w); this.hitbox.y = this.y - 10; } else { this.hitbox.active = false; } if (this.stateTimer >= atk.frames) { this.actionState = 'LAG'; this.stateTimer = atk.lag; this.chargePower = 1.0; this.hitbox.active = false; this.currentAttack = null; } return; } if (atk.type === 'lunge') { if (this.stateTimer > 5 && this.stateTimer < 15) { var spd = (this.chargePower - 1.0) * 22; if (spd < 0) spd = 0; this.vx = this.facingRight ? spd : -spd; } var startFrame = Math.floor(atk.frames * 0.2); var endFrame = Math.floor(atk.frames * 0.8); if (this.stateTimer >= startFrame && this.stateTimer <= endFrame) { this.hitbox.active = true; this.hitbox.shape = 'box'; this.hitbox.w = 80; this.hitbox.h = 40; this.hitbox.x = this.x + (this.facingRight ? 20 : -70); this.hitbox.y = this.y + 20; } else { this.hitbox.active = false; } if (this.stateTimer >= atk.frames) { this.hitbox.active = false; this.currentAttack = null; this.chargePower = 1.0; this.enterState('LAG', atk.lag); } return; } if (atk.type === 'dive') { if (this.stateTimer === 1) { this.vx = this.facingRight ? 15 : -15; this.vy = 20; S.createParticles(this.x + this.w / 2, this.y, 5, '#fff'); } if (this.isGrounded) { this.hitbox.active = false; this.currentAttack = null; this.chargePower = 1.0; this.enterState('LAG', 30); S.createParticles(this.x + this.w / 2, this.y + this.h, 20, '#fff'); S.shake = 5; return; } this.hitbox.active = true; this.hitbox.shape = 'box'; this.hitbox.w = 50; this.hitbox.h = 60; this.hitbox.x = this.x - 10; this.hitbox.y = this.y + 50; return; } if (atk.type === 'shoryu') { if (this.stateTimer === 3) { this.vy = -8; S.createParticles(this.x + this.w / 2, this.y + this.h, 10, '#e74c3c'); } if (this.stateTimer >= 3 && this.stateTimer <= 15) { this.hitbox.active = true; this.hitbox.w = 60; this.hitbox.h = 80; this.hitbox.x = this.x - 15; this.hitbox.y = this.y - 40; } else { this.hitbox.active = false; } if (this.stateTimer >= atk.frames) { this.actionState = 'LAG'; this.stateTimer = atk.lag; this.chargePower = 1.0; this.hitbox.active = false; this.currentAttack = null; } return; } if (atk.type === 'axe') { if (this.stateTimer >= 14 && this.stateTimer <= 20) { this.hitbox.active = true; this.hitbox.w = 100; this.hitbox.h = 100; this.hitbox.x = this.x + (this.facingRight ? 10 : -80); this.hitbox.y = this.y; } else { this.hitbox.active = false; } if (this.stateTimer >= atk.frames) { this.actionState = 'LAG'; this.stateTimer = atk.lag; this.chargePower = 1.0; this.hitbox.active = false; this.currentAttack = null; } return; } if (atk.type === 'blast') { if (this.stateTimer === 15) { S.createParticles(this.x + (this.facingRight ? 50 : -20), this.y + 20, 20, '#e67e22'); S.playSound('special'); } if (this.stateTimer >= 15 && this.stateTimer <= 25) { this.hitbox.active = true; this.hitbox.w = 80 * (1 + (this.chargePower - 1)); this.hitbox.h = 80 * (1 + (this.chargePower - 1)); this.hitbox.x = this.x + (this.facingRight ? 20 : -20 - this.hitbox.w); this.hitbox.y = this.y - 10; } else { this.hitbox.active = false; } if (this.stateTimer >= atk.frames) { this.actionState = 'LAG'; this.stateTimer = atk.lag; this.chargePower = 1.0; this.hitbox.active = false; this.currentAttack = null; } return; } if (atk.type === 'low_kick') { var startFrame = Math.floor(atk.frames * 0.2); var endFrame = Math.floor(atk.frames * 0.8); if (this.stateTimer >= startFrame && this.stateTimer <= endFrame) { this.hitbox.active = true; this.hitbox.w = 100; this.hitbox.h = 30; this.hitbox.x = this.x + (this.facingRight ? 10 : -80); this.hitbox.y = this.y + this.h - 10; } else { this.hitbox.active = false; } if (this.stateTimer >= atk.frames) { this.actionState = 'LAG'; this.stateTimer = atk.lag; this.chargePower = 1.0; this.hitbox.active = false; this.currentAttack = null; } return; } if (atk.type === 'sex_kick') { if (this.stateTimer >= 4 && this.stateTimer <= 21) { this.hitbox.active = true; this.hitbox.w = 68; this.hitbox.h = 55; this.hitbox.x = this.x + this.w / 2 + (this.facingRight ? 0 : -68); this.hitbox.y = this.y + 6; } else { this.hitbox.active = false; } if (this.stateTimer >= atk.frames) { this.actionState = 'LAG'; this.stateTimer = atk.lag; this.chargePower = 1.0; this.hitbox.active = false; this.currentAttack = null; } return; } if (atk.type === 'sweep') { var startFrame = Math.floor(atk.frames * 0.2); var endFrame = Math.floor(atk.frames * 0.8); if (this.stateTimer >= startFrame && this.stateTimer <= endFrame) { this.hitbox.active = true; this.hitbox.w = 100; this.hitbox.h = 30; this.hitbox.x = this.x + (this.facingRight ? 10 : -80); this.hitbox.y = this.y + this.h - 20; } else { this.hitbox.active = false; } if (this.stateTimer >= atk.frames) { this.actionState = 'LAG'; this.stateTimer = atk.lag; this.chargePower = 1.0; this.hitbox.active = false; this.currentAttack = null; } return; } if (atk.type === 'slide') { var startFrame = Math.floor(atk.frames * 0.2); var endFrame = Math.floor(atk.frames * 0.8); if (this.stateTimer === 1) { this.vx = 9.6 * (this.facingRight ? 1 : -1); S.createParticles(this.x + this.w / 2, this.y + this.h, 5, '#fff'); } if (this.stateTimer >= startFrame && this.stateTimer <= endFrame) { this.hitbox.active = true; this.hitbox.shape = 'box'; this.hitbox.w = 90; this.hitbox.h = 30; var offX = this.facingRight ? 10 : -90; this.hitbox.x = this.x + this.w / 2 + offX; this.hitbox.y = this.y + this.h - 20; } else { this.hitbox.active = false; } if (this.stateTimer >= atk.frames) { this.hitbox.active = false; this.currentAttack = null; this.chargePower = 1.0; this.enterState('LAG', atk.lag); } return; } if (atk.type === 'meteor') {
+    if (atk.type === 'blast') { if (this.stateTimer === 15) { S.createParticles(this.x + (this.facingRight ? 50 : -20), this.y + 20, 20, '#e67e22'); S.playSound('special'); } if (this.stateTimer >= 15 && this.stateTimer <= 25) { this.hitbox.active = true; this.hitbox.w = 80 * (1 + (this.chargePower - 1)); this.hitbox.h = 80 * (1 + (this.chargePower - 1)); this.hitbox.x = this.x + (this.facingRight ? 20 : -20 - this.hitbox.w); this.hitbox.y = this.y - 10; } else { this.hitbox.active = false; } if (this.stateTimer >= atk.frames) { this.actionState = 'LAG'; this.stateTimer = atk.lag; this.chargePower = 1.0; this.hitbox.active = false; this.currentAttack = null; } return; } if (atk.type === 'lunge') { if (this.stateTimer > 5 && this.stateTimer < 15) { var spd = (this.chargePower - 1.0) * 22; if (spd < 0) spd = 0; this.vx = this.facingRight ? spd : -spd; } var startFrame = Math.floor(atk.frames * 0.2); var endFrame = Math.floor(atk.frames * 0.8); if (this.stateTimer >= startFrame && this.stateTimer <= endFrame) { this.hitbox.active = true; this.hitbox.shape = 'box'; this.hitbox.w = 80; this.hitbox.h = 40; this.hitbox.x = this.x + (this.facingRight ? 20 : -70); this.hitbox.y = this.y + 20; } else { this.hitbox.active = false; } if (this.stateTimer >= atk.frames) { this.hitbox.active = false; this.currentAttack = null; this.chargePower = 1.0; this.enterState('LAG', atk.lag); } return; } if (atk.type === 'dive') { if (this.stateTimer === 1) { this.vx = this.facingRight ? 15 : -15; this.vy = 20; S.createParticles(this.x + this.w / 2, this.y, 5, '#fff'); } if (this.isGrounded) { this.hitbox.active = false; this.currentAttack = null; this.chargePower = 1.0; this.enterState('LAG', 30); S.createParticles(this.x + this.w / 2, this.y + this.h, 20, '#fff'); S.shake = 5; return; } this.hitbox.active = true; this.hitbox.shape = 'box'; this.hitbox.w = 50; this.hitbox.h = 60; this.hitbox.x = this.x - 10; this.hitbox.y = this.y + 50; return; } if (atk.type === 'shoryu') { if (this.stateTimer === 3) { this.vy = -8; S.createParticles(this.x + this.w / 2, this.y + this.h, 10, '#e74c3c'); } if (this.stateTimer >= 3 && this.stateTimer <= 15) { this.hitbox.active = true; this.hitbox.w = 60; this.hitbox.h = 80; this.hitbox.x = this.x - 15; this.hitbox.y = this.y - 40; } else { this.hitbox.active = false; } if (this.stateTimer >= atk.frames) { this.actionState = 'LAG'; this.stateTimer = atk.lag; this.chargePower = 1.0; this.hitbox.active = false; this.currentAttack = null; } return; } if (atk.type === 'axe') { if (this.stateTimer >= 14 && this.stateTimer <= 20) { this.hitbox.active = true; this.hitbox.w = 100; this.hitbox.h = 100; this.hitbox.x = this.x + (this.facingRight ? 10 : -80); this.hitbox.y = this.y; } else { this.hitbox.active = false; } if (this.stateTimer >= atk.frames) { this.actionState = 'LAG'; this.stateTimer = atk.lag; this.chargePower = 1.0; this.hitbox.active = false; this.currentAttack = null; } return; } if (atk.type === 'blast') { if (this.stateTimer === 15) { S.createParticles(this.x + (this.facingRight ? 50 : -20), this.y + 20, 20, '#e67e22'); S.playSound('special'); } if (this.stateTimer >= 15 && this.stateTimer <= 25) { this.hitbox.active = true; this.hitbox.w = 80 * (1 + (this.chargePower - 1)); this.hitbox.h = 80 * (1 + (this.chargePower - 1)); this.hitbox.x = this.x + (this.facingRight ? 20 : -20 - this.hitbox.w); this.hitbox.y = this.y - 10; } else { this.hitbox.active = false; } if (this.stateTimer >= atk.frames) { this.actionState = 'LAG'; this.stateTimer = atk.lag; this.chargePower = 1.0; this.hitbox.active = false; this.currentAttack = null; } return; } if (atk.type === 'low_kick') { var startFrame = Math.floor(atk.frames * 0.2); var endFrame = Math.floor(atk.frames * 0.8); if (this.stateTimer >= startFrame && this.stateTimer <= endFrame) { this.hitbox.active = true; this.hitbox.w = 76; this.hitbox.h = 30; this.hitbox.x = this.facingRight ? this.x + 10 : this.x + this.w - 10 - this.hitbox.w; this.hitbox.y = this.y + this.h - 10; } else { this.hitbox.active = false; } if (this.stateTimer >= atk.frames) { this.actionState = 'LAG'; this.stateTimer = atk.lag; this.chargePower = 1.0; this.hitbox.active = false; this.currentAttack = null; } return; } if (atk.type === 'sex_kick') { if (this.stateTimer >= 4 && this.stateTimer <= 21) { this.hitbox.active = true; this.hitbox.w = 68; this.hitbox.h = 55; this.hitbox.x = this.x + this.w / 2 - this.hitbox.w / 2 + (this.facingRight ? 18 : -18); this.hitbox.y = this.y + 6; } else { this.hitbox.active = false; } if (this.stateTimer >= atk.frames) { this.actionState = 'LAG'; this.stateTimer = atk.lag; this.chargePower = 1.0; this.hitbox.active = false; this.currentAttack = null; } return; } if (atk.type === 'sweep') { var startFrame = Math.floor(atk.frames * 0.2); var endFrame = Math.floor(atk.frames * 0.8); if (this.stateTimer >= startFrame && this.stateTimer <= endFrame) { this.hitbox.active = true; this.hitbox.w = 100; this.hitbox.h = 30; this.hitbox.x = this.x + (this.facingRight ? 10 : -80); this.hitbox.y = this.y + this.h - 20; } else { this.hitbox.active = false; } if (this.stateTimer >= atk.frames) { this.actionState = 'LAG'; this.stateTimer = atk.lag; this.chargePower = 1.0; this.hitbox.active = false; this.currentAttack = null; } return; } if (atk.type === 'slide') { var startFrame = Math.floor(atk.frames * 0.2); var endFrame = Math.floor(atk.frames * 0.8); if (this.stateTimer === 1) { this.vx = 9.6 * (this.facingRight ? 1 : -1); S.createParticles(this.x + this.w / 2, this.y + this.h, 5, '#fff'); } if (this.stateTimer >= startFrame && this.stateTimer <= endFrame) { this.hitbox.active = true; this.hitbox.shape = 'box'; this.hitbox.w = 90; this.hitbox.h = 30; var offX = this.facingRight ? 10 : -90; this.hitbox.x = this.x + this.w / 2 + offX; this.hitbox.y = this.y + this.h - 20; } else { this.hitbox.active = false; } if (this.stateTimer >= atk.frames) { this.hitbox.active = false; this.currentAttack = null; this.chargePower = 1.0; this.enterState('LAG', atk.lag); } return; } if (atk.type === 'meteor') {
         if (this.stateTimer === 1) {
             this.vy = 12; // FIXED SPEED
             S.createParticles(this.x + this.w / 2, this.y, 5, '#fff');
@@ -1895,13 +1986,23 @@ window.SMA.Fighter.prototype.handleAttackFrame = function () {
         this.hitbox.active = true; this.hitbox.shape = 'box'; this.hitbox.w = 50; this.hitbox.h = 60; this.hitbox.x = this.x - 10; this.hitbox.y = this.y + 50; return;
     }
 
-    if (this.charId === 'mage' && (this.currentAttackType === 'UP' || this.currentAttackType === 'AIR_UP') && this.stateTimer === Math.floor(atk.frames * 0.2)) {
-        S.spawnMageVfx('overhead_explosion', this.x + this.w / 2, this.y - 68, { life: 18, scale: 1.0 });
+    var mageUpAttack = this.charId === 'mage' && (this.currentAttackType === 'UP' || this.currentAttackType === 'AIR_UP');
+    var mageUpStart = Math.floor(atk.frames * 0.2) + 4;
+    if (mageUpAttack && this.stateTimer === mageUpStart) {
+        this._mageUpHitbox = { x: this.x + this.w / 2, y: this.y - 68, scale: S.getMageUpChargeScale(this.chargePower) };
+        S.spawnMageVfx('overhead_explosion', this._mageUpHitbox.x, this._mageUpHitbox.y, { life: 18, scale: this._mageUpHitbox.scale });
     }
 
-    var start = Math.floor(atk.frames * 0.2); var end = Math.floor(atk.frames * (atk.frames > 100 ? 0.1 : 0.6)); if (this.stateTimer >= start && this.stateTimer <= end) {
+    var start = Math.floor(atk.frames * 0.2); var end = Math.floor(atk.frames * (atk.frames > 100 ? 0.1 : 0.6)); if (mageUpAttack) { start = mageUpStart; end += 4; } if (this.stateTimer >= start && this.stateTimer <= end) {
         this.hitbox.active = true; var scale = 1 + (this.chargePower - 1.0) * 0.5; this.hitbox.w = (atk.radius ? atk.radius * 2 : 70) * scale; this.hitbox.h = this.hitbox.w; if (this.currentAttackType === 'UP' || this.currentAttackType === 'AIR_UP') {
-            if (this.charId === 'mage') { this.hitbox.w = 80; this.hitbox.h = 40; this.hitbox.x = this.x - 25; this.hitbox.y = this.y - 40; } else if (this.charId === 'hammer') {
+            if (this.charId === 'mage') {
+                var mageUpAnchor = this._mageUpHitbox || { x: this.x + this.w / 2, y: this.y - 68, scale: S.getMageUpChargeScale(this.chargePower) };
+                var mageUpSize = 108 * mageUpAnchor.scale;
+                this.hitbox.w = mageUpSize;
+                this.hitbox.h = mageUpSize;
+                this.hitbox.x = mageUpAnchor.x - mageUpSize / 2;
+                this.hitbox.y = mageUpAnchor.y - mageUpSize / 2;
+            } else if (this.charId === 'hammer') {
                 // Hammer up attack follows the visible overhead arc.
                 if (this.stateTimer >= 15 && this.stateTimer <= 21) {
                     this.hitbox.active = true;
@@ -1923,8 +2024,8 @@ window.SMA.Fighter.prototype.handleAttackFrame = function () {
         } else if (this.charId === 'hammer' && this.currentAttackType === 'NEUTRAL') {
             if (this.stateTimer >= 15 && this.stateTimer <= 21) {
                 this.hitbox.active = true;
-                this.hitbox.w = 100 * scale; this.hitbox.h = 100 * scale;
-                this.hitbox.x = this.x + (this.facingRight ? 20 : -20 - this.hitbox.w) + this.w / 2;
+                this.hitbox.w = 90 * scale; this.hitbox.h = 100 * scale;
+                this.hitbox.x = this.x + this.w / 2 + (this.facingRight ? -10 : 10 - this.hitbox.w);
                 this.hitbox.y = this.y - 20;
                 this.superArmor = true;
             } else { this.hitbox.active = false; }
@@ -2005,6 +2106,9 @@ window.SMA.STAGE_ASSETS = {
     battlefieldSmallWide: { key: 'stage_battlefield_small_wide_surface_v2', src: 'assets/stages/battlefield_platform_small_wide_surface_v2.png?v=2' },
     battlefieldSmallShort: { key: 'stage_battlefield_small_short_surface_v2', src: 'assets/stages/battlefield_platform_small_short_surface_v2.png?v=2' },
     finalBg: { key: 'stage_final_bg_mobile_v2', src: 'assets/stages/final_background_mobile.png?v=2' },
+    dayBg: { key: 'stage_day_bg_mobile_v1', src: 'assets/stages/day_background_mobile.png?v=1' },
+    dayMain: { key: 'stage_day_main_platform_v1', src: 'assets/stages/day_platform_main.png?v=1' },
+    dayFloat: { key: 'stage_day_float_surface_v1', src: 'assets/stages/day_platform_float_surface.png?v=1' },
     finalMain: { key: 'stage_final_main_platform_v1', src: 'assets/stages/final_platform_main.png?v=1' }
 };
 window.SMA.drawStageImageCover = function (ctx, asset, x, y, w, h) {
@@ -2032,6 +2136,24 @@ window.SMA.drawFinalMainPlatformArt = function (ctx, plat) {
     var drawW = plat.w * 1.04;
     var drawH = drawW * img.naturalHeight / img.naturalWidth;
     ctx.drawImage(img, plat.x - (drawW - plat.w) / 2, plat.y - 28, drawW, drawH);
+    return true;
+};
+window.SMA.drawDayMainPlatformArt = function (ctx, plat) {
+    var asset = window.SMA.STAGE_ASSETS && window.SMA.STAGE_ASSETS.dayMain;
+    var img = asset && window.SMA.getSpriteAsset ? window.SMA.getSpriteAsset(asset.key, asset.src) : null;
+    if (!img || !img.complete || !img.naturalWidth) return false;
+    var drawW = plat.w * 1.08;
+    var drawH = drawW * img.naturalHeight / img.naturalWidth;
+    ctx.drawImage(img, plat.x - (drawW - plat.w) / 2, plat.y - 18, drawW, drawH);
+    return true;
+};
+window.SMA.drawDayFloatPlatformArt = function (ctx, plat) {
+    var asset = window.SMA.STAGE_ASSETS && window.SMA.STAGE_ASSETS.dayFloat;
+    var img = asset && window.SMA.getSpriteAsset ? window.SMA.getSpriteAsset(asset.key, asset.src) : null;
+    if (!img || !img.complete || !img.naturalWidth) return false;
+    var drawW = plat.w * 1.14;
+    var drawH = drawW * img.naturalHeight / img.naturalWidth;
+    ctx.drawImage(img, plat.x - (drawW - plat.w) / 2, plat.y - 8, drawW, drawH);
     return true;
 };
 window.SMA.drawBattlefieldSmallPlatformArt = function (ctx, plat) {
@@ -2133,6 +2255,10 @@ window.SMA.drawMageProjectileVfx = function (ctx, p) {
         return drawn;
     }
     return false;
+};
+window.SMA.getMageUpChargeScale = function (chargePower) {
+    var ratio = Math.max(0, ((chargePower || 1) - 1.0) / 0.7);
+    return Math.min(1.5, 1 + ratio * 0.5);
 };
 window.SMA.spawnMageVfx = function (kind, x, y, opts) {
     opts = opts || {};
@@ -2595,13 +2721,6 @@ window.SMA.Fighter.prototype.drawSwordChibiSprite = function (ctx, cx) {
 
     ctx.save();
     ctx.imageSmoothingEnabled = true;
-    ctx.globalAlpha = 0.22;
-    ctx.strokeStyle = this.color;
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.ellipse(cx, footY - 3, 24 * spriteScale, 7 * spriteScale, 0, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.globalAlpha = 1;
 
     ctx.translate(cx, footY);
     if (!this.facingRight) {
@@ -2881,17 +3000,6 @@ window.SMA.Fighter.prototype.drawMageChibiSprite = function (ctx, cx) {
     var sx = Math.min(frame, (anim.frames || 1) - 1) * fw;
     var footY = this.y + this.h;
     var staffPose = this.getMageChibiStaffPose(cx);
-
-    ctx.save();
-    ctx.imageSmoothingEnabled = true;
-    ctx.globalAlpha = 0.22;
-    ctx.strokeStyle = this.color;
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.ellipse(cx, footY - 3, 23 * spriteScale, 7 * spriteScale, 0, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.globalAlpha = 1;
-    ctx.restore();
 
     ctx.save();
     ctx.imageSmoothingEnabled = true;
@@ -3212,17 +3320,6 @@ window.SMA.Fighter.prototype.drawBrawlerChibiSprite = function (ctx, cx) {
         drawCx = ledgeTopX + this.w / 2;
         drawFootY = ledgePlatform.y;
     }
-
-    ctx.save();
-    ctx.imageSmoothingEnabled = true;
-    ctx.globalAlpha = 0.22;
-    ctx.strokeStyle = this.color;
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.ellipse(drawCx, drawFootY - 3, 23 * spriteScale, 7 * spriteScale, 0, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.globalAlpha = 1;
-    ctx.restore();
 
     ctx.save();
     ctx.imageSmoothingEnabled = true;
@@ -3559,17 +3656,6 @@ window.SMA.Fighter.prototype.drawHammerChibiSprite = function (ctx, cx) {
 
     ctx.save();
     ctx.imageSmoothingEnabled = true;
-    ctx.globalAlpha = 0.22;
-    ctx.strokeStyle = this.color;
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.ellipse(drawCx, drawFootY - 3, 23 * spriteScale, 7 * spriteScale, 0, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.globalAlpha = 1;
-    ctx.restore();
-
-    ctx.save();
-    ctx.imageSmoothingEnabled = true;
     ctx.translate(drawCx, drawFootY);
     if (!this.facingRight) {
         ctx.scale(-1, 1);
@@ -3632,6 +3718,8 @@ window.SMA.preloadSpearChibiSprites = function () {
     }
     var weapon = window.SMA.SPEAR_WEAPON_ASSET;
     if (weapon) window.SMA.getSpriteAsset(weapon.key, weapon.src);
+    var shockwave = window.SMA.SPEAR_GROUND_SHOCKWAVE_ASSET;
+    if (shockwave) window.SMA.getSpriteAsset(shockwave.key, shockwave.src);
 };
 window.SMA.resolveSpearChibiAnim = function (fighter) {
     var A = window.SMA.SPEAR_CHIBI_ANIMS;
@@ -3789,17 +3877,6 @@ window.SMA.Fighter.prototype.drawSpearChibiSprite = function (ctx, cx) {
         drawCx = cx + ((ledgeTopX + this.w / 2) - cx) * eased;
         drawFootY = footY + (ledgePlatform.y - footY) * eased;
     }
-
-    ctx.save();
-    ctx.imageSmoothingEnabled = true;
-    ctx.globalAlpha = 0.22;
-    ctx.strokeStyle = this.color;
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.ellipse(drawCx, drawFootY - 3, 23 * spriteScale, 7 * spriteScale, 0, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.globalAlpha = 1;
-    ctx.restore();
 
     var weaponInFront = this.actionState === 'ATTACK' || this.actionState === 'LEDGE_ATK';
     if (!weaponInFront) {
@@ -4068,17 +4145,6 @@ window.SMA.Fighter.prototype.drawMirrorChibiSprite = function (ctx, cx) {
         drawCx = cx + ((ledgeTopX + this.w / 2) - cx) * eased;
         drawFootY = footY + (ledgePlatform.y - footY) * eased;
     }
-
-    ctx.save();
-    ctx.imageSmoothingEnabled = true;
-    ctx.globalAlpha = 0.22;
-    ctx.strokeStyle = this.color;
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.ellipse(drawCx, drawFootY - 3, 22 * spriteScale, 7 * spriteScale, 0, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.globalAlpha = 1;
-    ctx.restore();
 
     ctx.save();
     ctx.imageSmoothingEnabled = true;
@@ -4493,17 +4559,6 @@ window.SMA.Fighter.prototype.drawAngelChibiSprite = function (ctx, cx) {
     }
 
     this.drawAngelShockwaveVfx(ctx, drawCx);
-
-    ctx.save();
-    ctx.imageSmoothingEnabled = true;
-    ctx.globalAlpha = 0.2;
-    ctx.strokeStyle = this.color;
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.ellipse(drawCx, drawFootY - 3, 23 * spriteScale, 7 * spriteScale, 0, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.globalAlpha = 1;
-    ctx.restore();
 
     ctx.save();
     ctx.imageSmoothingEnabled = true;

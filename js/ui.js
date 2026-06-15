@@ -230,6 +230,7 @@ window.onload = function () {
     };
     bindStage('stage-battlefield', 'battlefield');
     bindStage('stage-final', 'final');
+    bindStage('stage-day', 'day');
 
     // CHAR SELECT BINDINGS
     var bindChar = function (id, charId) {
@@ -336,6 +337,8 @@ window.onload = function () {
     var pressControl = function (k, e) {
         if (window.SMA.isEditingLayout || window.SMA.myRole === 'spec') return;
         try { if (e && e.cancelable) e.preventDefault(); } catch (err) { }
+        var wasHeld = !!window.SMA.myKeys[k];
+        if (wasHeld) return;
         window.SMA.myKeys[k] = true;
         if (window.SMA.gameRunning) {
             if (window.SMA.isHost && window.SMA.pOne) {
@@ -365,11 +368,13 @@ window.onload = function () {
     var releaseControl = function (k, e) {
         if (window.SMA.isEditingLayout || window.SMA.myRole === 'spec') return;
         try { if (e && e.cancelable) e.preventDefault(); } catch (err) { }
+        var wasHeld = !!window.SMA.myKeys[k];
         window.SMA.myKeys[k] = false;
         var type = 'NEUTRAL';
         if (window.SMA.myKeys.up) type = 'UP';
         else if (window.SMA.myKeys.down) type = 'DOWN';
         else if (window.SMA.myKeys.left || window.SMA.myKeys.right) type = 'SIDE';
+        if (!wasHeld) return;
         if (window.SMA.gameRunning && window.SMA.isHost && window.SMA.pOne) {
             if (k === 'attack') window.SMA.pOne.releaseAttack(type);
         }
@@ -429,6 +434,12 @@ window.onload = function () {
         return !!(keyDirMap[e.code] || getKeyButton(e));
     };
     window.addEventListener('keydown', function (e) {
+        if (e.code === 'KeyH' && !window.SMA.isEditingLayout && window.SMA.myRole !== 'spec') {
+            window.SMA.debugHitboxes = !window.SMA.debugHitboxes;
+            if (window.SMA.showNotification) window.SMA.showNotification('Hitboxes ' + (window.SMA.debugHitboxes ? 'ON' : 'OFF'), 900);
+            e.preventDefault();
+            return;
+        }
         if (!shouldUseGameKeys(e)) return;
         if (keyDirMap[e.code]) window.SMA.myKeys[keyDirMap[e.code]] = true;
         else {
