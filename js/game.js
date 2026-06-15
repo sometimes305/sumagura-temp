@@ -983,7 +983,7 @@ window.SMA.applySync = function (d) {
         if (pData) window.SMA.players[si].deserialize(pData);
     }
     if (d.projs) window.SMA.projectiles = d.projs;
-    if (d.events) { d.events.forEach(function (e) { if (e.type === 'snd') window.SMA.playSound(e.key); if (e.type === 'part') window.SMA.createParticles(e.x, e.y, e.n, e.c); if (e.type === 'comet') window.SMA.triggerComet(e.x, e.y, e.dir, e.c); }); }
+    if (d.events) { d.events.forEach(function (e) { if (e.type === 'snd') window.SMA.playSound(e.key); if (e.type === 'part') window.SMA.createParticles(e.x, e.y, e.n, e.c); if (e.type === 'comet') window.SMA.triggerComet(e.x, e.y, e.dir, e.c); if (e.type === 'mage_vfx') window.SMA.spawnMageVfx(e.kind, e.x, e.y, { life: e.life, scale: e.scale, flipX: e.flipX }); }); }
     window.SMA.updateHud();
     if (window.SMA.gameState === 'GAMEOVER') {
         var txt = d.winText || (d.win ? (String(d.win).indexOf('WINS!') !== -1 ? d.win : (d.win + ' WINS!')) : 'GAME OVER');
@@ -1063,11 +1063,11 @@ window.SMA.CHAR_DATA = {
         airAttackMoveMult: 0.9,
         attacks: {
             NEUTRAL: { type: 'shot', spawnFrame: 5, dmg: 3, kb: 3.0, scale: 0, speed: 11.34, radius: 10, frames: 21, lag: 0, stun: 2, hitstun: 15 },
-            SIDE: { type: 'shot', spawnFrame: 12, dmg: 13, kb: 3.0, scale: 0.1, speed: 3.5, radius: 25, frames: 25, lag: 35, stun: 10 },
-            UP: { dmg: 13.5, kb: 1.6, scale: 0.1, angle: -90, frames: 25, lag: 20, stun: 5 },
+            SIDE: { type: 'shot', spawnFrame: 12, dmg: 13, kb: 3.0, scale: 0.1, speed: 3.5, radius: 25, frames: 25, lag: 40, stun: 10 },
+            UP: { dmg: 13.5, kb: 1.6, scale: 0.1, angle: -90, frames: 25, lag: 25, stun: 5 },
             DOWN: { type: 'fire_shot', spawnFrame: 10, dmg: 9, kb: 1.5, scale: 0.08, angle: -45, frames: 25, lag: 18, stun: 5, radius: 10 },
             AIR_NEUTRAL: { type: 'shot', spawnFrame: 5, dmg: 3, kb: 3.0, scale: 0, speed: 11.34, radius: 10, frames: 21, lag: 0, stun: 2, hitstun: 15 },
-            AIR_SIDE: { type: 'shot', spawnFrame: 12, dmg: 13, kb: 3.0, scale: 0.1, speed: 3.5, radius: 25, frames: 25, lag: 35, stun: 10 },
+            AIR_SIDE: { type: 'shot', spawnFrame: 12, dmg: 13, kb: 3.0, scale: 0.1, speed: 3.5, radius: 25, frames: 25, lag: 40, stun: 10 },
             AIR_DOWN: { type: 'fire_shot', spawnFrame: 10, dmg: 9, kb: 1.5, scale: 0.08, angle: -45, frames: 25, lag: 18, stun: 5, radius: 10 },
             LEDGE_ATK: { dmg: 8, kb: 12.0, scale: 0.01, angle: -45, frames: 30, lag: 10, stun: 10 }
         },
@@ -2262,6 +2262,9 @@ window.SMA.getMageUpChargeScale = function (chargePower) {
 };
 window.SMA.spawnMageVfx = function (kind, x, y, opts) {
     opts = opts || {};
+    if (window.SMA.isHost && window.SMA.isOnline) {
+        window.SMA.syncEvents.push({ type: 'mage_vfx', kind: kind, x: x, y: y, life: opts.life || 18, scale: opts.scale || 1, flipX: !!opts.flipX });
+    }
     window.SMA.mageVfx = window.SMA.mageVfx || [];
     window.SMA.mageVfx.push({
         kind: kind,
