@@ -253,6 +253,7 @@ window.SMA.bootGame = function () {
     window.SMA.projectiles = [];
     window.SMA.mageVfx = [];
     if (window.SMA.resetLockstepState) window.SMA.resetLockstepState();
+    if (window.SMA.resetSoloInputDelayState) window.SMA.resetSoloInputDelayState();
     // HUD蜷榊燕險ｭ螳・
     if (window.SMA.isHost) {
         document.getElementById('p1-name').innerText = window.SMA.localPlayerName;
@@ -286,6 +287,7 @@ window.SMA.gameLoop = function () {
     try {
         if (window.SMA.hitStop > 0) { window.SMA.hitStop--; } else {
             var lockstepInputs = null;
+            var soloDelayedInput = null;
             if (window.SMA.onlineStrictLockstep && window.SMA.isHost && window.SMA.isOnline && window.SMA.gameState === 'PLAYING') {
                 lockstepInputs = window.SMA.prepareHostLockstepInputs();
                 if (lockstepInputs === false) {
@@ -293,7 +295,13 @@ window.SMA.gameLoop = function () {
                     return;
                 }
             }
+            if (!window.SMA.isOnline && window.SMA.isHost && window.SMA.gameState === 'PLAYING' && window.SMA.prepareSoloDelayedInput) {
+                soloDelayedInput = window.SMA.prepareSoloDelayedInput();
+            }
             if (window.SMA.gameState === 'COUNTDOWN') { window.SMA.countdownTimer--; if (window.SMA.isHost && window.SMA.countdownTimer <= 0) window.SMA.gameState = 'PLAYING'; } else if (window.SMA.gameState === 'PLAYING' && window.SMA.isHost) { window.SMA.countdownTimer--; }
+            if (!soloDelayedInput && !window.SMA.isOnline && window.SMA.isHost && window.SMA.gameState === 'PLAYING' && window.SMA.prepareSoloDelayedInput) {
+                soloDelayedInput = window.SMA.prepareSoloDelayedInput();
+            }
 
             if (window.SMA.isHost) {
                 if (window.SMA.gameState === 'PLAYING') {
@@ -324,7 +332,12 @@ window.SMA.gameLoop = function () {
                             player.update(lKeys, nearestEnemy);
                         } else if (pi === 0) {
                             // 1P: 繝帙せ繝医・蜈･蜉・
-                            player.update(S.myKeys, nearestEnemy);
+                            var p1Keys = soloDelayedInput || S.myKeys;
+                            if (p1Keys.triggerStartCharge) player.startCharge();
+                            if (p1Keys.triggerReleaseAttack) player.releaseAttack(p1Keys.attackType);
+                            if (p1Keys.triggerJump) player.triggerJump(p1Keys);
+                            if (p1Keys.triggerGrab) player.tryGrab(nearestEnemy);
+                            player.update(p1Keys, nearestEnemy);
                         } else if (S.isOnline) {
                             // 繧ｪ繝ｳ繝ｩ繧､繝ｳ: 繝ｪ繝｢繝ｼ繝亥・蜉・
                             var rKeys = S.remoteKeysMap[role] || {};
@@ -396,6 +409,7 @@ window.SMA.gameLoop = function () {
                         window.SMA.syncEvents = [];
                     }
                     if (lockstepInputs && window.SMA.advanceLockstepFrame) window.SMA.advanceLockstepFrame();
+                    if (soloDelayedInput && window.SMA.advanceSoloInputFrame) window.SMA.advanceSoloInputFrame();
                 }
             } else {
                 if (window.SMA.netConn && window.SMA.netConn.open && !(window.SMA.isGravity && window.SMA.gravityUsePeerInMatch)) {

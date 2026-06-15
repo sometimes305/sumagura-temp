@@ -70,6 +70,7 @@ window.SMA.lastGravityRtSyncAt = 0;
 window.SMA.gravityRtOutbox = [];
 window.SMA.pendingHubReady = null;
 window.SMA.ONLINE_INPUT_DELAY_FRAMES = 4;
+window.SMA.SOLO_INPUT_DELAY_FRAMES = 4;
 window.SMA.LOCKSTEP_STALL_FILL_MS = null; // null keeps the host stopped until every frame input arrives.
 window.SMA.onlineStrictLockstep = true;
 window.SMA.lockstepFrame = 0;
@@ -79,6 +80,9 @@ window.SMA.lockstepLastInputs = { p1: {}, p2: {}, p3: {}, p4: {} };
 window.SMA.lockstepLastInputFrame = { p1: -1, p2: -1, p3: -1, p4: -1 };
 window.SMA.lockstepLocalTriggers = {};
 window.SMA.lockstepStallStartAt = 0;
+window.SMA.soloInputFrame = 0;
+window.SMA.soloInputBuffer = {};
+window.SMA.soloLocalTriggers = {};
 
 window.SMA.emptyInputKeys = function () {
     return { left: false, right: false, up: false, down: false, shield: false, attack: false, jump: false, grab: false };
@@ -249,4 +253,44 @@ window.SMA.prepareHostLockstepInputs = function () {
 
 window.SMA.advanceLockstepFrame = function () {
     window.SMA.lockstepFrame = (window.SMA.lockstepFrame || 0) + 1;
+};
+
+window.SMA.resetSoloInputDelayState = function () {
+    window.SMA.soloInputFrame = 0;
+    window.SMA.soloInputBuffer = {};
+    window.SMA.soloLocalTriggers = {};
+    for (var frame = 0; frame < window.SMA.SOLO_INPUT_DELAY_FRAMES; frame++) {
+        window.SMA.soloInputBuffer[frame] = window.SMA.emptyInputKeys();
+    }
+};
+
+window.SMA.shouldDelaySoloInput = function () {
+    return !!(!window.SMA.isOnline && window.SMA.isHost && window.SMA.gameRunning);
+};
+
+window.SMA.queueSoloInputEvent = function (keys) {
+    window.SMA.soloLocalTriggers = window.SMA.mergeInputKeys(window.SMA.soloLocalTriggers, keys);
+};
+
+window.SMA.captureSoloDelayedInput = function () {
+    var keys = window.SMA.mergeInputKeys(window.SMA.myKeys, window.SMA.soloLocalTriggers);
+    window.SMA.soloLocalTriggers = {};
+    return keys;
+};
+
+window.SMA.prepareSoloDelayedInput = function () {
+    if (!window.SMA.shouldDelaySoloInput() || window.SMA.gameState !== 'PLAYING') return null;
+    var frame = window.SMA.soloInputFrame || 0;
+    var targetFrame = frame + window.SMA.SOLO_INPUT_DELAY_FRAMES;
+    if (!window.SMA.soloInputBuffer[targetFrame]) window.SMA.soloInputBuffer[targetFrame] = {};
+    window.SMA.soloInputBuffer[targetFrame] = window.SMA.mergeInputKeys(window.SMA.soloInputBuffer[targetFrame], window.SMA.captureSoloDelayedInput());
+    var inputs = window.SMA.cloneInputKeys(window.SMA.soloInputBuffer[frame] || window.SMA.emptyInputKeys());
+    Object.keys(window.SMA.soloInputBuffer).forEach(function (k) {
+        if (parseInt(k, 10) < frame - 30) delete window.SMA.soloInputBuffer[k];
+    });
+    return inputs;
+};
+
+window.SMA.advanceSoloInputFrame = function () {
+    window.SMA.soloInputFrame = (window.SMA.soloInputFrame || 0) + 1;
 };

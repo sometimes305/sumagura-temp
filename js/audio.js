@@ -102,6 +102,24 @@ window.SMA.showHubSelectPanel = function () {
     // バグ5: ステージ選択画面に入ったら「ステージ選択へ進む」ボタンを非表示
     var gotoBtn = document.getElementById('btn-goto-sss');
     if (gotoBtn) gotoBtn.style.display = 'none';
+
+    window.SMA.amIReady = false;
+    window.SMA.pendingHubReady = null;
+    window.SMA.hubData = { p1: {}, p2: {}, p3: {}, p4: {} };
+
+    window.SMA.myStageId = 'battlefield';
+    window.SMA.myCharId = 'sword';
+    document.querySelectorAll('.stage-card, .char-card').forEach(function (c) { c.classList.remove('selected'); });
+    var defStage = document.getElementById('stage-battlefield');
+    var defChar = document.getElementById('card-sword');
+    if (defStage) defStage.classList.add('selected');
+    if (defChar) defChar.classList.add('selected');
+
+    if (typeof window.SMA.refreshHubUI === 'function') window.SMA.refreshHubUI();
+    var readyBtn = document.getElementById('btn-hub-ready');
+    if (readyBtn) { readyBtn.innerText = "準備完了！"; readyBtn.style.background = ""; readyBtn.style.borderColor = ""; }
+    var startOverlay = document.getElementById('hub-start-overlay');
+    if (startOverlay) startOverlay.style.display = 'none';
 };
 window.SMA.showHubRoomPanel = function () {
     var rp = document.getElementById('hub-room-panel');

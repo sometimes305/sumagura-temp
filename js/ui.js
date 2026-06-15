@@ -36,6 +36,8 @@ window.onload = function () {
         } catch (e) { }
     };
     window.SMA.loadSettings();
+    var roomCapacity = g('room-capacity');
+    if (roomCapacity) roomCapacity.value = '2';
     window.SMA.bindAudioUnlock();
 
     // Gravity環境の場合はユーザー情報取得を開始
@@ -355,6 +357,10 @@ window.onload = function () {
                     if (k === 'jump') window.SMA.queueLocalInputEvent(Object.assign({}, window.SMA.myKeys, { triggerJump: true }));
                     if (k === 'attack') window.SMA.queueLocalInputEvent(Object.assign({}, window.SMA.myKeys, { triggerStartCharge: true }));
                     if (k === 'grab') window.SMA.queueLocalInputEvent(Object.assign({}, window.SMA.myKeys, { triggerGrab: true }));
+                } else if (window.SMA.shouldDelaySoloInput && window.SMA.shouldDelaySoloInput()) {
+                    if (k === 'jump') window.SMA.queueSoloInputEvent(Object.assign({}, window.SMA.myKeys, { triggerJump: true }));
+                    if (k === 'attack') window.SMA.queueSoloInputEvent(Object.assign({}, window.SMA.myKeys, { triggerStartCharge: true }));
+                    if (k === 'grab') window.SMA.queueSoloInputEvent(Object.assign({}, window.SMA.myKeys, { triggerGrab: true }));
                 } else {
                     if (k === 'jump') window.SMA.pOne.triggerJump(window.SMA.myKeys);
                     if (k === 'attack') window.SMA.pOne.startCharge();
@@ -393,6 +399,7 @@ window.onload = function () {
         if (window.SMA.gameRunning && window.SMA.isHost && window.SMA.pOne) {
             if (k === 'attack') {
                 if (window.SMA.isOnline && window.SMA.onlineStrictLockstep) window.SMA.queueLocalInputEvent(Object.assign({}, window.SMA.myKeys, { triggerReleaseAttack: true, attackType: type }));
+                else if (window.SMA.shouldDelaySoloInput && window.SMA.shouldDelaySoloInput()) window.SMA.queueSoloInputEvent(Object.assign({}, window.SMA.myKeys, { triggerReleaseAttack: true, attackType: type }));
                 else window.SMA.pOne.releaseAttack(type);
             }
         }
@@ -430,6 +437,7 @@ window.onload = function () {
         var type = getAttackType();
         if (attackWasHeld && window.SMA.gameRunning && window.SMA.isHost && window.SMA.pOne) {
             if (window.SMA.isOnline && window.SMA.onlineStrictLockstep) window.SMA.queueLocalInputEvent(Object.assign({}, window.SMA.myKeys, { attack: false, triggerReleaseAttack: true, attackType: type }));
+            else if (window.SMA.shouldDelaySoloInput && window.SMA.shouldDelaySoloInput()) window.SMA.queueSoloInputEvent(Object.assign({}, window.SMA.myKeys, { attack: false, triggerReleaseAttack: true, attackType: type }));
             else window.SMA.pOne.releaseAttack(type);
         }
         window.SMA.myKeys.left = false;

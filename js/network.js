@@ -582,7 +582,7 @@ window.SMA.showGravityCreateRoom = async function () {
     }
 
     try {
-        var maxP = parseInt(document.getElementById('room-capacity').value || 4);
+        var maxP = parseInt(document.getElementById('room-capacity').value || 2);
         window.SMA.showPlayerSlots(maxP);
         // room_permission: 0=公開, 1=非公開 (ローダー側のロジックと合わせる)
         var createParams = { room_type: 'aitools_game_room', max_players: maxP, maxplayers: maxP, room_permission: 0, permission: 0 };
@@ -932,8 +932,8 @@ window.SMA.setupClientConn = function (conn, role) {
 };
 
 // --- BATTLE HUB LOGIC ---
-window.SMA.myStageId = null;
-window.SMA.myCharId = null;
+window.SMA.myStageId = 'battlefield';
+window.SMA.myCharId = 'sword';
 window.SMA.amIReady = false;
 
 window.SMA.getHubPlayerRole = function () {
