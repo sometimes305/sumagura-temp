@@ -199,6 +199,26 @@ window.SMA.getActiveBlastBounds = function () {
     var activeH = (window.SMA.SCREEN_H / currentZoom) * 1.08;
     return { left: center.x - activeW / 2, right: center.x + activeW / 2, top: center.y - activeH / 2, bottom: center.y + activeH / 2 };
 };
+window.SMA.getCameraMinZoomForBounds = function (bounds) {
+    if (!bounds) return 0;
+    var w = Math.max(1, bounds.right - bounds.left);
+    var h = Math.max(1, bounds.bottom - bounds.top);
+    return Math.max(window.SMA.SCREEN_W / w, window.SMA.SCREEN_H / h) * 1.002;
+};
+window.SMA.clampCameraCenterToBounds = function (x, y, zoom, bounds) {
+    if (!bounds || !zoom || zoom <= 0) return { x: x, y: y };
+    var halfW = window.SMA.SCREEN_W / (zoom * 2);
+    var halfH = window.SMA.SCREEN_H / (zoom * 2);
+    var minX = bounds.left + halfW;
+    var maxX = bounds.right - halfW;
+    var minY = bounds.top + halfH;
+    var maxY = bounds.bottom - halfH;
+    if (minX > maxX) x = (bounds.left + bounds.right) / 2;
+    else x = Math.max(minX, Math.min(maxX, x));
+    if (minY > maxY) y = (bounds.top + bounds.bottom) / 2;
+    else y = Math.max(minY, Math.min(maxY, y));
+    return { x: x, y: y };
+};
 window.SMA.SPEAR_WEAPON_ASSET = {
     key: 'spear_weapon_v4',
     src: 'assets/characters/spear/spear_weapon.png?v=4',
@@ -587,7 +607,42 @@ window.SMA.gameLoop = function () {
             window.SMA.players.forEach(function (p) { if (p.stocks > 0) winner = p; });
             if (winner) targets = [winner];
         }
-        var tx = window.SMA.WORLD_W / 2; var ty = window.SMA.WORLD_H / 2; var tz = 1.0; var suddenActive = (window.SMA.matchTimer || 0) <= 0 && window.SMA.gameState === 'PLAYING'; if (window.SMA.gameState === 'COUNTDOWN') { tz = window.SMA.SCREEN_W / 1200; } else if (suddenActive) { var sdCenter = window.SMA.getStageCenter(); var suddenP = window.SMA.getSuddenDeathProgress(); tx = sdCenter.x; ty = sdCenter.y; tz = 0.32 + (window.SMA.getSuddenDeathFinalZoom() - 0.32) * suddenP; } else if (targets.length > 0) { var minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity; targets.forEach(function (p) { if (p.x < minX) minX = p.x; if (p.x + p.w > maxX) maxX = p.x + p.w; if (p.y < minY) minY = p.y; if (p.y + p.h > maxY) maxY = p.y + p.h; }); tx = (minX + maxX) / 2; ty = (minY + maxY) / 2; var zx = window.SMA.SCREEN_W / (maxX - minX + 520); var zy = window.SMA.SCREEN_H / (maxY - minY + 400); tz = Math.min(Math.min(zx, zy), 1.2); if (tz < 0.32) tz = 0.32; if (window.SMA.gameState === 'GAMEOVER') tz = 2.0; } var camLerp = suddenActive ? 0.18 : 0.1; var zoomLerp = suddenActive ? 0.18 : 0.05; if (!isNaN(tx)) window.SMA.camera.x += (tx - window.SMA.camera.x) * camLerp; if (!isNaN(ty)) window.SMA.camera.y += (ty - window.SMA.camera.y) * camLerp; if (!isNaN(tz)) window.SMA.camera.zoom += (tz - window.SMA.camera.zoom) * zoomLerp; if (isNaN(window.SMA.camera.x)) window.SMA.camera.x = 0; if (window.SMA.shake > 0) window.SMA.shake *= 0.9; if (window.SMA.shake < 0.5) window.SMA.shake = 0; if (window.SMA.ctx) {
+        var tx = window.SMA.WORLD_W / 2;
+        var ty = window.SMA.WORLD_H / 2;
+        var tz = 1.0;
+        var suddenActive = (window.SMA.matchTimer || 0) <= 0 && window.SMA.gameState === 'PLAYING';
+        if (window.SMA.gameState === 'COUNTDOWN') {
+            tz = window.SMA.SCREEN_W / 1200;
+        } else if (suddenActive) {
+            var sdCenter = window.SMA.getStageCenter();
+            var suddenP = window.SMA.getSuddenDeathProgress();
+            tx = sdCenter.x;
+            ty = sdCenter.y;
+            tz = 0.32 + (window.SMA.getSuddenDeathFinalZoom() - 0.32) * suddenP;
+        } else if (targets.length > 0) {
+            var minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+            targets.forEach(function (p) { if (p.x < minX) minX = p.x; if (p.x + p.w > maxX) maxX = p.x + p.w; if (p.y < minY) minY = p.y; if (p.y + p.h > maxY) maxY = p.y + p.h; });
+            tx = (minX + maxX) / 2;
+            ty = (minY + maxY) / 2;
+            var zx = window.SMA.SCREEN_W / (maxX - minX + 520);
+            var zy = window.SMA.SCREEN_H / (maxY - minY + 400);
+            tz = Math.min(Math.min(zx, zy), 1.2);
+            if (tz < 0.32) tz = 0.32;
+            if (window.SMA.gameState === 'GAMEOVER') tz = 2.0;
+        }
+        var cameraBounds = window.SMA.getActiveBlastBounds();
+        var minBoundZoom = window.SMA.getCameraMinZoomForBounds(cameraBounds);
+        if (!isNaN(minBoundZoom) && tz < minBoundZoom) tz = minBoundZoom;
+        var camLerp = suddenActive ? 0.18 : 0.1;
+        var zoomLerp = suddenActive ? 0.18 : 0.05;
+        if (!isNaN(tx)) window.SMA.camera.x += (tx - window.SMA.camera.x) * camLerp;
+        if (!isNaN(ty)) window.SMA.camera.y += (ty - window.SMA.camera.y) * camLerp;
+        if (!isNaN(tz)) window.SMA.camera.zoom += (tz - window.SMA.camera.zoom) * zoomLerp;
+        if (!isNaN(minBoundZoom) && window.SMA.camera.zoom < minBoundZoom) window.SMA.camera.zoom = minBoundZoom;
+        var clampedCamera = window.SMA.clampCameraCenterToBounds(window.SMA.camera.x, window.SMA.camera.y, window.SMA.camera.zoom, cameraBounds);
+        window.SMA.camera.x = clampedCamera.x;
+        window.SMA.camera.y = clampedCamera.y;
+        if (isNaN(window.SMA.camera.x)) window.SMA.camera.x = 0; if (window.SMA.shake > 0) window.SMA.shake *= 0.9; if (window.SMA.shake < 0.5) window.SMA.shake = 0; if (window.SMA.ctx) {
             var renderScale = window.SMA.RENDER_SCALE || 1;
             window.SMA.ctx.setTransform(renderScale, 0, 0, renderScale, 0, 0);
             window.SMA.ctx.imageSmoothingEnabled = true;
@@ -620,6 +675,9 @@ window.SMA.gameLoop = function () {
             var snap = Math.max(1, window.SMA.camera.zoom * renderScale);
             viewX = Math.round(viewX * snap) / snap;
             viewY = Math.round(viewY * snap) / snap;
+            var clampedView = window.SMA.clampCameraCenterToBounds(viewX, viewY, window.SMA.camera.zoom, cameraBounds);
+            viewX = clampedView.x;
+            viewY = clampedView.y;
             window.SMA.ctx.save(); window.SMA.ctx.translate(window.SMA.SCREEN_W / 2, window.SMA.SCREEN_H / 2); window.SMA.ctx.scale(window.SMA.camera.zoom, window.SMA.camera.zoom); window.SMA.ctx.translate(-viewX, -viewY); for (var i = 0; i < window.SMA.stars.length; i++) {
                 var s = window.SMA.stars[i];
                 if ((stg === 'final' || stg === 'day') && (!window.SMA.STAGE_ASSETS || !window.SMA.getSpriteAsset((stg === 'day' ? window.SMA.STAGE_ASSETS.dayBg : window.SMA.STAGE_ASSETS.finalBg).key, (stg === 'day' ? window.SMA.STAGE_ASSETS.dayBg : window.SMA.STAGE_ASSETS.finalBg).src).complete)) {
