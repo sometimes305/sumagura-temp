@@ -10,6 +10,100 @@ window.SMA.showNotification = function (text, duration) {
 };
 window.SMA.triggerComet = function (x, y, dir, col) { if (window.SMA.isHost && window.SMA.isOnline) window.SMA.syncEvents.push({ type: 'comet', x: x, y: y, dir: dir, c: col }); window.SMA.comets.push({ x: x, y: y, vx: (Math.random() - 0.5) * 10, vy: -(Math.random() * 10 + 10), color: col, l: 60 }); };
 window.SMA.drawComets = function (ctx) { for (var i = window.SMA.comets.length - 1; i >= 0; i--) { var c = window.SMA.comets[i]; ctx.fillStyle = c.color; ctx.save(); ctx.shadowBlur = 20; ctx.shadowColor = c.color; ctx.beginPath(); ctx.arc(c.x, c.y, 20, 0, Math.PI * 2); ctx.fill(); ctx.beginPath(); ctx.strokeStyle = c.color; ctx.lineWidth = 10; ctx.moveTo(c.x, c.y); ctx.lineTo(c.x - c.vx * 4, c.y - c.vy * 4); ctx.stroke(); ctx.restore(); } };
+window.SMA.koBlastTrails = window.SMA.koBlastTrails || [];
+window.SMA.getKoBlastVector = function (dir, vx, vy) {
+    var mag = Math.sqrt((vx || 0) * (vx || 0) + (vy || 0) * (vy || 0));
+    if (mag > 0.2) return { x: vx / mag, y: vy / mag };
+    if (dir === 'left') return { x: -1, y: 0 };
+    if (dir === 'right') return { x: 1, y: 0 };
+    if (dir === 'up') return { x: 0, y: -1 };
+    if (dir === 'down') return { x: 0, y: 1 };
+    return { x: 0, y: -1 };
+};
+window.SMA.getKoBlastPoint = function (x, y, dir) {
+    var b = window.SMA.getActiveBlastBounds ? window.SMA.getActiveBlastBounds() : { left: window.SMA.BLAST_LEFT, right: window.SMA.BLAST_RIGHT, top: window.SMA.BLAST_TOP, bottom: window.SMA.BLAST_BOTTOM };
+    var px = Math.max(b.left + 120, Math.min(b.right - 120, x));
+    var py = Math.max(b.top + 90, Math.min(b.bottom - 90, y));
+    if (dir === 'left') px = b.left + 70;
+    else if (dir === 'right') px = b.right - 70;
+    else if (dir === 'up') py = b.top + 70;
+    else if (dir === 'down') py = b.bottom - 70;
+    return { x: px, y: py };
+};
+window.SMA.getKoPlayerColor = function (fighter) {
+    var idx = window.SMA.players ? window.SMA.players.indexOf(fighter) : -1;
+    if (idx >= 0 && window.SMA.PLAYER_COLORS && window.SMA.PLAYER_COLORS[idx]) return window.SMA.PLAYER_COLORS[idx];
+    return fighter && fighter.color ? fighter.color : '#ffffff';
+};
+window.SMA.colorToRgb = function (color) {
+    var c = String(color || '#ffffff').trim();
+    if (c.charAt(0) === '#') {
+        if (c.length === 4) c = '#' + c.charAt(1) + c.charAt(1) + c.charAt(2) + c.charAt(2) + c.charAt(3) + c.charAt(3);
+        var n = parseInt(c.slice(1), 16);
+        if (!isNaN(n)) return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+    }
+    return { r: 255, g: 255, b: 255 };
+};
+window.SMA.darkenKoColor = function (color, amount) {
+    var rgb = window.SMA.colorToRgb(color);
+    var m = amount == null ? 0.72 : amount;
+    return 'rgb(' + Math.floor(rgb.r * m) + ',' + Math.floor(rgb.g * m) + ',' + Math.floor(rgb.b * m) + ')';
+};
+window.SMA.triggerKoBlastFx = function (x, y, dir, col, vx, vy) {
+    if (window.SMA.isHost && window.SMA.isOnline) window.SMA.syncEvents.push({ type: 'ko_fx', x: x, y: y, dir: dir, c: col, vx: vx || 0, vy: vy || 0 });
+    var v = window.SMA.getKoBlastVector(dir, vx, vy);
+    var p = window.SMA.getKoBlastPoint(x, y, dir);
+    var perpX = -v.y;
+    var perpY = v.x;
+    var color = window.SMA.darkenKoColor(col || '#ffffff', 0.62);
+    for (var i = 0; i < 19; i++) {
+        var offset = (i - 9) * 17 + (Math.random() - 0.5) * 16;
+        var length = 560 + Math.random() * 420;
+        var speed = 7 + Math.random() * 5;
+        window.SMA.koBlastTrails.push({
+            x: p.x + perpX * offset - v.x * (20 + Math.random() * 50),
+            y: p.y + perpY * offset - v.y * (20 + Math.random() * 50),
+            vx: v.x * speed,
+            vy: v.y * speed,
+            dirX: v.x,
+            dirY: v.y,
+            len: length,
+            width: 1.4 + Math.random() * 1.8,
+            color: color,
+            life: 44 + Math.floor(Math.random() * 14),
+            maxLife: 58
+        });
+    }
+};
+window.SMA.updateKoBlastFx = function () {
+    for (var i = window.SMA.koBlastTrails.length - 1; i >= 0; i--) { var t = window.SMA.koBlastTrails[i]; t.x += t.vx; t.y += t.vy; t.life--; if (t.life <= 0) window.SMA.koBlastTrails.splice(i, 1); }
+};
+window.SMA.drawKoBlastFx = function (ctx) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.lineCap = 'round';
+    for (var i = 0; i < window.SMA.koBlastTrails.length; i++) {
+        var t = window.SMA.koBlastTrails[i];
+        var a = Math.max(0, Math.min(1, t.life / t.maxLife));
+        var tailX = t.x - t.dirX * t.len;
+        var tailY = t.y - t.dirY * t.len;
+        var rgb = window.SMA.colorToRgb(t.color);
+        var grad = ctx.createLinearGradient(tailX, tailY, t.x, t.y);
+        grad.addColorStop(0, 'rgba(' + rgb.r + ',' + rgb.g + ',' + rgb.b + ',0)');
+        grad.addColorStop(0.32, 'rgba(' + rgb.r + ',' + rgb.g + ',' + rgb.b + ',' + (0.86 * a) + ')');
+        grad.addColorStop(1, t.color);
+        ctx.globalAlpha = a;
+        ctx.shadowBlur = 18;
+        ctx.shadowColor = t.color;
+        ctx.strokeStyle = grad;
+        ctx.lineWidth = t.width;
+        ctx.beginPath();
+        ctx.moveTo(tailX, tailY);
+        ctx.lineTo(t.x, t.y);
+        ctx.stroke();
+    }
+    ctx.restore();
+};
 window.SMA.createParticles = function (x, y, n, c) { if (window.SMA.isHost && window.SMA.isOnline) window.SMA.syncEvents.push({ type: 'part', x: x, y: y, n: n, c: c }); for (var i = 0; i < n; i++) window.SMA.particles.push({ x: x, y: y, vx: (Math.random() - 0.5) * 10, vy: (Math.random() - 0.5) * 10, color: c, l: 20 }); };
 window.SMA.updateParticles = function (ctx) { for (var i = window.SMA.particles.length - 1; i >= 0; i--) { var p = window.SMA.particles[i]; ctx.fillStyle = p.color; ctx.globalAlpha = p.life / 30; ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1; } };
 window.SMA.debugHitboxes = window.SMA.debugHitboxes || false;
@@ -235,7 +329,7 @@ window.SMA.applyTopExclusionLayout = function () {
 window.SMA.bootGame = function () {
     if (!window.SMA.Fighter) { alert("Fighter Class Missing"); return; }
     if (!window.SMA.CHAR_DATA) { alert("Data Missing"); return; }
-    if (window.SMA.animationFrameId) cancelAnimationFrame(window.SMA.animationFrameId); window.SMA.initCanvas(); window.SMA.gameRunning = true; window.SMA.gameState = 'COUNTDOWN'; window.SMA.countdownTimer = 180; window.SMA.matchTimer = window.SMA.MATCH_TIME_FRAMES; window.SMA.suddenDeathTimer = 0; var elTxtOvl = document.getElementById('text-overlay'); if (elTxtOvl) elTxtOvl.style.opacity = 1;
+    if (window.SMA.animationFrameId) cancelAnimationFrame(window.SMA.animationFrameId); window.SMA.initCanvas(); window.SMA.gameRunning = true; window.SMA.gameState = 'COUNTDOWN'; window.SMA.countdownTimer = 180; window.SMA.matchTimer = window.SMA.MATCH_TIME_FRAMES; window.SMA.suddenDeathTimer = 0; window.SMA.koBlastTrails = []; var elTxtOvl = document.getElementById('text-overlay'); if (elTxtOvl) elTxtOvl.style.opacity = 1;
 
     // STAGE INIT
     var stg = window.SMA.selectedStage;
@@ -467,6 +561,7 @@ window.SMA.gameLoop = function () {
 
         // PARTICLES (FIX: MOVED OUTSIDE isHost)
         for (var i = window.SMA.comets.length - 1; i >= 0; i--) { var c = window.SMA.comets[i]; c.x += c.vx; c.y += c.vy; c.l--; if (c.l <= 0) window.SMA.comets.splice(i, 1); }
+        window.SMA.updateKoBlastFx();
         for (var i = window.SMA.particles.length - 1; i >= 0; i--) { var p = window.SMA.particles[i]; p.x += p.vx; p.y += p.vy; p.life--; if (p.life <= 0) window.SMA.particles.splice(i, 1); }
 
         // 繧ｫ繝｡繝ｩ: 蜈ｨ逕溷ｭ倥・繝ｬ繧､繝､繝ｼ繧定ｿｽ蠕・
@@ -674,7 +769,7 @@ window.SMA.gameLoop = function () {
                     window.SMA.ctx.shadowBlur = 0;
                     window.SMA.ctx.restore();
                 } else { window.SMA.ctx.fillStyle = p.color; window.SMA.ctx.beginPath(); window.SMA.ctx.arc(p.x, p.y, p.w / 2, 0, Math.PI * 2); window.SMA.ctx.fill(); }
-            } window.SMA.drawMageTransientVfx(window.SMA.ctx); window.SMA.drawComets(window.SMA.ctx); window.SMA.updateParticles(window.SMA.ctx); window.SMA.drawDebugHitboxes(window.SMA.ctx); window.SMA.ctx.restore();
+            } window.SMA.drawMageTransientVfx(window.SMA.ctx); window.SMA.drawComets(window.SMA.ctx); window.SMA.drawKoBlastFx(window.SMA.ctx); window.SMA.updateParticles(window.SMA.ctx); window.SMA.drawDebugHitboxes(window.SMA.ctx); window.SMA.ctx.restore();
         } window.SMA.updateHud();
     } catch (e) { reportError("Loop Error: " + e); } window.SMA.animationFrameId = requestAnimationFrame(window.SMA.gameLoop);
 };
@@ -1070,7 +1165,7 @@ window.SMA.applySync = function (d) {
         if (pData) window.SMA.players[si].deserialize(pData);
     }
     if (d.projs) window.SMA.projectiles = d.projs;
-    if (d.events) { d.events.forEach(function (e) { if (e.type === 'snd') window.SMA.playSound(e.key); if (e.type === 'part') window.SMA.createParticles(e.x, e.y, e.n, e.c); if (e.type === 'comet') window.SMA.triggerComet(e.x, e.y, e.dir, e.c); if (e.type === 'mage_vfx') window.SMA.spawnMageVfx(e.kind, e.x, e.y, { life: e.life, scale: e.scale, flipX: e.flipX }); }); }
+    if (d.events) { d.events.forEach(function (e) { if (e.type === 'snd') window.SMA.playSound(e.key); if (e.type === 'part') window.SMA.createParticles(e.x, e.y, e.n, e.c); if (e.type === 'comet') window.SMA.triggerComet(e.x, e.y, e.dir, e.c); if (e.type === 'ko_fx') window.SMA.triggerKoBlastFx(e.x, e.y, e.dir, e.c, e.vx, e.vy); if (e.type === 'mage_vfx') window.SMA.spawnMageVfx(e.kind, e.x, e.y, { life: e.life, scale: e.scale, flipX: e.flipX }); }); }
     window.SMA.updateHud();
     if (window.SMA.gameState === 'GAMEOVER') {
         var txt = d.winText || (d.win ? (String(d.win).indexOf('WINS!') !== -1 ? d.win : (d.win + ' WINS!')) : 'GAME OVER');
@@ -1453,7 +1548,7 @@ window.SMA.Fighter.prototype.checkLedgeGrab = function () {
         }
     }
 };
-window.SMA.Fighter.prototype.checkBounds = function () { var S = window.SMA; var b = S.getActiveBlastBounds ? S.getActiveBlastBounds() : { left: S.BLAST_LEFT, right: S.BLAST_RIGHT, top: S.BLAST_TOP, bottom: S.BLAST_BOTTOM }; var dieDir = null; var dx = this.x; var dy = this.y; if (this.y < b.top) dieDir = 'up'; else if (this.x > b.right) dieDir = 'right'; else if (this.x < b.left) dieDir = 'left'; else if (this.y > b.bottom) dieDir = 'down'; if (dieDir) this.die(dieDir, dx, dy); };
+window.SMA.Fighter.prototype.checkBounds = function () { var S = window.SMA; var b = S.getActiveBlastBounds ? S.getActiveBlastBounds() : { left: S.BLAST_LEFT, right: S.BLAST_RIGHT, top: S.BLAST_TOP, bottom: S.BLAST_BOTTOM }; var dieDir = null; var dx = this.x; var dy = this.y; if (this.y < b.top) dieDir = 'up'; else if (this.x > b.right) dieDir = 'right'; else if (this.x < b.left) dieDir = 'left'; else if (this.y > b.bottom) dieDir = 'down'; if (dieDir) this.die(dieDir, dx, dy, this.vx, this.vy); };
 window.SMA.Fighter.prototype.checkSolids = function () { var S = window.SMA; for (var p of S.platforms) { if (p.type === 'main') { if (this.x < p.x + p.w && this.x + this.w > p.x && this.y < p.y + p.h && this.y + this.h > p.y) { var overlapX = (this.x + this.w / 2) - (p.x + p.w / 2); var overlapY = (this.y + this.h / 2) - (p.y + p.h / 2); var halfW = (this.w + p.w) / 2; var halfH = (this.h + p.h) / 2; var ox = halfW - Math.abs(overlapX); var oy = halfH - Math.abs(overlapY); if (ox < oy) { if (overlapX > 0) { this.x += ox; this.vx = 0; } else { this.x -= ox; this.vx = 0; } } else { if (overlapY > 0) { this.y += oy; this.vy = 0; } else { this.y -= oy; this.vy = 0; this.isGrounded = true; this.jumps = 0; this.currentPlatform = p; this.hasAirDodged = false; this.hasUpSpecial = false; } } } } } };
 window.SMA.Fighter.prototype.performDodge = function (inputKeys) { var S = window.SMA; if (this.dodgeCooldown > 0) return false; if (!this.isGrounded && this.hasAirDodged) return false; this.actionState = 'DODGE'; this.stateTimer = 25; this.invincible = 20; this.dodgeCooldown = 55; var dx = 0; var dy = 0; if (inputKeys.left) dx = -1; if (inputKeys.right) dx = 1; if (inputKeys.up) dy = -1; if (inputKeys.down) dy = 1; if (dx !== 0 || dy !== 0) { var speed = 12; if (dx !== 0 && dy !== 0) { dx *= 0.707; dy *= 0.707; } this.vx = dx * speed; this.vy = dy * speed; } if (!this.isGrounded) this.hasAirDodged = true; S.playSound('jump'); S.createParticles(this.x + 15, this.y + 30, 10, '#fff'); return true; };
 window.SMA.Fighter.prototype.tryGrab = function (opponent) {
@@ -1467,7 +1562,7 @@ window.SMA.Fighter.prototype.tryGrab = function (opponent) {
 };
 window.SMA.Fighter.prototype.handleGrabbing = function (inputKeys) { if (!this.grabbedTarget) { this.actionState = 'IDLE'; return; } this.grabbedTarget.x = this.x + (this.facingRight ? 25 : -25); this.grabbedTarget.y = this.y - 5; this.stateTimer--; if (this.stateTimer > 108) return; var throwType = null; if (inputKeys.left) throwType = this.facingRight ? 'THROW_BK' : 'THROW_FW'; else if (inputKeys.right) throwType = this.facingRight ? 'THROW_FW' : 'THROW_BK'; else if (inputKeys.up) throwType = 'THROW_UP'; else if (inputKeys.down) throwType = 'THROW_DN'; else if (this.stateTimer <= 0) throwType = 'THROW_FW'; if (throwType) this.performThrow(throwType); };
 window.SMA.Fighter.prototype.performThrow = function (typeStr) { var S = window.SMA; var vic = this.grabbedTarget; if (!vic) return; this.actionState = 'THROWING'; this.stateTimer = 15; var data = S.CHAR_DATA[this.charId].throws[typeStr]; vic.percent += data.dmg; var rad = data.angle * (Math.PI / 180); var force = data.kb + (vic.percent * data.scale); var vx = Math.cos(rad) * force; var vy = Math.sin(rad) * force; if (!this.facingRight) vx *= -1; vic.vx = vx; vic.vy = vy; vic.enterState('STUN', 40); vic.grabInvincible = 60; vic.chargePower = 1.0; this.grabbedTarget = null; S.createParticles(vic.x + 15, vic.y + 30, 15, '#fff'); S.shake = 10; S.updateHud(); S.playSound('hit'); };
-window.SMA.Fighter.prototype.die = function (direction, dx, dy) { var S = window.SMA; this.stocks--; if (this.charId === 'mirror') { this.mirror = null; this.mirrorClone = null; this.mirrorCooldown = 300; } S.updateHud(); this.chargePower = 1.0; this.hitbox.active = false; S.playSound('hit'); S.triggerComet(dx, dy, direction, this.color); S.freezeFrame = 10; this.actionState = 'DEAD'; this.percent = 0; if (this.stocks > 0) { this.actionState = 'RESPAWN'; this.respawnTimer = 90; this.x = -9999; } else { S.checkGameSet(); } };
+window.SMA.Fighter.prototype.die = function (direction, dx, dy, vx, vy) { var S = window.SMA; var koColor = S.getKoPlayerColor ? S.getKoPlayerColor(this) : this.color; this.stocks--; if (this.charId === 'mirror') { this.mirror = null; this.mirrorClone = null; this.mirrorCooldown = 300; } S.updateHud(); this.chargePower = 1.0; this.hitbox.active = false; S.playSound('hit'); S.triggerComet(dx, dy, direction, koColor); S.triggerKoBlastFx(dx, dy, direction, koColor, vx, vy); S.freezeFrame = 10; this.actionState = 'DEAD'; this.percent = 0; if (this.stocks > 0) { this.actionState = 'RESPAWN'; this.respawnTimer = 90; this.x = -9999; } else { S.checkGameSet(); } };
 window.SMA.Fighter.prototype.respawn = function () { var S = window.SMA; this.actionState = 'IDLE'; this.x = S.WORLD_W / 2 - this.w / 2; this.y = (S.WORLD_H * 0.7) - 300; this.vx = 0; this.vy = 0; this.percent = 0; this.shieldHP = 100; this.chargePower = 1.0; this.invincible = 180; this.isGrounded = false; this.airborneFrames = 0; this.ledgeInputLock = 0; this.hitbox.active = false; };
 window.SMA.Fighter.prototype.triggerJump = function (keys) { var S = window.SMA; if (this.actionState === 'LEDGE') return; if (keys && keys.down && this.isGrounded) { if (this.currentPlatform && this.currentPlatform.type === 'main') { this.vy = S.JUMP_FORCE * 0.6; this.jumps++; this.animScale.x = 0.7; this.animScale.y = 1.3; S.playSound('jump'); return; } else { this.dropThrough = true; this.isGrounded = false; this.y += 1; return; } } var maxJ = (window.SMA.CHAR_DATA[this.charId] && window.SMA.CHAR_DATA[this.charId].maxJumps) || 2; if (this.actionState === 'IDLE' && this.jumps < maxJ) { var force = keys && keys.down ? S.JUMP_FORCE * 0.6 : S.JUMP_FORCE; var jm = S.CHAR_DATA[this.charId].jumpMult || 1.0; this.vy = force * jm; this.jumps++; this.animScale.x = 0.7; this.animScale.y = 1.3; if (this.jumps === 2) { this.vx *= 0.8; S.createParticles(this.x + this.w / 2, this.y + this.h, 10, '#fff'); } S.playSound('jump'); } };
 window.SMA.Fighter.prototype.startCharge = function () {
