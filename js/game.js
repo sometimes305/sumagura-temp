@@ -60,6 +60,37 @@ window.SMA.getLedgeInvincibleFrames = function (airborneFrames) {
     var airborneSeconds = Math.max(0, airborneFrames || 0) / 60;
     return Math.min(window.SMA.LEDGE_MAX_INVINCIBLE_FRAMES, Math.floor(airborneSeconds * 0.75 * 60));
 };
+window.SMA.MATCH_TIME_FRAMES = 21600;
+window.SMA.SUDDEN_DEATH_ZOOM_FRAMES = 900;
+window.SMA.getStageCenter = function () {
+    var main = (window.SMA.platforms || []).find(function (p) { return p && p.type === 'main'; });
+    if (main) return { x: main.x + main.w / 2, y: main.y - 200 };
+    return { x: window.SMA.WORLD_W / 2, y: window.SMA.WORLD_H * 0.7 - 200 };
+};
+window.SMA.getSuddenDeathProgress = function () {
+    if ((window.SMA.matchTimer || 0) > 0) return 0;
+    return Math.max(0, Math.min(1, ((window.SMA.suddenDeathTimer || 0) - 30) / window.SMA.SUDDEN_DEATH_ZOOM_FRAMES));
+};
+window.SMA.getSuddenDeathFinalZoom = function () {
+    return Math.min(2.0, Math.max(1.45, window.SMA.SCREEN_W / 750));
+};
+window.SMA.formatMatchTimer = function () {
+    var frames = Math.max(0, window.SMA.matchTimer || 0);
+    var totalSeconds = Math.ceil(frames / 60);
+    var mins = Math.floor(totalSeconds / 60);
+    var secs = totalSeconds % 60;
+    return mins + ':' + (secs < 10 ? '0' : '') + secs;
+};
+window.SMA.getActiveBlastBounds = function () {
+    var p = window.SMA.getSuddenDeathProgress();
+    if (p <= 0) return { left: window.SMA.BLAST_LEFT, right: window.SMA.BLAST_RIGHT, top: window.SMA.BLAST_TOP, bottom: window.SMA.BLAST_BOTTOM };
+    var center = window.SMA.getStageCenter();
+    var finalZoom = window.SMA.getSuddenDeathFinalZoom();
+    var currentZoom = 0.32 + (finalZoom - 0.32) * p;
+    var activeW = (window.SMA.SCREEN_W / currentZoom) * 1.08;
+    var activeH = (window.SMA.SCREEN_H / currentZoom) * 1.08;
+    return { left: center.x - activeW / 2, right: center.x + activeW / 2, top: center.y - activeH / 2, bottom: center.y + activeH / 2 };
+};
 window.SMA.SPEAR_WEAPON_ASSET = {
     key: 'spear_weapon_v4',
     src: 'assets/characters/spear/spear_weapon.png?v=4',
@@ -204,7 +235,7 @@ window.SMA.applyTopExclusionLayout = function () {
 window.SMA.bootGame = function () {
     if (!window.SMA.Fighter) { alert("Fighter Class Missing"); return; }
     if (!window.SMA.CHAR_DATA) { alert("Data Missing"); return; }
-    if (window.SMA.animationFrameId) cancelAnimationFrame(window.SMA.animationFrameId); window.SMA.initCanvas(); window.SMA.gameRunning = true; window.SMA.gameState = 'COUNTDOWN'; window.SMA.countdownTimer = 180; var elTxtOvl = document.getElementById('text-overlay'); if (elTxtOvl) elTxtOvl.style.opacity = 1;
+    if (window.SMA.animationFrameId) cancelAnimationFrame(window.SMA.animationFrameId); window.SMA.initCanvas(); window.SMA.gameRunning = true; window.SMA.gameState = 'COUNTDOWN'; window.SMA.countdownTimer = 180; window.SMA.matchTimer = window.SMA.MATCH_TIME_FRAMES; window.SMA.suddenDeathTimer = 0; var elTxtOvl = document.getElementById('text-overlay'); if (elTxtOvl) elTxtOvl.style.opacity = 1;
 
     // STAGE INIT
     var stg = window.SMA.selectedStage;
@@ -274,6 +305,8 @@ window.SMA.bootGame = function () {
         var hud = document.getElementById('p' + (pi + 1) + '-hud');
         if (hud) hud.style.display = (pi < pc) ? '' : 'none';
     }
+    var matchTimerEl = document.getElementById('match-timer');
+    if (matchTimerEl) { matchTimerEl.style.display = 'block'; matchTimerEl.innerText = window.SMA.formatMatchTimer(); matchTimerEl.classList.remove('sudden-death'); }
     window.SMA.camera.x = mainPlat.x + mainPlat.w / 2; window.SMA.camera.y = mainPlat.y - 200; window.SMA.gameLoop();
 };
 window.SMA.updateCPU = function (cpu, targets) {
@@ -304,7 +337,7 @@ window.SMA.gameLoop = function () {
             if (!window.SMA.isOnline && window.SMA.isHost && window.SMA.gameState === 'PLAYING' && window.SMA.prepareSoloDelayedInput) {
                 soloDelayedInput = window.SMA.prepareSoloDelayedInput();
             }
-            if (window.SMA.gameState === 'COUNTDOWN') { window.SMA.countdownTimer--; if (window.SMA.isHost && window.SMA.countdownTimer <= 0) window.SMA.gameState = 'PLAYING'; } else if (window.SMA.gameState === 'PLAYING' && window.SMA.isHost) { window.SMA.countdownTimer--; }
+            if (window.SMA.gameState === 'COUNTDOWN') { window.SMA.countdownTimer--; if (window.SMA.isHost && window.SMA.countdownTimer <= 0) window.SMA.gameState = 'PLAYING'; } else if (window.SMA.gameState === 'PLAYING' && window.SMA.isHost) { window.SMA.countdownTimer--; if ((window.SMA.matchTimer || 0) > 0) window.SMA.matchTimer--; else window.SMA.suddenDeathTimer++; }
             if (!soloDelayedInput && !window.SMA.isOnline && window.SMA.isHost && window.SMA.gameState === 'PLAYING' && window.SMA.prepareSoloDelayedInput) {
                 soloDelayedInput = window.SMA.prepareSoloDelayedInput();
             }
@@ -407,7 +440,7 @@ window.SMA.gameLoop = function () {
                     window.SMA.checkGameSet();
                     // 繝阪ャ繝医Ρ繝ｼ繧ｯ蜷梧悄
                     if (window.SMA.isOnline) {
-                        var pkt = { type: 'sync', frame: window.SMA.lockstepFrame || 0, inputDelayFrames: window.SMA.ONLINE_INPUT_DELAY_FRAMES, stg: window.SMA.selectedStage, gState: window.SMA.gameState, cd: window.SMA.countdownTimer, playerCount: pc, events: window.SMA.syncEvents, projs: window.SMA.projectiles.map(function (p) { return { x: p.x, y: p.y, vx: p.vx, vy: p.vy, type: p.type, w: p.w, h: p.h, hitW: p.hitW, hitH: p.hitH, hitOffsetX: p.hitOffsetX, hitOffsetY: p.hitOffsetY, visualKind: p.visualKind, color: p.color, particleColor: p.particleColor, angle: p.angle || 0, age: p.age || 0, maxLife: p.maxLife || p.life || 0, surfaceY: p.surfaceY }; }), win: (window.SMA.gameState === 'GAMEOVER' ? document.getElementById('result-text').innerText : null) };
+                        var pkt = { type: 'sync', frame: window.SMA.lockstepFrame || 0, inputDelayFrames: window.SMA.ONLINE_INPUT_DELAY_FRAMES, stg: window.SMA.selectedStage, gState: window.SMA.gameState, cd: window.SMA.countdownTimer, mt: window.SMA.matchTimer, sd: window.SMA.suddenDeathTimer, playerCount: pc, events: window.SMA.syncEvents, projs: window.SMA.projectiles.map(function (p) { return { x: p.x, y: p.y, vx: p.vx, vy: p.vy, type: p.type, w: p.w, h: p.h, hitW: p.hitW, hitH: p.hitH, hitOffsetX: p.hitOffsetX, hitOffsetY: p.hitOffsetY, visualKind: p.visualKind, color: p.color, particleColor: p.particleColor, angle: p.angle || 0, age: p.age || 0, maxLife: p.maxLife || p.life || 0, surfaceY: p.surfaceY }; }), win: (window.SMA.gameState === 'GAMEOVER' ? document.getElementById('result-text').innerText : null) };
                         // 蜷・・繝ｬ繧､繝､繝ｼ縺ｮ迥ｶ諷九ｒ霑ｽ蜉
                         for (var si = 0; si < pc; si++) {
                             pkt['p' + (si + 1)] = allPlayers[si].serialize();
@@ -445,7 +478,7 @@ window.SMA.gameLoop = function () {
             window.SMA.players.forEach(function (p) { if (p.stocks > 0) winner = p; });
             if (winner) targets = [winner];
         }
-        var tx = window.SMA.WORLD_W / 2; var ty = window.SMA.WORLD_H / 2; var tz = 1.0; if (window.SMA.gameState === 'COUNTDOWN') { tz = window.SMA.SCREEN_W / 1200; } else if (targets.length > 0) { var minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity; targets.forEach(function (p) { if (p.x < minX) minX = p.x; if (p.x > maxX) maxX = p.x; if (p.y < minY) minY = p.y; if (p.y > maxY) maxY = p.y; }); tx = (minX + maxX) / 2; ty = (minY + maxY) / 2; var zx = window.SMA.SCREEN_W / (maxX - minX + 500); var zy = window.SMA.SCREEN_H / (maxY - minY + 400); tz = Math.min(Math.min(zx, zy), 1.2); if (tz < 0.5) tz = 0.5; if (window.SMA.gameState === 'GAMEOVER') tz = 2.0; } if (!isNaN(tx)) window.SMA.camera.x += (tx - window.SMA.camera.x) * 0.1; if (!isNaN(ty)) window.SMA.camera.y += (ty - window.SMA.camera.y) * 0.1; if (!isNaN(tz)) window.SMA.camera.zoom += (tz - window.SMA.camera.zoom) * 0.05; if (isNaN(window.SMA.camera.x)) window.SMA.camera.x = 0; if (window.SMA.shake > 0) window.SMA.shake *= 0.9; if (window.SMA.shake < 0.5) window.SMA.shake = 0; if (window.SMA.ctx) {
+        var tx = window.SMA.WORLD_W / 2; var ty = window.SMA.WORLD_H / 2; var tz = 1.0; var suddenActive = (window.SMA.matchTimer || 0) <= 0 && window.SMA.gameState === 'PLAYING'; if (window.SMA.gameState === 'COUNTDOWN') { tz = window.SMA.SCREEN_W / 1200; } else if (suddenActive) { var sdCenter = window.SMA.getStageCenter(); var suddenP = window.SMA.getSuddenDeathProgress(); tx = sdCenter.x; ty = sdCenter.y; tz = 0.32 + (window.SMA.getSuddenDeathFinalZoom() - 0.32) * suddenP; } else if (targets.length > 0) { var minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity; targets.forEach(function (p) { if (p.x < minX) minX = p.x; if (p.x + p.w > maxX) maxX = p.x + p.w; if (p.y < minY) minY = p.y; if (p.y + p.h > maxY) maxY = p.y + p.h; }); tx = (minX + maxX) / 2; ty = (minY + maxY) / 2; var zx = window.SMA.SCREEN_W / (maxX - minX + 520); var zy = window.SMA.SCREEN_H / (maxY - minY + 400); tz = Math.min(Math.min(zx, zy), 1.2); if (tz < 0.32) tz = 0.32; if (window.SMA.gameState === 'GAMEOVER') tz = 2.0; } var camLerp = suddenActive ? 0.18 : 0.1; var zoomLerp = suddenActive ? 0.18 : 0.05; if (!isNaN(tx)) window.SMA.camera.x += (tx - window.SMA.camera.x) * camLerp; if (!isNaN(ty)) window.SMA.camera.y += (ty - window.SMA.camera.y) * camLerp; if (!isNaN(tz)) window.SMA.camera.zoom += (tz - window.SMA.camera.zoom) * zoomLerp; if (isNaN(window.SMA.camera.x)) window.SMA.camera.x = 0; if (window.SMA.shake > 0) window.SMA.shake *= 0.9; if (window.SMA.shake < 0.5) window.SMA.shake = 0; if (window.SMA.ctx) {
             var renderScale = window.SMA.RENDER_SCALE || 1;
             window.SMA.ctx.setTransform(renderScale, 0, 0, renderScale, 0, 0);
             window.SMA.ctx.imageSmoothingEnabled = true;
@@ -890,6 +923,8 @@ window.SMA.showGameOverResult = function (text, icon) {
     var t = document.getElementById('result-text');
     if (t) t.innerText = text || 'GAME OVER';
     window.SMA.renderResultWinnerIcon(icon);
+    var matchTimerEl = document.getElementById('match-timer');
+    if (matchTimerEl) matchTimerEl.style.display = 'none';
     var scr = document.getElementById('game-over-screen');
     if (scr) scr.classList.remove('hidden');
 };
@@ -1009,6 +1044,16 @@ window.SMA.updateHud = function () {
         // 繧｢繧､繧ｳ繝ｳ縺ｯ繧ｹ繝医ャ繧ｯ陦ｨ遉ｺ縺ｫ邨ｱ蜷医＠縺溘◆繧√”ud-icon隕∫ｴ縺ｯ髱櫁｡ｨ遉ｺ縺ｮ縺ｾ縺ｾ
         if (iconEl) iconEl.style.display = 'none';
     }
+    var timerEl = document.getElementById('match-timer');
+    if (timerEl) {
+        timerEl.innerText = window.SMA.formatMatchTimer();
+        timerEl.classList.toggle('sudden-death', (window.SMA.matchTimer || 0) <= 0 && window.SMA.gameState === 'PLAYING');
+        var remaining = Math.max(0, window.SMA.matchTimer || 0);
+        var timerScale = 1;
+        if (remaining > 0 && remaining <= 600) timerScale = 1 + Math.min(1, (600 - remaining) / 300) * 2;
+        else if (remaining <= 0) timerScale = 3;
+        timerEl.style.transform = 'translateX(-50%) scale(' + timerScale.toFixed(3) + ')';
+    }
     var elOvlMsg = document.getElementById('overlay-msg'); var elTxtOvl = document.getElementById('text-overlay');
     if (window.SMA.gameState === 'COUNTDOWN') { var t = '3'; if (window.SMA.countdownTimer < 60) t = '1'; else if (window.SMA.countdownTimer < 120) t = '2'; if (elOvlMsg) elOvlMsg.innerText = t; if (elTxtOvl) elTxtOvl.style.opacity = 1; }
     else if (window.SMA.gameState === 'PLAYING') { if (window.SMA.countdownTimer > -30) { if (elOvlMsg) elOvlMsg.innerText = 'GO!'; if (elTxtOvl) elTxtOvl.style.opacity = 1; } else { if (elTxtOvl) elTxtOvl.style.opacity = 0; } }
@@ -1017,7 +1062,7 @@ window.SMA.applySync = function (d) {
     if (d.data) { try { d = JSON.parse(d.data); } catch (e) { return; } }
     if (typeof d.frame === 'number') window.SMA.lockstepRemoteFrame = d.frame;
     if (typeof d.inputDelayFrames === 'number') window.SMA.ONLINE_INPUT_DELAY_FRAMES = d.inputDelayFrames;
-    window.SMA.gameState = d.gState; window.SMA.countdownTimer = d.cd;
+    window.SMA.gameState = d.gState; window.SMA.countdownTimer = d.cd; if (typeof d.mt === 'number') window.SMA.matchTimer = d.mt; if (typeof d.sd === 'number') window.SMA.suddenDeathTimer = d.sd;
     // 蜈ｨ繝励Ξ繧､繝､繝ｼ縺ｮ迥ｶ諷九ｒ蜿肴丐
     var pc = d.playerCount || 2;
     for (var si = 0; si < pc && si < window.SMA.players.length; si++) {
@@ -1041,6 +1086,8 @@ window.SMA.handleClient = function (d) {
     if (d.type === 'rematch') {
         document.getElementById('game-over-screen').classList.add('hidden');
         document.getElementById('hud-layer').style.display = 'none';
+        var matchTimerEl = document.getElementById('match-timer');
+        if (matchTimerEl) matchTimerEl.style.display = 'none';
         document.getElementById('controller-area').style.display = 'none';
         if (window.SMA.animationFrameId) { cancelAnimationFrame(window.SMA.animationFrameId); window.SMA.animationFrameId = null; }
         window.SMA.gameRunning = false;
@@ -1406,7 +1453,7 @@ window.SMA.Fighter.prototype.checkLedgeGrab = function () {
         }
     }
 };
-window.SMA.Fighter.prototype.checkBounds = function () { var S = window.SMA; var dieDir = null; var dx = this.x; var dy = this.y; if (this.y < S.BLAST_TOP) dieDir = 'up'; else if (this.x > S.BLAST_RIGHT) dieDir = 'right'; else if (this.x < S.BLAST_LEFT) dieDir = 'left'; else if (this.y > S.BLAST_BOTTOM) dieDir = 'down'; if (dieDir) this.die(dieDir, dx, dy); };
+window.SMA.Fighter.prototype.checkBounds = function () { var S = window.SMA; var b = S.getActiveBlastBounds ? S.getActiveBlastBounds() : { left: S.BLAST_LEFT, right: S.BLAST_RIGHT, top: S.BLAST_TOP, bottom: S.BLAST_BOTTOM }; var dieDir = null; var dx = this.x; var dy = this.y; if (this.y < b.top) dieDir = 'up'; else if (this.x > b.right) dieDir = 'right'; else if (this.x < b.left) dieDir = 'left'; else if (this.y > b.bottom) dieDir = 'down'; if (dieDir) this.die(dieDir, dx, dy); };
 window.SMA.Fighter.prototype.checkSolids = function () { var S = window.SMA; for (var p of S.platforms) { if (p.type === 'main') { if (this.x < p.x + p.w && this.x + this.w > p.x && this.y < p.y + p.h && this.y + this.h > p.y) { var overlapX = (this.x + this.w / 2) - (p.x + p.w / 2); var overlapY = (this.y + this.h / 2) - (p.y + p.h / 2); var halfW = (this.w + p.w) / 2; var halfH = (this.h + p.h) / 2; var ox = halfW - Math.abs(overlapX); var oy = halfH - Math.abs(overlapY); if (ox < oy) { if (overlapX > 0) { this.x += ox; this.vx = 0; } else { this.x -= ox; this.vx = 0; } } else { if (overlapY > 0) { this.y += oy; this.vy = 0; } else { this.y -= oy; this.vy = 0; this.isGrounded = true; this.jumps = 0; this.currentPlatform = p; this.hasAirDodged = false; this.hasUpSpecial = false; } } } } } };
 window.SMA.Fighter.prototype.performDodge = function (inputKeys) { var S = window.SMA; if (this.dodgeCooldown > 0) return false; if (!this.isGrounded && this.hasAirDodged) return false; this.actionState = 'DODGE'; this.stateTimer = 25; this.invincible = 20; this.dodgeCooldown = 55; var dx = 0; var dy = 0; if (inputKeys.left) dx = -1; if (inputKeys.right) dx = 1; if (inputKeys.up) dy = -1; if (inputKeys.down) dy = 1; if (dx !== 0 || dy !== 0) { var speed = 12; if (dx !== 0 && dy !== 0) { dx *= 0.707; dy *= 0.707; } this.vx = dx * speed; this.vy = dy * speed; } if (!this.isGrounded) this.hasAirDodged = true; S.playSound('jump'); S.createParticles(this.x + 15, this.y + 30, 10, '#fff'); return true; };
 window.SMA.Fighter.prototype.tryGrab = function (opponent) {

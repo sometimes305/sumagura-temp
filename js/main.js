@@ -24,7 +24,7 @@ window.SMA.isInCSS = false; // "In Locked Room State" (SSS or CSS)
 window.SMA.myRole = 'host';
 window.SMA.netPeer = null; window.SMA.netConn = null; window.SMA.connections = [];
 window.SMA.targetPeerId = null;
-window.SMA.gameState = 'COUNTDOWN'; window.SMA.countdownTimer = 180;
+window.SMA.gameState = 'COUNTDOWN'; window.SMA.countdownTimer = 180; window.SMA.matchTimer = 21600; window.SMA.suddenDeathTimer = 0;
 window.SMA.localPlayerName = "Player";
 window.SMA.isGravity = (window.self !== window.top); // iframe内（Gravity環境）か判定
 window.SMA.gravityUserInfo = null;

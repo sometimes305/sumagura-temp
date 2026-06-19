@@ -1208,6 +1208,8 @@ window.SMA.rematch = function () {
     document.getElementById('game-over-screen').classList.add('hidden');
     // HUD・コントローラーを非表示
     document.getElementById('hud-layer').style.display = 'none';
+    var matchTimerEl = document.getElementById('match-timer');
+    if (matchTimerEl) matchTimerEl.style.display = 'none';
     document.getElementById('controller-area').style.display = 'none';
     // アニメーションフレームを停止
     if (window.SMA.animationFrameId) { cancelAnimationFrame(window.SMA.animationFrameId); window.SMA.animationFrameId = null; }
@@ -1261,6 +1263,8 @@ window.SMA.startSoloGame = function () {
     document.getElementById('battle-hub-screen').classList.add('hidden');
     document.getElementById('controller-area').style.display = 'block';
     document.getElementById('hud-layer').style.display = 'flex';
+    var soloTimerEl = document.getElementById('match-timer');
+    if (soloTimerEl) soloTimerEl.style.display = 'block';
     window.SMA.initCanvas();
     try { window.SMA.bootGame(); } catch (e) { console.error("Init Error: " + e); }
 };
@@ -1269,6 +1273,8 @@ window.SMA.startGameMulti = function () {
     document.getElementById('battle-hub-screen').classList.add('hidden');
     document.getElementById('controller-area').style.display = (window.SMA.myRole === 'spec') ? 'none' : 'block';
     document.getElementById('hud-layer').style.display = 'flex';
+    var multiTimerEl = document.getElementById('match-timer');
+    if (multiTimerEl) multiTimerEl.style.display = 'block';
     window.SMA.renderSpectatorStrip([]);
 
     var s = window.SMA.lobbyState || {};
