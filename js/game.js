@@ -12,10 +12,10 @@ window.SMA.triggerComet = function (x, y, dir, col) { if (window.SMA.isHost && w
 window.SMA.drawComets = function (ctx) { for (var i = window.SMA.comets.length - 1; i >= 0; i--) { var c = window.SMA.comets[i]; ctx.fillStyle = c.color; ctx.save(); ctx.shadowBlur = 20; ctx.shadowColor = c.color; ctx.beginPath(); ctx.arc(c.x, c.y, 20, 0, Math.PI * 2); ctx.fill(); ctx.beginPath(); ctx.strokeStyle = c.color; ctx.lineWidth = 10; ctx.moveTo(c.x, c.y); ctx.lineTo(c.x - c.vx * 4, c.y - c.vy * 4); ctx.stroke(); ctx.restore(); } };
 window.SMA.koBlastTrails = window.SMA.koBlastTrails || [];
 window.SMA.KO_TRAIL_ASSETS = {
-    red: { key: 'ko_trail_red_sheet_v1', src: 'assets/effects/ko_trail_red_sheet.png?v=1' },
-    blue: { key: 'ko_trail_blue_sheet_v1', src: 'assets/effects/ko_trail_blue_sheet.png?v=1' },
-    yellow: { key: 'ko_trail_yellow_sheet_v1', src: 'assets/effects/ko_trail_yellow_sheet.png?v=1' },
-    green: { key: 'ko_trail_green_sheet_v1', src: 'assets/effects/ko_trail_green_sheet.png?v=1' },
+    red: { key: 'ko_trail_red_sheet_v3', src: 'assets/effects/ko_trail_red_sheet.png?v=3' },
+    blue: { key: 'ko_trail_blue_sheet_v3', src: 'assets/effects/ko_trail_blue_sheet.png?v=3' },
+    yellow: { key: 'ko_trail_yellow_sheet_v3', src: 'assets/effects/ko_trail_yellow_sheet.png?v=3' },
+    green: { key: 'ko_trail_green_sheet_v3', src: 'assets/effects/ko_trail_green_sheet.png?v=3' },
     frameW: 512,
     frameH: 192,
     frames: 4
@@ -29,14 +29,24 @@ window.SMA.getKoBlastVector = function (dir, vx, vy) {
     if (dir === 'down') return { x: 0, y: 1 };
     return { x: 0, y: -1 };
 };
-window.SMA.getKoBlastPoint = function (x, y, dir) {
-    var b = window.SMA.getActiveBlastBounds ? window.SMA.getActiveBlastBounds() : { left: window.SMA.BLAST_LEFT, right: window.SMA.BLAST_RIGHT, top: window.SMA.BLAST_TOP, bottom: window.SMA.BLAST_BOTTOM };
-    var px = Math.max(b.left + 120, Math.min(b.right - 120, x));
-    var py = Math.max(b.top + 90, Math.min(b.bottom - 90, y));
-    if (dir === 'left') px = b.left + 70;
-    else if (dir === 'right') px = b.right - 70;
-    else if (dir === 'up') py = b.top + 70;
-    else if (dir === 'down') py = b.bottom - 70;
+window.SMA.worldToScreenPoint = function (x, y) {
+    var cam = window.SMA.camera || { x: 0, y: 0, zoom: 1 };
+    var sw = window.SMA.SCREEN_W || 1280;
+    var sh = window.SMA.SCREEN_H || 720;
+    var zoom = cam.zoom || 1;
+    return {
+        x: (x - cam.x) * zoom + sw / 2,
+        y: (y - cam.y) * zoom + sh / 2
+    };
+};
+window.SMA.getKoBlastScreenPoint = function (x, y) {
+    var sw = window.SMA.SCREEN_W || 1280;
+    var sh = window.SMA.SCREEN_H || 720;
+    var padX = Math.max(82, Math.min(150, sw * 0.12));
+    var padY = Math.max(92, Math.min(150, sh * 0.14));
+    var screen = window.SMA.worldToScreenPoint ? window.SMA.worldToScreenPoint(x, y) : { x: sw / 2, y: sh / 2 };
+    var px = Math.max(padX, Math.min(sw - padX, screen.x));
+    var py = Math.max(padY, Math.min(sh - padY, screen.y));
     return { x: px, y: py };
 };
 window.SMA.getKoPlayerColor = function (fighter) {
@@ -76,9 +86,9 @@ window.SMA.preloadKoTrailAssets = function () {
 window.SMA.triggerKoBlastFx = function (x, y, dir, col, vx, vy) {
     if (window.SMA.isHost && window.SMA.isOnline) window.SMA.syncEvents.push({ type: 'ko_fx', x: x, y: y, dir: dir, c: col, vx: vx || 0, vy: vy || 0 });
     var v = window.SMA.getKoBlastVector(dir, vx, vy);
-    var p = window.SMA.getKoBlastPoint(x, y, dir);
+    var p = window.SMA.getKoBlastScreenPoint(x, y);
     if (window.SMA.preloadKoTrailAssets) window.SMA.preloadKoTrailAssets();
-    window.SMA.koBlastTrails.push({ x: p.x, y: p.y, dirX: v.x, dirY: v.y, asset: window.SMA.getKoTrailAssetName(col), life: 34, maxLife: 34, scaleX: 5.6, scaleY: 2.9 });
+    window.SMA.koBlastTrails.push({ x: p.x, y: p.y, dirX: v.x, dirY: v.y, asset: window.SMA.getKoTrailAssetName(col), life: 38, maxLife: 38, scaleX: 1.75, scaleY: 0.55, anchor: 0.5 });
 };
 window.SMA.updateKoBlastFx = function () {
     for (var i = window.SMA.koBlastTrails.length - 1; i >= 0; i--) { var t = window.SMA.koBlastTrails[i]; t.life--; if (t.life <= 0) window.SMA.koBlastTrails.splice(i, 1); }
@@ -94,14 +104,16 @@ window.SMA.drawKoBlastFx = function (ctx) {
         var progress = 1 - (t.life / t.maxLife);
         var frame = Math.min(assets.frames - 1, Math.floor(progress * assets.frames));
         var alpha = progress < 0.86 ? 1 : Math.max(0, 1 - (progress - 0.86) / 0.14);
-        var drawW = assets.frameW * (t.scaleX || t.scale || 1);
-        var drawH = assets.frameH * (t.scaleY || t.scale || 1);
+        var baseLen = Math.max(window.SMA.SCREEN_W || 1280, window.SMA.SCREEN_H || 720);
+        var drawW = baseLen * (t.scaleX || t.scale || 1);
+        var drawH = assets.frameH * (drawW / assets.frameW) * (t.scaleY || t.scale || 1);
+        var anchor = t.anchor == null ? 0.82 : t.anchor;
         var angle = Math.atan2(t.dirY || 0, t.dirX || 1);
         ctx.save();
         ctx.globalAlpha = alpha;
         ctx.translate(t.x, t.y);
         ctx.rotate(angle);
-        ctx.drawImage(img, frame * assets.frameW, 0, assets.frameW, assets.frameH, -drawW * 0.18, -drawH / 2, drawW, drawH);
+        ctx.drawImage(img, frame * assets.frameW, 0, assets.frameW, assets.frameH, -drawW * anchor, -drawH / 2, drawW, drawH);
         ctx.restore();
     }
     ctx.restore();
@@ -599,6 +611,7 @@ window.SMA.gameLoop = function () {
                 window.SMA.ctx.fillRect(0, 0, window.SMA.SCREEN_W, window.SMA.SCREEN_H);
                 window.SMA.drawStageImageCover(window.SMA.ctx, window.SMA.STAGE_ASSETS.battlefieldBg, 0, 0, window.SMA.SCREEN_W, window.SMA.SCREEN_H);
             }
+            window.SMA.drawKoBlastFx(window.SMA.ctx);
 
             var shakeX = (Math.random() - 0.5) * window.SMA.shake;
             var shakeY = (Math.random() - 0.5) * window.SMA.shake;
@@ -771,7 +784,7 @@ window.SMA.gameLoop = function () {
                     window.SMA.ctx.shadowBlur = 0;
                     window.SMA.ctx.restore();
                 } else { window.SMA.ctx.fillStyle = p.color; window.SMA.ctx.beginPath(); window.SMA.ctx.arc(p.x, p.y, p.w / 2, 0, Math.PI * 2); window.SMA.ctx.fill(); }
-            } window.SMA.drawMageTransientVfx(window.SMA.ctx); window.SMA.drawComets(window.SMA.ctx); window.SMA.drawKoBlastFx(window.SMA.ctx); window.SMA.updateParticles(window.SMA.ctx); window.SMA.drawDebugHitboxes(window.SMA.ctx); window.SMA.ctx.restore();
+            } window.SMA.drawMageTransientVfx(window.SMA.ctx); window.SMA.drawComets(window.SMA.ctx); window.SMA.updateParticles(window.SMA.ctx); window.SMA.drawDebugHitboxes(window.SMA.ctx); window.SMA.ctx.restore();
         } window.SMA.updateHud();
     } catch (e) { reportError("Loop Error: " + e); } window.SMA.animationFrameId = requestAnimationFrame(window.SMA.gameLoop);
 };
@@ -1550,7 +1563,7 @@ window.SMA.Fighter.prototype.checkLedgeGrab = function () {
         }
     }
 };
-window.SMA.Fighter.prototype.checkBounds = function () { var S = window.SMA; var b = S.getActiveBlastBounds ? S.getActiveBlastBounds() : { left: S.BLAST_LEFT, right: S.BLAST_RIGHT, top: S.BLAST_TOP, bottom: S.BLAST_BOTTOM }; var dieDir = null; var dx = this.x; var dy = this.y; if (this.y < b.top) dieDir = 'up'; else if (this.x > b.right) dieDir = 'right'; else if (this.x < b.left) dieDir = 'left'; else if (this.y > b.bottom) dieDir = 'down'; if (dieDir) this.die(dieDir, dx, dy, this.vx, this.vy); };
+window.SMA.Fighter.prototype.checkBounds = function () { var S = window.SMA; var b = S.getActiveBlastBounds ? S.getActiveBlastBounds() : { left: S.BLAST_LEFT, right: S.BLAST_RIGHT, top: S.BLAST_TOP, bottom: S.BLAST_BOTTOM }; var dieDir = null; var dx = this.x + this.w / 2; var dy = this.y + this.h / 2; if (this.y < b.top) dieDir = 'up'; else if (this.x > b.right) dieDir = 'right'; else if (this.x < b.left) dieDir = 'left'; else if (this.y > b.bottom) dieDir = 'down'; if (dieDir) this.die(dieDir, dx, dy, this.vx, this.vy); };
 window.SMA.Fighter.prototype.checkSolids = function () { var S = window.SMA; for (var p of S.platforms) { if (p.type === 'main') { if (this.x < p.x + p.w && this.x + this.w > p.x && this.y < p.y + p.h && this.y + this.h > p.y) { var overlapX = (this.x + this.w / 2) - (p.x + p.w / 2); var overlapY = (this.y + this.h / 2) - (p.y + p.h / 2); var halfW = (this.w + p.w) / 2; var halfH = (this.h + p.h) / 2; var ox = halfW - Math.abs(overlapX); var oy = halfH - Math.abs(overlapY); if (ox < oy) { if (overlapX > 0) { this.x += ox; this.vx = 0; } else { this.x -= ox; this.vx = 0; } } else { if (overlapY > 0) { this.y += oy; this.vy = 0; } else { this.y -= oy; this.vy = 0; this.isGrounded = true; this.jumps = 0; this.currentPlatform = p; this.hasAirDodged = false; this.hasUpSpecial = false; } } } } } };
 window.SMA.Fighter.prototype.performDodge = function (inputKeys) { var S = window.SMA; if (this.dodgeCooldown > 0) return false; if (!this.isGrounded && this.hasAirDodged) return false; this.actionState = 'DODGE'; this.stateTimer = 25; this.invincible = 20; this.dodgeCooldown = 55; var dx = 0; var dy = 0; if (inputKeys.left) dx = -1; if (inputKeys.right) dx = 1; if (inputKeys.up) dy = -1; if (inputKeys.down) dy = 1; if (dx !== 0 || dy !== 0) { var speed = 12; if (dx !== 0 && dy !== 0) { dx *= 0.707; dy *= 0.707; } this.vx = dx * speed; this.vy = dy * speed; } if (!this.isGrounded) this.hasAirDodged = true; S.playSound('jump'); S.createParticles(this.x + 15, this.y + 30, 10, '#fff'); return true; };
 window.SMA.Fighter.prototype.tryGrab = function (opponent) {
