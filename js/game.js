@@ -11,6 +11,15 @@ window.SMA.showNotification = function (text, duration) {
 window.SMA.triggerComet = function (x, y, dir, col) { if (window.SMA.isHost && window.SMA.isOnline) window.SMA.syncEvents.push({ type: 'comet', x: x, y: y, dir: dir, c: col }); window.SMA.comets.push({ x: x, y: y, vx: (Math.random() - 0.5) * 10, vy: -(Math.random() * 10 + 10), color: col, l: 60 }); };
 window.SMA.drawComets = function (ctx) { for (var i = window.SMA.comets.length - 1; i >= 0; i--) { var c = window.SMA.comets[i]; ctx.fillStyle = c.color; ctx.save(); ctx.shadowBlur = 20; ctx.shadowColor = c.color; ctx.beginPath(); ctx.arc(c.x, c.y, 20, 0, Math.PI * 2); ctx.fill(); ctx.beginPath(); ctx.strokeStyle = c.color; ctx.lineWidth = 10; ctx.moveTo(c.x, c.y); ctx.lineTo(c.x - c.vx * 4, c.y - c.vy * 4); ctx.stroke(); ctx.restore(); } };
 window.SMA.koBlastTrails = window.SMA.koBlastTrails || [];
+window.SMA.KO_TRAIL_ASSETS = {
+    red: { key: 'ko_trail_red_sheet_v1', src: 'assets/effects/ko_trail_red_sheet.png?v=1' },
+    blue: { key: 'ko_trail_blue_sheet_v1', src: 'assets/effects/ko_trail_blue_sheet.png?v=1' },
+    yellow: { key: 'ko_trail_yellow_sheet_v1', src: 'assets/effects/ko_trail_yellow_sheet.png?v=1' },
+    green: { key: 'ko_trail_green_sheet_v1', src: 'assets/effects/ko_trail_green_sheet.png?v=1' },
+    frameW: 512,
+    frameH: 192,
+    frames: 4
+};
 window.SMA.getKoBlastVector = function (dir, vx, vy) {
     var mag = Math.sqrt((vx || 0) * (vx || 0) + (vy || 0) * (vy || 0));
     if (mag > 0.2) return { x: vx / mag, y: vy / mag };
@@ -44,63 +53,56 @@ window.SMA.colorToRgb = function (color) {
     }
     return { r: 255, g: 255, b: 255 };
 };
-window.SMA.darkenKoColor = function (color, amount) {
+window.SMA.getKoTrailAssetName = function (color) {
+    var colors = window.SMA.PLAYER_COLORS || [];
+    if (color === colors[0]) return 'red';
+    if (color === colors[1]) return 'blue';
+    if (color === colors[2]) return 'yellow';
+    if (color === colors[3]) return 'green';
     var rgb = window.SMA.colorToRgb(color);
-    var m = amount == null ? 0.72 : amount;
-    return 'rgb(' + Math.floor(rgb.r * m) + ',' + Math.floor(rgb.g * m) + ',' + Math.floor(rgb.b * m) + ')';
+    if (rgb.b > rgb.r && rgb.b > rgb.g) return 'blue';
+    if (rgb.g > rgb.r && rgb.g > rgb.b) return 'green';
+    if (rgb.r > 180 && rgb.g > 100) return 'yellow';
+    return 'red';
+};
+window.SMA.preloadKoTrailAssets = function () {
+    var assets = window.SMA.KO_TRAIL_ASSETS;
+    if (!assets || !window.SMA.getSpriteAsset) return;
+    ['red', 'blue', 'yellow', 'green'].forEach(function (name) {
+        var asset = assets[name];
+        if (asset) window.SMA.getSpriteAsset(asset.key, asset.src);
+    });
 };
 window.SMA.triggerKoBlastFx = function (x, y, dir, col, vx, vy) {
     if (window.SMA.isHost && window.SMA.isOnline) window.SMA.syncEvents.push({ type: 'ko_fx', x: x, y: y, dir: dir, c: col, vx: vx || 0, vy: vy || 0 });
     var v = window.SMA.getKoBlastVector(dir, vx, vy);
     var p = window.SMA.getKoBlastPoint(x, y, dir);
-    var perpX = -v.y;
-    var perpY = v.x;
-    var color = window.SMA.darkenKoColor(col || '#ffffff', 0.62);
-    for (var i = 0; i < 19; i++) {
-        var offset = (i - 9) * 17 + (Math.random() - 0.5) * 16;
-        var length = 560 + Math.random() * 420;
-        var speed = 7 + Math.random() * 5;
-        window.SMA.koBlastTrails.push({
-            x: p.x + perpX * offset - v.x * (20 + Math.random() * 50),
-            y: p.y + perpY * offset - v.y * (20 + Math.random() * 50),
-            vx: v.x * speed,
-            vy: v.y * speed,
-            dirX: v.x,
-            dirY: v.y,
-            len: length,
-            width: 1.4 + Math.random() * 1.8,
-            color: color,
-            life: 44 + Math.floor(Math.random() * 14),
-            maxLife: 58
-        });
-    }
+    if (window.SMA.preloadKoTrailAssets) window.SMA.preloadKoTrailAssets();
+    window.SMA.koBlastTrails.push({ x: p.x, y: p.y, dirX: v.x, dirY: v.y, asset: window.SMA.getKoTrailAssetName(col), life: 34, maxLife: 34, scaleX: 5.6, scaleY: 2.9 });
 };
 window.SMA.updateKoBlastFx = function () {
-    for (var i = window.SMA.koBlastTrails.length - 1; i >= 0; i--) { var t = window.SMA.koBlastTrails[i]; t.x += t.vx; t.y += t.vy; t.life--; if (t.life <= 0) window.SMA.koBlastTrails.splice(i, 1); }
+    for (var i = window.SMA.koBlastTrails.length - 1; i >= 0; i--) { var t = window.SMA.koBlastTrails[i]; t.life--; if (t.life <= 0) window.SMA.koBlastTrails.splice(i, 1); }
 };
 window.SMA.drawKoBlastFx = function (ctx) {
     ctx.save();
-    ctx.globalCompositeOperation = 'lighter';
-    ctx.lineCap = 'round';
     for (var i = 0; i < window.SMA.koBlastTrails.length; i++) {
         var t = window.SMA.koBlastTrails[i];
-        var a = Math.max(0, Math.min(1, t.life / t.maxLife));
-        var tailX = t.x - t.dirX * t.len;
-        var tailY = t.y - t.dirY * t.len;
-        var rgb = window.SMA.colorToRgb(t.color);
-        var grad = ctx.createLinearGradient(tailX, tailY, t.x, t.y);
-        grad.addColorStop(0, 'rgba(' + rgb.r + ',' + rgb.g + ',' + rgb.b + ',0)');
-        grad.addColorStop(0.32, 'rgba(' + rgb.r + ',' + rgb.g + ',' + rgb.b + ',' + (0.86 * a) + ')');
-        grad.addColorStop(1, t.color);
-        ctx.globalAlpha = a;
-        ctx.shadowBlur = 18;
-        ctx.shadowColor = t.color;
-        ctx.strokeStyle = grad;
-        ctx.lineWidth = t.width;
-        ctx.beginPath();
-        ctx.moveTo(tailX, tailY);
-        ctx.lineTo(t.x, t.y);
-        ctx.stroke();
+        var assets = window.SMA.KO_TRAIL_ASSETS;
+        var asset = assets && assets[t.asset || 'red'];
+        var img = asset && window.SMA.getSpriteAsset ? window.SMA.getSpriteAsset(asset.key, asset.src) : null;
+        if (!img || !img.complete || !img.naturalWidth) continue;
+        var progress = 1 - (t.life / t.maxLife);
+        var frame = Math.min(assets.frames - 1, Math.floor(progress * assets.frames));
+        var alpha = progress < 0.86 ? 1 : Math.max(0, 1 - (progress - 0.86) / 0.14);
+        var drawW = assets.frameW * (t.scaleX || t.scale || 1);
+        var drawH = assets.frameH * (t.scaleY || t.scale || 1);
+        var angle = Math.atan2(t.dirY || 0, t.dirX || 1);
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.translate(t.x, t.y);
+        ctx.rotate(angle);
+        ctx.drawImage(img, frame * assets.frameW, 0, assets.frameW, assets.frameH, -drawW * 0.18, -drawH / 2, drawW, drawH);
+        ctx.restore();
     }
     ctx.restore();
 };
@@ -329,7 +331,7 @@ window.SMA.applyTopExclusionLayout = function () {
 window.SMA.bootGame = function () {
     if (!window.SMA.Fighter) { alert("Fighter Class Missing"); return; }
     if (!window.SMA.CHAR_DATA) { alert("Data Missing"); return; }
-    if (window.SMA.animationFrameId) cancelAnimationFrame(window.SMA.animationFrameId); window.SMA.initCanvas(); window.SMA.gameRunning = true; window.SMA.gameState = 'COUNTDOWN'; window.SMA.countdownTimer = 180; window.SMA.matchTimer = window.SMA.MATCH_TIME_FRAMES; window.SMA.suddenDeathTimer = 0; window.SMA.koBlastTrails = []; var elTxtOvl = document.getElementById('text-overlay'); if (elTxtOvl) elTxtOvl.style.opacity = 1;
+    if (window.SMA.animationFrameId) cancelAnimationFrame(window.SMA.animationFrameId); window.SMA.initCanvas(); window.SMA.gameRunning = true; window.SMA.gameState = 'COUNTDOWN'; window.SMA.countdownTimer = 180; window.SMA.matchTimer = window.SMA.MATCH_TIME_FRAMES; window.SMA.suddenDeathTimer = 0; window.SMA.koBlastTrails = []; if (window.SMA.preloadKoTrailAssets) window.SMA.preloadKoTrailAssets(); var elTxtOvl = document.getElementById('text-overlay'); if (elTxtOvl) elTxtOvl.style.opacity = 1;
 
     // STAGE INIT
     var stg = window.SMA.selectedStage;
