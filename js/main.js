@@ -18,7 +18,7 @@ window.SMA.FRICTION = 0.82; window.SMA.KB_FRICTION = 0.95;
 window.SMA.SPEED = 1.1; window.SMA.JUMP_FORCE = -10.0;
 window.SMA.SCREEN_W = 1280; window.SMA.SCREEN_H = 720;
 window.SMA.WORLD_W = 1500; window.SMA.WORLD_H = 1600;
-window.SMA.BLAST_LEFT = -250; window.SMA.BLAST_RIGHT = 1750; window.SMA.BLAST_TOP = -150; window.SMA.BLAST_BOTTOM = 1800;
+window.SMA.BLAST_LEFT = -250; window.SMA.BLAST_RIGHT = 1750; window.SMA.BLAST_TOP = -130; window.SMA.BLAST_BOTTOM = 1800;
 window.SMA.gameRunning = false; window.SMA.isOnline = false; window.SMA.isHost = true; window.SMA.isSolo = false;
 window.SMA.isInCSS = false; // "In Locked Room State" (SSS or CSS)
 window.SMA.myRole = 'host';
