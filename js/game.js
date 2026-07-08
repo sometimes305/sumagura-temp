@@ -604,7 +604,7 @@ window.SMA.gameLoop = function () {
                     window.SMA.checkGameSet();
                     // 繝阪ャ繝医Ρ繝ｼ繧ｯ蜷梧悄
                     if (window.SMA.isOnline) {
-                        var pkt = { type: 'sync', frame: window.SMA.lockstepFrame || 0, inputDelayFrames: window.SMA.ONLINE_INPUT_DELAY_FRAMES, stg: window.SMA.selectedStage, gState: window.SMA.gameState, cd: window.SMA.countdownTimer, mt: window.SMA.matchTimer, sd: window.SMA.suddenDeathTimer, playerCount: pc, events: window.SMA.syncEvents, projs: window.SMA.projectiles.map(function (p) { return { x: p.x, y: p.y, vx: p.vx, vy: p.vy, type: p.type, w: p.w, h: p.h, hitW: p.hitW, hitH: p.hitH, hitOffsetX: p.hitOffsetX, hitOffsetY: p.hitOffsetY, visualKind: p.visualKind, color: p.color, particleColor: p.particleColor, angle: p.angle || 0, age: p.age || 0, maxLife: p.maxLife || p.life || 0, surfaceY: p.surfaceY }; }), win: (window.SMA.gameState === 'GAMEOVER' ? document.getElementById('result-text').innerText : null) };
+                        var pkt = { type: 'sync', frame: window.SMA.lockstepFrame || 0, inputDelayFrames: window.SMA.ONLINE_INPUT_DELAY_FRAMES, stg: window.SMA.selectedStage, gState: window.SMA.gameState, cd: window.SMA.countdownTimer, mt: window.SMA.matchTimer, sd: window.SMA.suddenDeathTimer, playerCount: pc, events: window.SMA.syncEvents, projs: window.SMA.projectiles.map(function (p) { return { x: p.x, y: p.y, vx: p.vx, vy: p.vy, type: p.type, w: p.w, h: p.h, hitW: p.hitW, hitH: p.hitH, hitOffsetX: p.hitOffsetX, hitOffsetY: p.hitOffsetY, visualKind: p.visualKind, sourceCharId: p.sourceCharId, sourceAttackType: p.sourceAttackType, color: p.color, particleColor: p.particleColor, angle: p.angle || 0, age: p.age || 0, maxLife: p.maxLife || p.life || 0, surfaceY: p.surfaceY }; }), win: (window.SMA.gameState === 'GAMEOVER' ? document.getElementById('result-text').innerText : null) };
                         // 蜷・・繝ｬ繧､繝､繝ｼ縺ｮ迥ｶ諷九ｒ霑ｽ蜉
                         for (var si = 0; si < pc; si++) {
                             pkt['p' + (si + 1)] = allPlayers[si].serialize();
@@ -986,7 +986,7 @@ window.SMA.checkHit = function (atk, vic) {
                 var projectileAtkKbMult = p.attackKbMult || 1.0;
                 var kb = (p.kb + (Math.pow(vic.percent, 1.2) * scale)) * kbMult * projectileAtkKbMult;
 
-                vic.vx = (p.vx > 0 ? 1 : -1) * kb * 2.0; if (p.vx === 0) vic.vx = (p.x < vic.x + vic.w / 2 ? 1 : -1) * kb * 2.0; vic.vy = -kb * 2.0; vic.enterState('STUN', Math.min(60, kb * 1.5)); window.SMA.hitStop = Math.floor(kb * 0.5); window.SMA.shake = 5; if (p.type === 'witch_potion' && window.SMA.spawnWitchPotionExplosionHit) window.SMA.spawnWitchPotionExplosionHit(p, p.x, p.y, vic.playerRole); else if (p.type === 'witch_potion' && window.SMA.triggerWitchPotionExplosion) window.SMA.triggerWitchPotionExplosion(p.x, p.y, Math.max(1, (p.w || 26) / 26)); else window.SMA.createParticles(vic.x, vic.y, 10, p.particleColor || p.color); window.SMA.playSound('hit'); if (p.type === 'witch_potion_explosion') { p.hitRoles = p.hitRoles || []; p.hitRoles.push(vic.playerRole); } else if (p.type !== 'fire_trap') window.SMA.projectiles.splice(i, 1);
+                vic.vx = (p.vx > 0 ? 1 : -1) * kb * 2.0; if (p.vx === 0) vic.vx = (p.x < vic.x + vic.w / 2 ? 1 : -1) * kb * 2.0; vic.vy = -kb * 2.0; vic.enterState('STUN', Math.min(60, kb * 1.5)); window.SMA.hitStop = Math.floor(kb * 0.5); window.SMA.shake = 5; if (p.sourceCharId === 'mage' && p.type === 'magic' && (p.sourceAttackType === 'NEUTRAL' || p.sourceAttackType === 'AIR_NEUTRAL' || p.sourceAttackType === 'SIDE' || p.sourceAttackType === 'AIR_SIDE') && window.SMA.spawnMageProjectileImpact) window.SMA.spawnMageProjectileImpact(vic.x + vic.w / 2, vic.y + vic.h / 2, p.sourceAttackType === 'SIDE' || p.sourceAttackType === 'AIR_SIDE' ? 1.2 : 0.85, p.vx < 0); else if (p.type === 'witch_potion' && window.SMA.spawnWitchPotionExplosionHit) window.SMA.spawnWitchPotionExplosionHit(p, p.x, p.y, vic.playerRole); else if (p.type === 'witch_potion' && window.SMA.triggerWitchPotionExplosion) window.SMA.triggerWitchPotionExplosion(p.x, p.y, Math.max(1, (p.w || 26) / 26)); else window.SMA.createParticles(vic.x, vic.y, 10, p.particleColor || p.color); window.SMA.playSound('hit'); if (p.type === 'witch_potion_explosion') { p.hitRoles = p.hitRoles || []; p.hitRoles.push(vic.playerRole); } else if (p.type !== 'fire_trap') window.SMA.projectiles.splice(i, 1);
             }
         }
     }
@@ -1199,16 +1199,13 @@ window.SMA.checkGameSet = function () {
     }
 };
 window.SMA.updateHud = function () {
-    var getStockIcon = function (id) {
-        if (id === 'sword') return 'S';
-        if (id === 'mage') return 'M';
-        if (id === 'brawler') return 'B';
-        if (id === 'spear') return 'P';
-        if (id === 'hammer') return 'H';
-        if (id === 'mirror') return 'R';
-        if (id === 'angel') return 'A';
-        if (id === 'witch_apprentice') return 'W';
-        return '*';
+    var getStockHtml = function (stocks, pIndex) {
+        var color = (window.SMA.PLAYER_COLORS && window.SMA.PLAYER_COLORS[pIndex]) || '#fff';
+        var html = '';
+        for (var si = 0; si < Math.max(0, stocks); si++) {
+            html += '<span class="stock-dot" style="background:' + color + '"></span>';
+        }
+        return html;
     };
     var getDamageColor = function (pct, pIndex) {
         if (pct >= 100) return '#c0392b'; // 豼・＞襍､
@@ -1239,7 +1236,7 @@ window.SMA.updateHud = function () {
             if (window.SMA.lobbyState) {
                 pIconUrl = window.SMA.lobbyState['p' + (hi + 1) + 'Icon'];
             }
-            if (pIconUrl) {
+            if (false && pIconUrl) {
                 // 繝励Ξ繧､繝､繝ｼ繧｢繧､繧ｳ繝ｳ逕ｻ蜒上〒繧ｹ繝医ャ繧ｯ陦ｨ遉ｺ
                 var stockHtml = '';
                 for (var si = 0; si < Math.max(0, player.stocks); si++) {
@@ -1248,8 +1245,7 @@ window.SMA.updateHud = function () {
                 stkEl.innerHTML = stockHtml;
             } else {
                 // 繧｢繧､繧ｳ繝ｳ縺ｪ縺玲凾縺ｯ繧ｭ繝｣繝ｩ邨ｵ譁・ｭ励↓繝輔か繝ｼ繝ｫ繝舌ャ繧ｯ
-                var icon = getStockIcon(player.charId);
-                stkEl.innerText = icon.repeat(Math.max(0, player.stocks));
+                stkEl.innerHTML = getStockHtml(player.stocks, hi);
             }
         }
 
@@ -2423,14 +2419,17 @@ window.SMA.Fighter.prototype.handleAttackFrame = function () {
                 life: 60,
                 maxLife: 60,
                 age: 0,
-                color: '#73f1bf'
+                color: '#73f1bf',
+                sourceCharId: this.charId,
+                sourceAttackType: this.currentAttackType
             };
             if (atk.type === 'shot') {
                 var visualW = r >= 22.5
                     ? Math.max(120, Math.min(270, (r * 2) * 3.15))
                     : Math.max(46, Math.min(104, (r * 2) * 2.7));
                 var visualH = visualW * 0.72;
-                var frontExtend = Math.max(0, visualW / 2 - r);
+                var isMageSideShot = this.charId === 'mage' && (this.currentAttackType === 'SIDE' || this.currentAttackType === 'AIR_SIDE');
+                var frontExtend = Math.max(0, visualW / 2 - r) * (isMageSideShot ? 0.55 : 1);
                 p.hitW = (r * 2) + frontExtend;
                 p.hitH = Math.max(r * 2, visualH * (r >= 22.5 ? 0.58 : 0.82));
                 p.hitOffsetX = (this.facingRight ? 1 : -1) * (frontExtend / 2);
@@ -2974,6 +2973,10 @@ window.SMA.spawnMageVfx = function (kind, x, y, opts) {
         flipX: !!opts.flipX
     });
 };
+window.SMA.spawnMageProjectileImpact = function (x, y, scale, flipX) {
+    window.SMA.spawnMageVfx('magic_impact', x, y, { life: 14, scale: scale || 1, flipX: !!flipX });
+    window.SMA.createParticles(x, y, 8, '#b8fff0');
+};
 window.SMA.drawMageTransientVfx = function (ctx) {
     var list = window.SMA.mageVfx || [];
     var A = window.SMA.MAGE_VFX_ANIMS || {};
@@ -2987,6 +2990,10 @@ window.SMA.drawMageTransientVfx = function (ctx) {
             var expFrame = Math.floor(progress * explosionAnim.frames);
             var expSize = 122 * (fx.scale || 1);
             window.SMA.drawMageVfxSheet(ctx, explosionAnim, expFrame, fx.x, fx.y, expSize, expSize, 0, fx.flipX);
+        } else if (fx.kind === 'magic_impact') {
+            var impactFrame = Math.floor(progress * A.overheadExplosion.frames);
+            var impactSize = 82 * (fx.scale || 1);
+            window.SMA.drawMageVfxSheet(ctx, A.overheadExplosion, impactFrame, fx.x, fx.y, impactSize, impactSize, 0, fx.flipX);
         } else if (fx.kind === 'fire_pillar') {
             var pillarFrame = Math.floor(progress * A.firePillar.frames);
             var pillarH = 154 * (fx.scale || 1);

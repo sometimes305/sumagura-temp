@@ -102,6 +102,18 @@ canvas {
     font-size: 16px;
     color: #dfe6e9;
     letter-spacing: 2px;
+    display: flex;
+    justify-content: center;
+    gap: 3px;
+}
+
+.stock-dot {
+    display: inline-block;
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.9);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
 }
 
 #match-timer {
@@ -311,7 +323,7 @@ canvas {
 
 #btn-attack {
     bottom: 15%;
-    right: 32%;
+    right: 8%;
     width: 65px;
     height: 65px;
     background: #d63031;
@@ -337,7 +349,7 @@ canvas {
 
 #btn-grab {
     bottom: 15%;
-    right: 8%;
+    right: 32%;
     width: 60px;
     height: 60px;
     background: #fdcb6e;
@@ -1075,16 +1087,61 @@ select {
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
-.char-card .icon.witch-preview {
+.char-card .icon.witch-preview,
+#card-sword .icon,
+#card-mage .icon,
+#card-brawler .icon,
+#card-spear .icon,
+#card-hammer .icon,
+#card-mirror .icon,
+#card-angel .icon {
     width: 52px;
     height: 52px;
     margin-bottom: 1px;
-    background-image: url('../assets/characters/witch_apprentice/witch_idle_sheet.png?v=3');
     background-repeat: no-repeat;
     background-size: 400% 100%;
     background-position: 0 0;
     image-rendering: auto;
+    color: transparent;
+    font-size: 0;
+    line-height: 0;
     text-shadow: none;
+}
+
+#card-sword .icon {
+    background-image: url('../assets/characters/sword/chibi_idle_sheet.png?v=14');
+}
+
+#card-mage .icon {
+    background-image: url('../assets/characters/mage/mage_idle_sheet.png?v=2');
+}
+
+#card-brawler .icon {
+    width: 76px;
+    height: 43px;
+    background-image: url('../assets/characters/brawler/brawler_idle_sheet.png?v=18');
+}
+
+#card-spear .icon {
+    width: 76px;
+    height: 43px;
+    background-image: url('../assets/characters/spear/spear_idle_sheet.png?v=3');
+}
+
+#card-hammer .icon {
+    background-image: url('../assets/characters/hammer/hammer_idle_sheet.png?v=1');
+}
+
+#card-mirror .icon {
+    background-image: url('../assets/characters/mirror/mirror_idle_sheet.png?v=1');
+}
+
+#card-angel .icon {
+    background-image: url('../assets/characters/angel/angel_idle_sheet.png?v=5');
+}
+
+.char-card .icon.witch-preview {
+    background-image: url('../assets/characters/witch_apprentice/witch_idle_sheet.png?v=3');
 }
 
 .char-card .label {
