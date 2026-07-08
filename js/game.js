@@ -118,7 +118,7 @@ window.SMA.drawKoBlastFx = function (ctx) {
     }
     ctx.restore();
 };
-window.SMA.createParticles = function (x, y, n, c) { if (window.SMA.isHost && window.SMA.isOnline) window.SMA.syncEvents.push({ type: 'part', x: x, y: y, n: n, c: c }); for (var i = 0; i < n; i++) window.SMA.particles.push({ x: x, y: y, vx: (Math.random() - 0.5) * 10, vy: (Math.random() - 0.5) * 10, color: c, l: 20 }); };
+window.SMA.createParticles = function (x, y, n, c) { if (window.SMA.isHost && window.SMA.isOnline) window.SMA.syncEvents.push({ type: 'part', x: x, y: y, n: n, c: c }); for (var i = 0; i < n; i++) window.SMA.particles.push({ x: x, y: y, vx: (Math.random() - 0.5) * 10, vy: (Math.random() - 0.5) * 10, color: c, life: 20 }); };
 window.SMA.updateParticles = function (ctx) { for (var i = window.SMA.particles.length - 1; i >= 0; i--) { var p = window.SMA.particles[i]; ctx.fillStyle = p.color; ctx.globalAlpha = p.life / 30; ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1; } };
 window.SMA.debugHitboxes = window.SMA.debugHitboxes || false;
 window.SMA.drawDebugHitboxes = function (ctx) {
@@ -136,7 +136,7 @@ window.SMA.drawDebugHitboxes = function (ctx) {
         ctx.strokeRect(f.x, f.y, f.w, f.h);
         ctx.fillRect(f.x, f.y, f.w, f.h);
         if (f.hitbox && f.hitbox.active) {
-            var hb = f.hitbox;
+            var hb = window.SMA.getEffectiveHitbox ? window.SMA.getEffectiveHitbox(f) : f.hitbox;
             ctx.strokeStyle = 'rgba(255, 35, 35, 0.95)';
             ctx.fillStyle = 'rgba(255, 35, 35, 0.25)';
             ctx.fillRect(hb.x, hb.y, hb.w, hb.h);
@@ -493,7 +493,7 @@ window.SMA.gameLoop = function () {
                         if (lockstepInputs) {
                             var lKeys = lockstepInputs[role] || S.emptyInputKeys();
                             var localLedgeLocked = player.actionState === 'LEDGE' && player.ledgeInputLock > 0;
-                            if (!localLedgeLocked && lKeys.triggerStartCharge) player.startCharge();
+                            if (!localLedgeLocked && lKeys.triggerStartCharge) player.startCharge(lKeys);
                             if (!localLedgeLocked && lKeys.triggerReleaseAttack) player.releaseAttack(lKeys.attackType);
                             if (!localLedgeLocked && lKeys.triggerJump) player.triggerJump(lKeys);
                             if (!localLedgeLocked && lKeys.triggerGrab) player.tryGrab(nearestEnemy);
@@ -502,7 +502,7 @@ window.SMA.gameLoop = function () {
                             // 1P: 繝帙せ繝医・蜈･蜉・
                             var p1Keys = soloDelayedInput || S.myKeys;
                             var p1LedgeLocked = player.actionState === 'LEDGE' && player.ledgeInputLock > 0;
-                            if (!p1LedgeLocked && p1Keys.triggerStartCharge) player.startCharge();
+                            if (!p1LedgeLocked && p1Keys.triggerStartCharge) player.startCharge(p1Keys);
                             if (!p1LedgeLocked && p1Keys.triggerReleaseAttack) player.releaseAttack(p1Keys.attackType);
                             if (!p1LedgeLocked && p1Keys.triggerJump) player.triggerJump(p1Keys);
                             if (!p1LedgeLocked && p1Keys.triggerGrab) player.tryGrab(nearestEnemy);
@@ -519,7 +519,7 @@ window.SMA.gameLoop = function () {
                             while (events.length > 0) {
                                 var ev = events.shift();
                                 var remoteLedgeLocked = player.actionState === 'LEDGE' && player.ledgeInputLock > 0;
-                                if (!remoteLedgeLocked && ev.triggerStartCharge) player.startCharge();
+                                if (!remoteLedgeLocked && ev.triggerStartCharge) player.startCharge(ev);
                                 if (!remoteLedgeLocked && ev.triggerReleaseAttack) player.releaseAttack(ev.attackType);
                                 if (!remoteLedgeLocked && ev.triggerJump) player.triggerJump(ev);
                                 if (!remoteLedgeLocked && ev.triggerGrab) player.tryGrab(nearestEnemy);
@@ -554,7 +554,43 @@ window.SMA.gameLoop = function () {
                                     if (owner) { var dx = owner.x + owner.w / 2 - p.x; var dy = owner.y + owner.h / 2 - p.y; var dist = Math.sqrt(dx * dx + dy * dy); if (dist < 30) { window.SMA.projectiles.splice(i, 1); continue; } p.vx += dx * 0.05; p.vy += dy * 0.05; }
                                 } p.angle += 0.5;
                             } p.x += p.vx; p.y += p.vy;
-                        } else { p.x += p.vx; p.y += p.vy; p.life--; if (p.type === 'fire') { for (var j = 0; j < window.SMA.platforms.length; j++) { var plat = window.SMA.platforms[j]; if (p.y > plat.y && p.y < plat.y + plat.h && p.x > plat.x && p.x < plat.x + plat.w) { p.type = 'fire_trap'; p.vx = 0; p.vy = 0; p.y = plat.y - 10; p.surfaceY = plat.y; p.life = 60; p.maxLife = 60; p.age = 0; p.w = 60; p.h = 40; p.hitW = 82; p.hitH = 125; p.hitOffsetX = 0; p.hitOffsetY = -62.5; window.SMA.playSound('special'); window.SMA.createParticles(p.x, p.surfaceY, 10, '#e17055'); break; } } } } if (p.life <= 0) window.SMA.projectiles.splice(i, 1);
+                        } else {
+                            if (p.type === 'witch_potion') {
+                                var prevY = p.y;
+                                p.vy += (p.gravity !== undefined ? p.gravity : 0.32);
+                                p.angle = (p.angle || 0) + 0.2;
+                                p.x += p.vx;
+                                p.y += p.vy;
+                                p.life--;
+                                var pr = Math.max(p.w || 0, p.h || 0) / 2;
+                                var overlapsPotionTarget = false;
+                                for (var pk = 0; pk < allPlayers.length; pk++) {
+                                    var potionTarget = allPlayers[pk];
+                                    if (!potionTarget || potionTarget.playerRole === p.ownerRole || potionTarget.stocks <= 0) continue;
+                                    if (p.x + pr > potionTarget.x && p.x - pr < potionTarget.x + potionTarget.w && p.y + pr > potionTarget.y && p.y - pr < potionTarget.y + potionTarget.h) {
+                                        overlapsPotionTarget = true;
+                                        break;
+                                    }
+                                }
+                                for (var pj = 0; pj < window.SMA.platforms.length; pj++) {
+                                    var potionPlat = window.SMA.platforms[pj];
+                                    if (!overlapsPotionTarget && p.vy >= 0 && p.x + pr > potionPlat.x && p.x - pr < potionPlat.x + potionPlat.w && prevY + pr <= potionPlat.y && p.y + pr >= potionPlat.y) {
+                                        if (window.SMA.spawnWitchPotionExplosionHit) window.SMA.spawnWitchPotionExplosionHit(p, p.x, potionPlat.y);
+                                        else if (window.SMA.triggerWitchPotionExplosion) window.SMA.triggerWitchPotionExplosion(p.x, potionPlat.y, Math.max(1, (p.w || 26) / 26));
+                                        else window.SMA.createParticles(p.x, potionPlat.y, 8, p.particleColor || p.color || '#ff334d');
+                                        window.SMA.projectiles.splice(i, 1);
+                                        p = null;
+                                        break;
+                                    }
+                                }
+                                if (!p) continue;
+                            } else {
+                                p.x += p.vx;
+                                p.y += p.vy;
+                                p.life--;
+                                if (p.type === 'fire') { for (var j = 0; j < window.SMA.platforms.length; j++) { var plat = window.SMA.platforms[j]; if (p.y > plat.y && p.y < plat.y + plat.h && p.x > plat.x && p.x < plat.x + plat.w) { p.type = 'fire_trap'; p.vx = 0; p.vy = 0; p.y = plat.y - 10; p.surfaceY = plat.y; p.life = 60; p.maxLife = 60; p.age = 0; p.w = 60; p.h = 40; p.hitW = 82; p.hitH = 125; p.hitOffsetX = 0; p.hitOffsetY = -62.5; window.SMA.playSound('special'); window.SMA.createParticles(p.x, p.surfaceY, 10, '#e17055'); break; } } }
+                            }
+                        } if (p.life <= 0) window.SMA.projectiles.splice(i, 1);
                     }
                     // 繝偵ャ繝亥愛螳・ 蜈ｨ繝励Ξ繧､繝､繝ｼ縺ｮ邨・∩蜷医ｏ縺・
                     for (var ai = 0; ai < pc; ai++) {
@@ -812,7 +848,7 @@ window.SMA.gameLoop = function () {
                 });
             } catch (e) { }
             for (var i = 0; i < window.SMA.projectiles.length; i++) {
-                var p = window.SMA.projectiles[i]; if (window.SMA.drawMageProjectileVfx && window.SMA.drawMageProjectileVfx(window.SMA.ctx, p)) { continue; } if (p.type === 'fire_trap') { window.SMA.ctx.save(); for (var k = 0; k < 3; k++) { window.SMA.ctx.fillStyle = "rgba(255, " + (Math.floor(Math.random() * 150) + 50) + ", 0, " + (0.5 + Math.random() * 0.5) + ")"; var w = p.w * (0.8 + Math.random() * 0.4); var h = p.h * (1.0 + Math.random() * 0.5); var fx = p.x + (Math.random() - 0.5) * 20; window.SMA.ctx.beginPath(); window.SMA.ctx.moveTo(fx - w / 2, p.y + 40); window.SMA.ctx.lineTo(fx + w / 2, p.y + 40); window.SMA.ctx.lineTo(fx, p.y - h); window.SMA.ctx.fill(); } window.SMA.ctx.restore(); } else if (p.type === 'spear_throw') { try { window.SMA.ctx.save(); window.SMA.ctx.translate(p.x, p.y); window.SMA.ctx.rotate(p.angle); window.SMA.ctx.translate(-35, 0); window.SMA.drawTrident(window.SMA.ctx, 0, 0, 0, p.color); window.SMA.ctx.restore(); } catch (e) { } } else if (p.type === 'shockwave') { if (window.SMA.drawSpearGroundShockwave && window.SMA.drawSpearGroundShockwave(window.SMA.ctx, p)) { continue; } window.SMA.ctx.fillStyle = "#ffeaa7"; window.SMA.ctx.beginPath(); window.SMA.ctx.arc(p.x, p.y, p.w / 2, 0, Math.PI, true); window.SMA.ctx.fill(); } else if (p.type === 'angel_arrow') {
+                var p = window.SMA.projectiles[i]; if (window.SMA.drawMageProjectileVfx && window.SMA.drawMageProjectileVfx(window.SMA.ctx, p)) { continue; } if (p.type === 'fire_trap') { window.SMA.ctx.save(); for (var k = 0; k < 3; k++) { window.SMA.ctx.fillStyle = "rgba(255, " + (Math.floor(Math.random() * 150) + 50) + ", 0, " + (0.5 + Math.random() * 0.5) + ")"; var w = p.w * (0.8 + Math.random() * 0.4); var h = p.h * (1.0 + Math.random() * 0.5); var fx = p.x + (Math.random() - 0.5) * 20; window.SMA.ctx.beginPath(); window.SMA.ctx.moveTo(fx - w / 2, p.y + 40); window.SMA.ctx.lineTo(fx + w / 2, p.y + 40); window.SMA.ctx.lineTo(fx, p.y - h); window.SMA.ctx.fill(); } window.SMA.ctx.restore(); } else if (p.type === 'spear_throw') { try { window.SMA.ctx.save(); window.SMA.ctx.translate(p.x, p.y); window.SMA.ctx.rotate(p.angle); window.SMA.ctx.translate(-35, 0); window.SMA.drawTrident(window.SMA.ctx, 0, 0, 0, p.color); window.SMA.ctx.restore(); } catch (e) { } } else if (p.type === 'shockwave') { if (window.SMA.drawSpearGroundShockwave && window.SMA.drawSpearGroundShockwave(window.SMA.ctx, p)) { continue; } window.SMA.ctx.fillStyle = "#ffeaa7"; window.SMA.ctx.beginPath(); window.SMA.ctx.arc(p.x, p.y, p.w / 2, 0, Math.PI, true); window.SMA.ctx.fill(); } else if (p.type === 'witch_potion') { if (window.SMA.drawWitchPotionProjectile && window.SMA.drawWitchPotionProjectile(window.SMA.ctx, p)) { continue; } window.SMA.ctx.fillStyle = p.color; window.SMA.ctx.beginPath(); window.SMA.ctx.arc(p.x, p.y, p.w / 2, 0, Math.PI * 2); window.SMA.ctx.fill(); } else if (p.type === 'witch_potion_explosion') { var ep = 1 - Math.max(0, (p.life || 0) / Math.max(1, p.maxLife || 3)); window.SMA.ctx.save(); window.SMA.ctx.globalAlpha = 0.5 * (1 - ep); window.SMA.ctx.fillStyle = '#ff334d'; window.SMA.ctx.beginPath(); window.SMA.ctx.arc(p.x, p.y, (p.w || 46) * (0.35 + ep * 0.35), 0, Math.PI * 2); window.SMA.ctx.fill(); window.SMA.ctx.globalAlpha = 0.75 * (1 - ep); window.SMA.ctx.strokeStyle = '#fff0a8'; window.SMA.ctx.lineWidth = 2; window.SMA.ctx.beginPath(); window.SMA.ctx.arc(p.x, p.y, (p.w || 46) * 0.5, 0, Math.PI * 2); window.SMA.ctx.stroke(); window.SMA.ctx.restore(); } else if (p.type === 'angel_arrow') {
                     if (window.SMA.drawAngelArrowProjectile && window.SMA.drawAngelArrowProjectile(window.SMA.ctx, p)) { continue; }
                     // 繧ｨ繝ｳ繧ｸ繧ｧ繝ｫ蠑鍋泙: 遏｢縺ｮ蠖｢縺ｧ謠冗判
                     window.SMA.ctx.save();
@@ -850,14 +886,16 @@ window.SMA.checkHit = function (atk, vic) {
     if (vic.invincible > 0 || vic.actionState === 'RESPAWN' || vic.actionState === 'DEAD') return;
 
     if (atk.hitbox.active && !atk.hasHit && vic.stocks > 0) {
-        var ab = atk.hitbox;
+        var ab = window.SMA.getEffectiveHitbox ? window.SMA.getEffectiveHitbox(atk) : atk.hitbox;
         if (ab.x < vic.x + vic.w && ab.x + ab.w > vic.x && ab.y < vic.y + vic.h && ab.y + ab.h > vic.y) {
             if (!atk.currentAttack) return;
             atk.hasHit = true;
             if (vic.actionState === 'DODGE') return;
             var data = atk.currentAttack; var p = atk.chargePower;
+            var dmgMult = window.SMA.getFighterDamageMult ? window.SMA.getFighterDamageMult(atk) : 1.0;
+            var atkKbMult = window.SMA.getFighterAttackKbMult ? window.SMA.getFighterAttackKbMult(atk) : 1.0;
             if (vic.superArmor) {
-                if (data.dmg) vic.percent += data.dmg * p;
+                if (data.dmg) vic.percent += data.dmg * p * dmgMult;
                 window.SMA.createParticles(vic.x + vic.w / 2, vic.y + vic.h / 2, 5, '#636e72');
                 window.SMA.playSound('hit');
                 return;
@@ -869,11 +907,11 @@ window.SMA.checkHit = function (atk, vic) {
                 vic.shieldHP -= shieldDmg; vic.vx = (atk.facingRight ? 1 : -1) * 2; window.SMA.createParticles(vic.x + vic.w / 2, vic.y + vic.h / 2, 5, '#0984e3'); if (vic.shieldHP <= 0) { vic.shieldHP = 0; vic.enterState('STUN', 120); } return;
             }
             if (vic.actionState === 'CHARGE') { vic.chargePower = 1.0; }
-            if (data.dmg) vic.percent += data.dmg * p;
+            if (data.dmg) vic.percent += data.dmg * p * dmgMult;
 
             // KNOCKBACK LOGIC
             var atkScale = (data.scale !== undefined) ? data.scale : 0.1;
-            var kbMult = window.SMA.CHAR_DATA[vic.charId].kbMult || 1.0;
+            var kbMult = window.SMA.getFighterKbMult ? window.SMA.getFighterKbMult(vic) : (window.SMA.CHAR_DATA[vic.charId].kbMult || 1.0);
 
             // DEFAULT KB
             var kbValue = data.kb;
@@ -890,7 +928,7 @@ window.SMA.checkHit = function (atk, vic) {
                 }
             }
 
-            var kb = (kbValue * p + (Math.pow(vic.percent, 1.2) * atkScale * p * 0.5)) * kbMult;
+            var kb = (kbValue * p + (Math.pow(vic.percent, 1.2) * atkScale * p * 0.5)) * kbMult * atkKbMult;
             var r = data.angle * (Math.PI / 180); vic.vx = Math.cos(r) * kb * 2.5 * (atk.facingRight ? 1 : -1); vic.vy = Math.sin(r) * kb * 2.5;
 
             // STUN CALCULATION (Prioritize data.hitstun over formula)
@@ -906,6 +944,7 @@ window.SMA.checkHit = function (atk, vic) {
         // RESTORED SHOT LOGIC (With Size scaling and new DOWN logic)
         var p = window.SMA.projectiles[i];
         if (p.ownerRole && vic.stocks > 0) {
+            if (p.hitRoles && p.hitRoles.indexOf(vic.playerRole) !== -1) continue;
             var owner = null;
             for (var oi = 0; oi < window.SMA.players.length; oi++) {
                 if (window.SMA.players[oi].playerRole === p.ownerRole) { owner = window.SMA.players[oi]; break; }
@@ -931,19 +970,23 @@ window.SMA.checkHit = function (atk, vic) {
                 if (vic.actionState === 'DODGE') continue;
                 if (vic.superArmor) {
                     if (p.dmg) vic.percent += p.dmg;
-                    window.SMA.createParticles(vic.x + vic.w / 2, vic.y + vic.h / 2, 5, '#636e72');
+                    if (p.type === 'witch_potion' && window.SMA.spawnWitchPotionExplosionHit) window.SMA.spawnWitchPotionExplosionHit(p, p.x, p.y, vic.playerRole);
+                    else if (p.type === 'witch_potion' && window.SMA.triggerWitchPotionExplosion) window.SMA.triggerWitchPotionExplosion(p.x, p.y, Math.max(1, (p.w || 26) / 26));
+                    else window.SMA.createParticles(vic.x + vic.w / 2, vic.y + vic.h / 2, 5, '#636e72');
                     window.SMA.playSound('hit');
-                    if (p.type !== 'fire_trap') window.SMA.projectiles.splice(i, 1);
+                    if (p.type === 'witch_potion_explosion') { p.hitRoles = p.hitRoles || []; p.hitRoles.push(vic.playerRole); }
+                    else if (p.type !== 'fire_trap') window.SMA.projectiles.splice(i, 1);
                     continue;
                 }
-                if (vic.actionState === 'SHIELD') { vic.shieldHP -= p.dmg; window.SMA.createParticles(p.x, p.y, 5, '#0984e3'); if (p.type !== 'fire_trap') window.SMA.projectiles.splice(i, 1); continue; }
+                if (vic.actionState === 'SHIELD') { vic.shieldHP -= p.dmg; if (p.type === 'witch_potion' && window.SMA.spawnWitchPotionExplosionHit) window.SMA.spawnWitchPotionExplosionHit(p, p.x, p.y, vic.playerRole); else if (p.type === 'witch_potion' && window.SMA.triggerWitchPotionExplosion) window.SMA.triggerWitchPotionExplosion(p.x, p.y, Math.max(1, (p.w || 26) / 26)); else window.SMA.createParticles(p.x, p.y, 5, '#0984e3'); if (p.type === 'witch_potion_explosion') { p.hitRoles = p.hitRoles || []; p.hitRoles.push(vic.playerRole); } else if (p.type !== 'fire_trap') window.SMA.projectiles.splice(i, 1); continue; }
                 if (p.dmg) vic.percent += p.dmg; var scale = (p.scale !== undefined) ? p.scale : 0.1;
-                var kbMult = window.SMA.CHAR_DATA[vic.charId].kbMult || 1.0;
+                var kbMult = window.SMA.getFighterKbMult ? window.SMA.getFighterKbMult(vic) : (window.SMA.CHAR_DATA[vic.charId].kbMult || 1.0);
 
                 // FIX: Ensure scale is handled if 0
-                var kb = (p.kb + (Math.pow(vic.percent, 1.2) * scale)) * kbMult;
+                var projectileAtkKbMult = p.attackKbMult || 1.0;
+                var kb = (p.kb + (Math.pow(vic.percent, 1.2) * scale)) * kbMult * projectileAtkKbMult;
 
-                vic.vx = (p.vx > 0 ? 1 : -1) * kb * 2.0; if (p.vx === 0) vic.vx = (p.x < vic.x + vic.w / 2 ? 1 : -1) * kb * 2.0; vic.vy = -kb * 2.0; vic.enterState('STUN', Math.min(60, kb * 1.5)); window.SMA.hitStop = Math.floor(kb * 0.5); window.SMA.shake = 5; window.SMA.createParticles(vic.x, vic.y, 10, p.particleColor || p.color); window.SMA.playSound('hit'); if (p.type !== 'fire_trap') window.SMA.projectiles.splice(i, 1);
+                vic.vx = (p.vx > 0 ? 1 : -1) * kb * 2.0; if (p.vx === 0) vic.vx = (p.x < vic.x + vic.w / 2 ? 1 : -1) * kb * 2.0; vic.vy = -kb * 2.0; vic.enterState('STUN', Math.min(60, kb * 1.5)); window.SMA.hitStop = Math.floor(kb * 0.5); window.SMA.shake = 5; if (p.type === 'witch_potion' && window.SMA.spawnWitchPotionExplosionHit) window.SMA.spawnWitchPotionExplosionHit(p, p.x, p.y, vic.playerRole); else if (p.type === 'witch_potion' && window.SMA.triggerWitchPotionExplosion) window.SMA.triggerWitchPotionExplosion(p.x, p.y, Math.max(1, (p.w || 26) / 26)); else window.SMA.createParticles(vic.x, vic.y, 10, p.particleColor || p.color); window.SMA.playSound('hit'); if (p.type === 'witch_potion_explosion') { p.hitRoles = p.hitRoles || []; p.hitRoles.push(vic.playerRole); } else if (p.type !== 'fire_trap') window.SMA.projectiles.splice(i, 1);
             }
         }
     }
@@ -1164,6 +1207,7 @@ window.SMA.updateHud = function () {
         if (id === 'hammer') return 'H';
         if (id === 'mirror') return 'R';
         if (id === 'angel') return 'A';
+        if (id === 'witch_apprentice') return 'W';
         return '*';
     };
     var getDamageColor = function (pct, pIndex) {
@@ -1284,9 +1328,17 @@ window.SMA.Fighter = function (x, y, color, isP2, charId) {
     this.animScale = { x: 1, y: 1 }; this.rotation = 0; this.currentPlatform = null; this.ledgeCooldown = 0;
     this.airborneFrames = 0; this.ledgeInputLock = 0;
     this.charId = charId || 'sword';
+    this.baseW = this.w; this.baseH = this.h;
     this.hasAirDodged = false;
     this.hasUpSpecial = false;
     this.superArmor = false;
+    this.witchPotionProgress = 0;
+    this.witchPotionRequired = 420;
+    this.witchPotionReady = false;
+    this.witchPotionCrafts = 0;
+    this.witchGiantTimer = 0;
+    this.witchShrinkTimer = 0;
+    this.witchSuppressDownRelease = false;
     // 髀｡繧ｭ繝｣繝ｩ逕ｨ繝励Ο繝代ユ繧｣
     this.mirror = null;       // {x, y, timer} 險ｭ鄂ｮ荳ｭ縺ｮ髀｡
     this.mirrorClone = null;  // {x, y, facingRight} 髀｡蜒上・菴咲ｽｮ
@@ -1450,15 +1502,102 @@ window.SMA.CHAR_DATA = {
             THROW_UP: { dmg: 7, kb: 7.0, scale: 0.07, angle: -90 },
             THROW_DN: { dmg: 7, kb: 7.0, scale: 0.07, angle: 45 }
         }
+    },
+    witch_apprentice: {
+        moveMult: 0.98,
+        airAttackMoveMult: 0.95,
+        attacks: {
+            NEUTRAL: { type: 'witch_potion_throw', spawnFrame: 7, dmg: 6, kb: 1.9, scale: 0.04, speed: 4.8, radius: 13, frames: 22, lag: 12, stun: 4, color: '#ff334d' },
+            SIDE: { type: 'witch_trip', dmg: 13, kb: 2.6, scale: 0.09, angle: -25, frames: 42, lag: 12, stun: 8, color: '#d58cff' },
+            UP: { type: 'witch_mage_up', dmg: 10.5, kb: 1.35, scale: 0.08, angle: -90, frames: 24, lag: 22, stun: 5, color: '#b68cff' },
+            DOWN: { type: 'witch_potion_brew', dmg: 0, kb: 0, scale: 0, angle: 0, frames: 420, lag: 8, stun: 0, color: '#9bff7a' },
+            AIR_NEUTRAL: { type: 'witch_potion_throw', spawnFrame: 7, dmg: 6, kb: 1.9, scale: 0.04, speed: 4.8, radius: 13, frames: 22, lag: 12, stun: 4, color: '#ff334d' },
+            AIR_SIDE: { type: 'witch_staff_flail', dmg: 8, kb: 1.8, scale: 0.07, angle: -35, frames: 28, lag: 14, stun: 5, color: '#d58cff' },
+            AIR_UP: { type: 'witch_mage_up', dmg: 10.5, kb: 1.35, scale: 0.08, angle: -90, frames: 24, lag: 22, stun: 5, color: '#b68cff' },
+            AIR_DOWN: { type: 'witch_potion_brew', dmg: 0, kb: 0, scale: 0, angle: 0, frames: 420, lag: 8, stun: 0, color: '#9bff7a' },
+            LEDGE_ATK: { dmg: 7, kb: 10.0, scale: 0.01, angle: -45, frames: 30, lag: 10, stun: 10 }
+        },
+        throws: {
+            THROW_FW: { dmg: 7, kb: 7.0, scale: 0.07, angle: -30 },
+            THROW_BK: { dmg: 7, kb: 7.0, scale: 0.07, angle: -150 },
+            THROW_UP: { dmg: 7, kb: 7.0, scale: 0.07, angle: -90 },
+            THROW_DN: { dmg: 7, kb: 7.0, scale: 0.07, angle: 45 }
+        }
     }
 };
 
 // 7. PROTOTYPES (EXPLICIT)
+window.SMA.Fighter.prototype.isWitchGiant = function () {
+    return this.charId === 'witch_apprentice' && this.witchGiantTimer > 0;
+};
+window.SMA.Fighter.prototype.getWitchScale = function () {
+    if (this.charId === 'witch_apprentice' && this.actionState === 'POTION_DRINK') {
+        return 1 + Math.max(0, Math.min(1, (this.stateTimer || 0) / 30));
+    }
+    if (this.charId === 'witch_apprentice' && this.witchShrinkTimer > 0) {
+        return 1 + Math.max(0, Math.min(1, this.witchShrinkTimer / 12));
+    }
+    return this.isWitchGiant() ? 2 : 1;
+};
+window.SMA.Fighter.prototype.applyWitchScale = function () {
+    if (this.charId !== 'witch_apprentice') return;
+    var scale = this.getWitchScale();
+    var bw = this.baseW || 30;
+    var bh = this.baseH || 60;
+    var cx = this.x + this.w / 2;
+    var footY = this.y + this.h;
+    this.w = bw * scale;
+    this.h = bh * scale;
+    this.x = cx - this.w / 2;
+    this.y = footY - this.h;
+};
+window.SMA.Fighter.prototype.resetWitchPotionState = function () {
+    if (this.charId !== 'witch_apprentice') return;
+    this.witchPotionProgress = 0;
+    this.witchPotionRequired = 420;
+    this.witchPotionReady = false;
+    this.witchPotionCrafts = 0;
+    this.witchGiantTimer = 0;
+    this.witchShrinkTimer = 0;
+    this.applyWitchScale();
+};
+window.SMA.getFighterKbMult = function (fighter) {
+    var data = window.SMA.CHAR_DATA[fighter.charId] || {};
+    var mult = data.kbMult || 1.0;
+    if (fighter.charId === 'witch_apprentice' && fighter.witchGiantTimer > 0) mult /= 1.5;
+    return mult;
+};
+window.SMA.getFighterDamageMult = function (fighter) {
+    return (fighter.charId === 'witch_apprentice' && fighter.witchGiantTimer > 0) ? 1.5 : 1.0;
+};
+window.SMA.getFighterAttackKbMult = function (fighter) {
+    return (fighter.charId === 'witch_apprentice' && fighter.witchGiantTimer > 0) ? 1.4 : 1.0;
+};
+window.SMA.getEffectiveHitbox = function (fighter) {
+    var hb = fighter.hitbox;
+    if (!hb || !hb.active) return hb;
+    var scale = (fighter.charId === 'witch_apprentice' && fighter.getWitchScale) ? fighter.getWitchScale() : 1;
+    if (fighter.charId !== 'witch_apprentice' || scale <= 1) return hb;
+    var cx = hb.x + hb.w / 2;
+    var cy = hb.y + hb.h / 2;
+    var scaledW = hb.w * scale;
+    var scaledH = hb.h * scale;
+    return { active: hb.active, shape: hb.shape, x: cx - scaledW / 2, y: cy - scaledH / 2, w: scaledW, h: scaledH, radius: (hb.radius || 0) * scale };
+};
 window.SMA.Fighter.prototype.update = function (inputKeys, opponent) {
     var S = window.SMA;
     if (S.gameState === 'COUNTDOWN') return;
 
     if (this.actionState !== 'ATTACK') this.rotation = 0;
+    if (this.charId === 'witch_apprentice') {
+        if (this.witchGiantTimer > 0) {
+            this.witchGiantTimer--;
+            if (this.witchGiantTimer <= 0) this.witchShrinkTimer = 12;
+        } else if (this.witchShrinkTimer > 0) {
+            this.witchShrinkTimer--;
+        }
+        this.applyWitchScale();
+    }
 
     if (this.actionState === 'DEAD' || this.stocks <= 0) return;
     this.animScale.x += (1.0 - this.animScale.x) * 0.2; this.animScale.y += (1.0 - this.animScale.y) * 0.2;
@@ -1481,6 +1620,62 @@ window.SMA.Fighter.prototype.update = function (inputKeys, opponent) {
     if (this.actionState === 'LEDGE_ATK') { this.stateTimer--; this.vx = 0; this.vy = 0; if (this.stateTimer > 20) { var p = this.ledgeGrabbed.platform; var dir = this.ledgeGrabbed.dir; var startX = (dir === 'left') ? p.x - this.w : p.x + p.w; var endX = (dir === 'left') ? p.x : p.x + p.w - this.w; var startY = p.y; var endY = p.y - this.h; var t = (30 - this.stateTimer) / 10; this.x = startX + (endX - startX) * t; this.y = startY + (endY - startY) * t; } if (this.stateTimer < 20 && this.stateTimer > 10) { this.hitbox.active = true; this.hitbox.w = 150; this.hitbox.h = 60; if (this.charId === 'mirror') { this.hitbox.w *= 1.25; this.hitbox.h *= 1.25; } this.hitbox.x = this.facingRight ? (this.x - 50) : (this.x + this.w + 50 - 150); this.hitbox.y = this.y; var set = S.CHAR_DATA[this.charId].attacks; this.currentAttack = set.LEDGE_ATK; this.chargePower = 1.0; } else { this.hitbox.active = false; } if (this.stateTimer <= 0) { this.currentAttack = null; this.enterState('LAG', 7); } return; }
     if (this.actionState === 'LEDGE_ROLL') { this.stateTimer--; var rollSpeed = 5; this.vx = this.facingRight ? rollSpeed : -rollSpeed; this.rotation += 0.5; if (this.stateTimer <= 0) { this.vx = 0; this.rotation = 0; this.enterState('LAG', 5); } this.x += this.vx; return; }
     switch (this.actionState) {
+        case 'POTION_BREW': {
+            var cancelBrew = inputKeys.shield || inputKeys.jump;
+            if (cancelBrew) {
+                this.witchSuppressDownRelease = true;
+                this.hitbox.active = false;
+                this.currentAttack = null;
+                this.actionState = 'IDLE';
+                if (inputKeys.jump) this.triggerJump(inputKeys);
+                else if (inputKeys.shield && this.isGrounded) this.actionState = 'SHIELD';
+                this.applyPhysics();
+                break;
+            }
+            this.stateTimer++;
+            this.witchPotionProgress++;
+            this.vx *= 0.45;
+            if (this.witchPotionProgress >= this.witchPotionRequired) {
+                this.witchPotionReady = true;
+                this.witchPotionProgress = this.witchPotionRequired;
+                this.witchPotionCrafts++;
+                this.witchPotionRequired = 420 + this.witchPotionCrafts * 90;
+                this.actionState = 'POTION_COMPLETE';
+                this.stateTimer = 0;
+                this.currentAttack = null;
+                this.currentAttackType = null;
+                if (inputKeys.attack) this.witchSuppressDownRelease = true;
+                S.createParticles(this.x + this.w / 2, this.y + this.h * 0.35, 18, '#9bff7a');
+                S.playSound('magic');
+            }
+            this.applyPhysics();
+            break;
+        }
+        case 'POTION_COMPLETE':
+            this.stateTimer++;
+            this.vx *= 0.45;
+            if (this.stateTimer >= 30) {
+                this.actionState = 'LAG';
+                this.stateTimer = 4;
+            }
+            this.applyPhysics();
+            break;
+        case 'POTION_DRINK':
+            this.stateTimer++;
+            this.vx *= 0.35;
+            this.invincible = Math.max(this.invincible, 2);
+            if (this.stateTimer >= 30) {
+                this.witchGiantTimer = 600;
+                this.witchShrinkTimer = 0;
+                this.invincible = 0;
+                this.actionState = 'LAG';
+                this.stateTimer = 4;
+                this.applyWitchScale();
+                S.createParticles(this.x + this.w / 2, this.y + this.h / 2, 30, '#9bff7a');
+                S.playSound('special');
+            }
+            this.applyPhysics();
+            break;
         case 'LAG': this.stateTimer--; if (this.stateTimer <= 0) this.actionState = 'IDLE'; this.vx *= S.FRICTION; this.applyPhysics(); break;
         case 'GRAB_ATTEMPT': {
             this.stateTimer++;
@@ -1492,7 +1687,8 @@ window.SMA.Fighter.prototype.update = function (inputKeys, opponent) {
                 if (opp) {
                     var dist = Math.sqrt(Math.pow(opp.x - this.x, 2) + Math.pow(opp.y - this.y, 2));
                     var isForward = this.facingRight ? (opp.x + opp.w / 2 > this.x + this.w / 2 - 10) : (opp.x + opp.w / 2 < this.x + this.w / 2 + 10);
-                    if (dist < 65 && isForward && opp.invincible === 0 && opp.grabInvincible <= 0 && opp.actionState !== 'DEAD' && opp.actionState !== 'RESPAWN' && opp.actionState !== 'DODGE') {
+                    var grabRange = 65 * ((this.charId === 'witch_apprentice' && this.witchGiantTimer > 0) ? 2 : 1);
+                    if (dist < grabRange && isForward && opp.invincible === 0 && opp.grabInvincible <= 0 && opp.actionState !== 'DEAD' && opp.actionState !== 'RESPAWN' && opp.actionState !== 'DODGE') {
                         // 縺､縺九∩謌仙粥
                         this.actionState = 'GRABBING'; this.grabbedTarget = opp; this.stateTimer = 120;
                         opp.chargePower = 1.0; opp.actionState = 'GRABBED'; opp.isShielding = false;
@@ -1508,7 +1704,7 @@ window.SMA.Fighter.prototype.update = function (inputKeys, opponent) {
             }
             break;
         }
-        case 'ATTACK': if (!this.isGrounded) { var moveSpd = S.SPEED * 0.5; var cAtk = S.CHAR_DATA[this.charId] || {}; var airMoveMult = (typeof cAtk.airAttackMoveMult === 'number') ? cAtk.airAttackMoveMult : 1.0; moveSpd *= airMoveMult; if (inputKeys.left) this.vx -= moveSpd; if (inputKeys.right) this.vx += moveSpd; if (this.vx > 5) this.vx = 5; if (this.vx < -5) this.vx = -5; } if (this.currentAttack && (this.currentAttack.type === 'meteor' || this.currentAttack.type === 'beam' || this.currentAttack.type === 'dive' || this.currentAttack.type === 'axe' || this.currentAttack.type === 'stall_fall' || this.currentAttack.type === 'up_rush' || this.currentAttack.type === 'ground_shock')) { this.handleAttackFrame(); this.applyPhysics(); } else if (this.currentAttack && (this.currentAttack.type === 'slide' || this.currentAttack.type === 'lunge' || this.currentAttack.type === 'spin_hammer' || this.currentAttack.type === 'hammer_spin_air' || this.currentAttack.type === 'tornado')) { this.handleAttackFrame(); this.vx *= 0.95; this.vy += S.GRAVITY; this.checkPlatforms(inputKeys); this.x += this.vx; this.y += this.vy; if (this.y > 2000) this.checkBounds(); } else { this.handleAttackFrame(); this.applyPhysics(); } break;
+        case 'ATTACK': if (!this.isGrounded) { var moveSpd = S.SPEED * 0.5; var cAtk = S.CHAR_DATA[this.charId] || {}; var airMoveMult = (typeof cAtk.airAttackMoveMult === 'number') ? cAtk.airAttackMoveMult : 1.0; moveSpd *= airMoveMult; if (inputKeys.left) this.vx -= moveSpd; if (inputKeys.right) this.vx += moveSpd; if (this.vx > 5) this.vx = 5; if (this.vx < -5) this.vx = -5; } if (this.currentAttack && (this.currentAttack.type === 'meteor' || this.currentAttack.type === 'beam' || this.currentAttack.type === 'dive' || this.currentAttack.type === 'axe' || this.currentAttack.type === 'stall_fall' || this.currentAttack.type === 'up_rush' || this.currentAttack.type === 'ground_shock')) { this.handleAttackFrame(); this.applyPhysics(); } else if (this.currentAttack && (this.currentAttack.type === 'slide' || this.currentAttack.type === 'lunge' || this.currentAttack.type === 'spin_hammer' || this.currentAttack.type === 'hammer_spin_air' || this.currentAttack.type === 'tornado' || this.currentAttack.type === 'witch_trip')) { this.handleAttackFrame(); this.vx *= 0.95; this.vy += S.GRAVITY; this.checkPlatforms(inputKeys); this.x += this.vx; this.y += this.vy; if (this.y > 2000) this.checkBounds(); } else { this.handleAttackFrame(); this.applyPhysics(); } break;
         case 'CHARGE':
             if (!inputKeys.attack) {
                 var chargeReleaseType = 'NEUTRAL';
@@ -1595,9 +1791,13 @@ window.SMA.Fighter.prototype.update = function (inputKeys, opponent) {
     } else {
         this.airborneFrames = (this.airborneFrames || 0) + 1;
     }
+    if (this.charId === 'witch_apprentice') {
+        if (this.actionState === 'IDLE' && !this.isGrounded && this.vy >= 0) this.witchFallAnimFrames = (this.witchFallAnimFrames || 0) + 1;
+        else this.witchFallAnimFrames = 0;
+    }
 };
-window.SMA.Fighter.prototype.serialize = function () { return { x: this.x, y: this.y, vx: this.vx, vy: this.vy, state: this.actionState, timer: this.stateTimer, atkType: this.currentAttackType, grounded: this.isGrounded, pct: this.percent, st: this.stocks, face: this.facingRight, chg: this.chargePower, sh: this.shieldHP, inv: this.invincible, grInv: this.grabInvincible, air: this.airborneFrames || 0, ledgeLock: this.ledgeInputLock || 0, mirror: this.mirror, mirrorClone: this.mirrorClone, mirrorCooldown: this.mirrorCooldown, mirrorPlaceRange: this.mirrorPlaceRange, mirrorChibiDownVariant: this._mirrorChibiDownVariant || null, hitboxActive: this.hitbox.active, hitboxX: this.hitbox.x, hitboxY: this.hitbox.y, hitboxW: this.hitbox.w, hitboxH: this.hitbox.h }; };
-window.SMA.Fighter.prototype.deserialize = function (data) { var S = window.SMA; if (!data) return; this.x = data.x; this.y = data.y; this.vx = data.vx; this.vy = data.vy; this.actionState = data.state; this.stateTimer = data.timer; this.isGrounded = data.grounded; this.currentAttackType = data.atkType; if (this.currentAttackType) { var set = S.CHAR_DATA[this.charId]; if (set.attacks[this.currentAttackType]) this.currentAttack = set.attacks[this.currentAttackType]; else if (set.throws[this.currentAttackType]) this.currentAttack = set.throws[this.currentAttackType]; } else this.currentAttack = null; this.percent = data.pct; this.stocks = data.st; this.facingRight = data.face; this.chargePower = data.chg; this.shieldHP = data.sh; this.invincible = data.inv; this.grabInvincible = data.grInv || 0; this.airborneFrames = data.air || 0; this.ledgeInputLock = data.ledgeLock || 0; this.mirror = data.mirror || null; this.mirrorClone = data.mirrorClone || null; this.mirrorCooldown = data.mirrorCooldown || 0; this.mirrorPlaceRange = data.mirrorPlaceRange || 0; this._mirrorChibiDownVariant = data.mirrorChibiDownVariant || null; if (data.hitboxActive !== undefined) { this.hitbox.active = data.hitboxActive; this.hitbox.x = data.hitboxX; this.hitbox.y = data.hitboxY; this.hitbox.w = data.hitboxW; this.hitbox.h = data.hitboxH; } };
+window.SMA.Fighter.prototype.serialize = function () { return { x: this.x, y: this.y, vx: this.vx, vy: this.vy, state: this.actionState, timer: this.stateTimer, atkType: this.currentAttackType, grounded: this.isGrounded, pct: this.percent, st: this.stocks, face: this.facingRight, chg: this.chargePower, sh: this.shieldHP, inv: this.invincible, grInv: this.grabInvincible, air: this.airborneFrames || 0, ledgeLock: this.ledgeInputLock || 0, mirror: this.mirror, mirrorClone: this.mirrorClone, mirrorCooldown: this.mirrorCooldown, mirrorPlaceRange: this.mirrorPlaceRange, mirrorChibiDownVariant: this._mirrorChibiDownVariant || null, witchPotionProgress: this.witchPotionProgress || 0, witchPotionRequired: this.witchPotionRequired || 420, witchPotionReady: !!this.witchPotionReady, witchPotionCrafts: this.witchPotionCrafts || 0, witchGiantTimer: this.witchGiantTimer || 0, witchShrinkTimer: this.witchShrinkTimer || 0, hitboxActive: this.hitbox.active, hitboxX: this.hitbox.x, hitboxY: this.hitbox.y, hitboxW: this.hitbox.w, hitboxH: this.hitbox.h }; };
+window.SMA.Fighter.prototype.deserialize = function (data) { var S = window.SMA; if (!data) return; this.x = data.x; this.y = data.y; this.vx = data.vx; this.vy = data.vy; this.actionState = data.state; this.stateTimer = data.timer; this.isGrounded = data.grounded; this.currentAttackType = data.atkType; if (this.currentAttackType) { var set = S.CHAR_DATA[this.charId]; if (set.attacks[this.currentAttackType]) this.currentAttack = set.attacks[this.currentAttackType]; else if (set.throws[this.currentAttackType]) this.currentAttack = set.throws[this.currentAttackType]; } else this.currentAttack = null; this.percent = data.pct; this.stocks = data.st; this.facingRight = data.face; this.chargePower = data.chg; this.shieldHP = data.sh; this.invincible = data.inv; this.grabInvincible = data.grInv || 0; this.airborneFrames = data.air || 0; this.ledgeInputLock = data.ledgeLock || 0; this.mirror = data.mirror || null; this.mirrorClone = data.mirrorClone || null; this.mirrorCooldown = data.mirrorCooldown || 0; this.mirrorPlaceRange = data.mirrorPlaceRange || 0; this._mirrorChibiDownVariant = data.mirrorChibiDownVariant || null; this.witchPotionProgress = data.witchPotionProgress || 0; this.witchPotionRequired = data.witchPotionRequired || 420; this.witchPotionReady = !!data.witchPotionReady; this.witchPotionCrafts = data.witchPotionCrafts || 0; this.witchGiantTimer = data.witchGiantTimer || 0; this.witchShrinkTimer = data.witchShrinkTimer || 0; if (this.charId === 'witch_apprentice') this.applyWitchScale(); if (data.hitboxActive !== undefined) { this.hitbox.active = data.hitboxActive; this.hitbox.x = data.hitboxX; this.hitbox.y = data.hitboxY; this.hitbox.w = data.hitboxW; this.hitbox.h = data.hitboxH; } };
 window.SMA.Fighter.prototype.enterState = function (state, duration) { this.actionState = state; this.stateTimer = duration; this.hitbox.active = false; };
 window.SMA.Fighter.prototype.faceOpponent = function (opponent) { if (opponent && opponent.stocks > 0 && opponent.actionState !== 'RESPAWN' && this.actionState !== 'ATTACK') { if (this.x < opponent.x - 10) this.facingRight = true; if (this.x > opponent.x + 10) this.facingRight = false; } };
 window.SMA.Fighter.prototype.applyPhysics = function () { var S = window.SMA; if (this.actionState === 'ATTACK' && this.currentAttack && (this.currentAttack.type === 'meteor' || this.currentAttack.type === 'dive' || this.currentAttack.type === 'axe' || this.currentAttack.type === 'stall_fall' || this.currentAttack.type === 'up_rush')) { if (this.vy > 30) this.vy = 30; } else { var cap = S.MAX_FALL_SPEED; if (this.actionState === 'STUN' && this.vy > cap) cap = 40; if (this.vy > cap) this.vy = cap; } if (this.actionState === 'STUN') { var speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy); if (speed < 4.0) { this.vx *= S.FRICTION; this.vy += S.GRAVITY; } else { this.vx *= S.KB_FRICTION; this.vy *= S.KB_FRICTION; } } else { this.vx *= S.FRICTION; this.vy += S.GRAVITY; } if (isNaN(this.x)) this.x = 0; if (isNaN(this.y)) this.y = 0; if (isNaN(this.vx)) this.vx = 0; if (isNaN(this.vy)) this.vy = 0; this.x += this.vx; this.y += this.vy; };
@@ -1634,18 +1834,73 @@ window.SMA.Fighter.prototype.tryGrab = function (opponent) {
     this.vx *= 0.3;
 };
 window.SMA.Fighter.prototype.handleGrabbing = function (inputKeys) { if (!this.grabbedTarget) { this.actionState = 'IDLE'; return; } this.grabbedTarget.x = this.x + (this.facingRight ? 25 : -25); this.grabbedTarget.y = this.y - 5; this.stateTimer--; if (this.stateTimer > 108) return; var throwType = null; if (inputKeys.left) throwType = this.facingRight ? 'THROW_BK' : 'THROW_FW'; else if (inputKeys.right) throwType = this.facingRight ? 'THROW_FW' : 'THROW_BK'; else if (inputKeys.up) throwType = 'THROW_UP'; else if (inputKeys.down) throwType = 'THROW_DN'; else if (this.stateTimer <= 0) throwType = 'THROW_FW'; if (throwType) this.performThrow(throwType); };
-window.SMA.Fighter.prototype.performThrow = function (typeStr) { var S = window.SMA; var vic = this.grabbedTarget; if (!vic) return; this.actionState = 'THROWING'; this.stateTimer = 15; var data = S.CHAR_DATA[this.charId].throws[typeStr]; vic.percent += data.dmg; var rad = data.angle * (Math.PI / 180); var force = data.kb + (vic.percent * data.scale); var vx = Math.cos(rad) * force; var vy = Math.sin(rad) * force; if (!this.facingRight) vx *= -1; vic.vx = vx; vic.vy = vy; vic.enterState('STUN', 40); vic.grabInvincible = 60; vic.chargePower = 1.0; this.grabbedTarget = null; S.createParticles(vic.x + 15, vic.y + 30, 15, '#fff'); S.shake = 10; S.updateHud(); S.playSound('hit'); };
-window.SMA.Fighter.prototype.die = function (direction, dx, dy, vx, vy) { var S = window.SMA; var koColor = S.getKoPlayerColor ? S.getKoPlayerColor(this) : this.color; this.stocks--; if (this.charId === 'mirror') { this.mirror = null; this.mirrorClone = null; this.mirrorCooldown = 300; } S.updateHud(); this.chargePower = 1.0; this.hitbox.active = false; S.playSound('hit'); S.triggerComet(dx, dy, direction, koColor); S.triggerKoBlastFx(dx, dy, direction, koColor, vx, vy); S.freezeFrame = 10; this.actionState = 'DEAD'; this.percent = 0; if (this.stocks > 0) { this.actionState = 'RESPAWN'; this.respawnTimer = 90; this.x = -9999; } else { S.checkGameSet(); } };
-window.SMA.Fighter.prototype.respawn = function () { var S = window.SMA; this.actionState = 'IDLE'; this.x = S.WORLD_W / 2 - this.w / 2; this.y = (S.WORLD_H * 0.7) - 300; this.vx = 0; this.vy = 0; this.percent = 0; this.shieldHP = 100; this.chargePower = 1.0; this.invincible = 180; this.isGrounded = false; this.airborneFrames = 0; this.ledgeInputLock = 0; this.hitbox.active = false; };
+window.SMA.Fighter.prototype.performThrow = function (typeStr) {
+    var S = window.SMA;
+    var vic = this.grabbedTarget;
+    if (!vic) return;
+    this.actionState = 'THROWING';
+    this.stateTimer = 15;
+    var data = S.CHAR_DATA[this.charId].throws[typeStr];
+    var dmgMult = S.getFighterDamageMult ? S.getFighterDamageMult(this) : 1.0;
+    var atkKbMult = S.getFighterAttackKbMult ? S.getFighterAttackKbMult(this) : 1.0;
+    vic.percent += data.dmg * dmgMult;
+    var rad = data.angle * (Math.PI / 180);
+    var kbMult = S.getFighterKbMult ? S.getFighterKbMult(vic) : (S.CHAR_DATA[vic.charId].kbMult || 1.0);
+    var force = (data.kb + (vic.percent * data.scale)) * kbMult * atkKbMult;
+    var vx = Math.cos(rad) * force;
+    var vy = Math.sin(rad) * force;
+    if (!this.facingRight) vx *= -1;
+    vic.vx = vx;
+    vic.vy = vy;
+    vic.enterState('STUN', 40);
+    vic.grabInvincible = 60;
+    vic.chargePower = 1.0;
+    this.grabbedTarget = null;
+    S.createParticles(vic.x + 15, vic.y + 30, 15, '#fff');
+    S.shake = 10;
+    S.updateHud();
+    S.playSound('hit');
+};
+window.SMA.Fighter.prototype.die = function (direction, dx, dy, vx, vy) { var S = window.SMA; var koColor = S.getKoPlayerColor ? S.getKoPlayerColor(this) : this.color; this.stocks--; if (this.charId === 'mirror') { this.mirror = null; this.mirrorClone = null; this.mirrorCooldown = 300; } if (this.charId === 'witch_apprentice') this.resetWitchPotionState(); S.updateHud(); this.chargePower = 1.0; this.hitbox.active = false; S.playSound('hit'); S.triggerComet(dx, dy, direction, koColor); S.triggerKoBlastFx(dx, dy, direction, koColor, vx, vy); S.freezeFrame = 10; this.actionState = 'DEAD'; this.percent = 0; if (this.stocks > 0) { this.actionState = 'RESPAWN'; this.respawnTimer = 90; this.x = -9999; } else { S.checkGameSet(); } };
+window.SMA.Fighter.prototype.respawn = function () { var S = window.SMA; if (this.charId === 'witch_apprentice') this.applyWitchScale(); this.actionState = 'IDLE'; this.x = S.WORLD_W / 2 - this.w / 2; this.y = (S.WORLD_H * 0.7) - 300; this.vx = 0; this.vy = 0; this.percent = 0; this.shieldHP = 100; this.chargePower = 1.0; this.invincible = 180; this.isGrounded = false; this.airborneFrames = 0; this.ledgeInputLock = 0; this.hitbox.active = false; };
 window.SMA.Fighter.prototype.triggerJump = function (keys) { var S = window.SMA; if (this.actionState === 'LEDGE') return; if (keys && keys.down && this.isGrounded) { if (this.currentPlatform && this.currentPlatform.type === 'main') { this.vy = S.JUMP_FORCE * 0.6; this.jumps++; this.animScale.x = 0.7; this.animScale.y = 1.3; S.playSound('jump'); return; } else { this.dropThrough = true; this.isGrounded = false; this.y += 1; return; } } var maxJ = (window.SMA.CHAR_DATA[this.charId] && window.SMA.CHAR_DATA[this.charId].maxJumps) || 2; if (this.actionState === 'IDLE' && this.jumps < maxJ) { var force = keys && keys.down ? S.JUMP_FORCE * 0.6 : S.JUMP_FORCE; var jm = S.CHAR_DATA[this.charId].jumpMult || 1.0; this.vy = force * jm; this.jumps++; this.animScale.x = 0.7; this.animScale.y = 1.3; if (this.jumps === 2) { this.vx *= 0.8; S.createParticles(this.x + this.w / 2, this.y + this.h, 10, '#fff'); } S.playSound('jump'); } };
-window.SMA.Fighter.prototype.startCharge = function () {
+window.SMA.Fighter.prototype.startCharge = function (inputKeys) {
+    var startKeys = inputKeys || null;
+    if (this.charId === 'witch_apprentice' && this.actionState === 'POTION_BREW') {
+        var cancelKeys = startKeys;
+        if (this.playerRole && this.playerRole !== 'p1') {
+            cancelKeys = cancelKeys || (window.SMA.remoteKeysMap && window.SMA.remoteKeysMap[this.playerRole]) || window.SMA.remoteKeys || {};
+        } else if (!cancelKeys) {
+            cancelKeys = window.SMA.myKeys || {};
+        }
+        if (cancelKeys.down) {
+            this.witchSuppressDownRelease = true;
+            this.hitbox.active = false;
+            this.currentAttack = null;
+            this.currentAttackType = null;
+            this.actionState = 'IDLE';
+            return;
+        }
+    }
     if (this.actionState === 'IDLE' || this.actionState === 'CHARGE') {
+        if (this.charId === 'witch_apprentice') {
+            var witchKeys = startKeys;
+            if (this.playerRole && this.playerRole !== 'p1') {
+                witchKeys = witchKeys || (window.SMA.remoteKeysMap && window.SMA.remoteKeysMap[this.playerRole]) || window.SMA.remoteKeys || {};
+            } else if (!witchKeys) {
+                witchKeys = window.SMA.myKeys || {};
+            }
+            if (witchKeys.down) {
+                this.startWitchPotionAction();
+                return;
+            }
+        }
         // 髀｡繧ｭ繝｣繝ｩ: 竊灘・蜉帑ｸｭ縺ｪ繧牙叉蠎ｧ縺ｫmirror_place繧堤匱蜍包ｼ磯聞謚ｼ縺苓ｷ晞屬隱ｿ謨ｴ縺ｮ縺溘ａ・・
         if (this.charId === 'mirror') {
-            var keys = null;
+            var keys = startKeys;
             if (this.playerRole && this.playerRole !== 'p1') {
-                keys = (window.SMA.remoteKeysMap && window.SMA.remoteKeysMap[this.playerRole]) || window.SMA.remoteKeys || {};
-            } else {
+                keys = keys || (window.SMA.remoteKeysMap && window.SMA.remoteKeysMap[this.playerRole]) || window.SMA.remoteKeys || {};
+            } else if (!keys) {
                 keys = window.SMA.myKeys || {};
             }
             if (keys.down) {
@@ -1671,9 +1926,42 @@ window.SMA.Fighter.prototype.startCharge = function () {
         if (this.chargePower === 1.0) this.chargePower = 1.0;
     }
 };
+window.SMA.Fighter.prototype.startWitchPotionAction = function () {
+    var S = window.SMA;
+    if (this.charId !== 'witch_apprentice') return;
+    if (this.witchPotionReady) {
+        this.witchPotionReady = false;
+        this.witchPotionProgress = 0;
+        this.witchSuppressDownRelease = true;
+        this.actionState = 'POTION_DRINK';
+        this.stateTimer = 0;
+        this.witchShrinkTimer = 0;
+        this.currentAttack = null;
+        this.currentAttackType = null;
+        this.invincible = Math.max(this.invincible, 30);
+        this.hitbox.active = false;
+        S.playSound('magic');
+        return;
+    }
+    this.actionState = 'POTION_BREW';
+    this.stateTimer = 0;
+    this.currentAttack = S.CHAR_DATA[this.charId].attacks.DOWN;
+    this.currentAttackType = this.isGrounded ? 'DOWN' : 'AIR_DOWN';
+    this.chargePower = 1.0;
+    this.hitbox.active = false;
+    S.playSound('magic');
+};
 window.SMA.Fighter.prototype.releaseAttack = function (typeStr) {
     var S = window.SMA;
+    if (this.charId === 'witch_apprentice' && this.witchSuppressDownRelease) {
+        this.witchSuppressDownRelease = false;
+        return;
+    }
     if (this.actionState === 'CHARGE' || this.actionState === 'IDLE') {
+        if (this.charId === 'witch_apprentice' && typeStr === 'DOWN') {
+            this.startWitchPotionAction();
+            return;
+        }
         var power = this.chargePower;
         if (this.actionState === 'IDLE') power = 1.0;
         var set = S.CHAR_DATA[this.charId].attacks;
@@ -1997,6 +2285,100 @@ window.SMA.Fighter.prototype.handleAttackFrame = function () {
             this.hitbox.x = this.x + (this.facingRight ? 30 : -30 - 65) + this.w / 2; this.hitbox.y = this.y + 20;
         } else if (this.stateTimer > hit3S && this.stateTimer <= hit3E) {
             this.hitbox.active = true;
+        } else { this.hitbox.active = false; }
+        if (this.stateTimer >= atk.frames) { this.actionState = 'LAG'; this.stateTimer = atk.lag; this.chargePower = 1.0; this.hitbox.active = false; this.currentAttack = null; }
+        return;
+    }
+
+    if (atk.type === 'witch_potion_throw') {
+        if (this.stateTimer === (atk.spawnFrame || 7)) {
+            var dir = this.facingRight ? 1 : -1;
+            var chargeRatio = Math.max(0, Math.min(1, ((this.chargePower || 1) - 1) / 0.7));
+            var giantMult = S.getFighterDamageMult ? S.getFighterDamageMult(this) : 1;
+            var giantKbMult = S.getFighterAttackKbMult ? S.getFighterAttackKbMult(this) : 1;
+            var sizeMult = this.getWitchScale ? this.getWitchScale() : 1;
+            var baseThrowVx = atk.speed || 4.8;
+            var baseThrowVy = 2.5;
+            var baseThrowSpeed = Math.sqrt(baseThrowVx * baseThrowVx + baseThrowVy * baseThrowVy);
+            var baseThrowAngle = Math.atan2(baseThrowVy, baseThrowVx);
+            var maxThrowAngle = Math.PI / 4;
+            var throwAngle = baseThrowAngle + (maxThrowAngle - baseThrowAngle) * chargeRatio;
+            var spd = baseThrowSpeed * (1 + chargeRatio * 0.5);
+            var life = 72;
+            var r = (atk.radius || 13) * sizeMult;
+            S.projectiles.push({
+                x: this.x + this.w / 2 + dir * (18 * sizeMult),
+                y: this.y + this.h * 0.35,
+                vx: Math.cos(throwAngle) * spd * dir,
+                vy: -Math.sin(throwAngle) * spd,
+                w: r * 2,
+                h: r * 2,
+                ownerRole: this.playerRole,
+                dmg: atk.dmg * giantMult,
+                kb: atk.kb,
+                attackKbMult: giantKbMult,
+                scale: (atk.scale !== undefined) ? atk.scale : 0.08,
+                type: 'witch_potion',
+                life: life,
+                maxLife: life,
+                gravity: 0.32,
+                color: atk.color || '#ff334d',
+                particleColor: '#ff334d'
+            });
+            S.playSound('magic');
+        }
+        if (this.stateTimer >= atk.frames) { this.actionState = 'LAG'; this.stateTimer = atk.lag; this.currentAttack = null; this.chargePower = 1.0; }
+        return;
+    }
+    if (atk.type === 'witch_trip') {
+        var tripDir = this.facingRight ? 1 : -1;
+        if (this.stateTimer === 1) this.vx = tripDir * 4.8;
+        if (this.stateTimer >= 10 && this.stateTimer <= 38 && Math.abs(this.vx) < 1.45) this.vx = tripDir * 1.45;
+        if (this.stateTimer >= 6 && this.stateTimer <= 22) {
+            var tripScale = this.getWitchScale ? this.getWitchScale() : 1;
+            var tripHitForward = 72;
+            var tripHitBack = 24;
+            var tripHitH = 42;
+            var tripCenterOffsetX = ((tripHitForward - tripHitBack) / 2) * tripScale;
+            var tripCenterOffsetY = (-38 + tripHitH / 2) * tripScale;
+            this.hitbox.active = true;
+            this.hitbox.w = tripHitForward + tripHitBack; this.hitbox.h = tripHitH;
+            this.hitbox.x = this.x + this.w / 2 + tripDir * tripCenterOffsetX - this.hitbox.w / 2;
+            this.hitbox.y = this.y + this.h + tripCenterOffsetY - this.hitbox.h / 2;
+        } else { this.hitbox.active = false; }
+        if (this.stateTimer >= atk.frames) { this.hitbox.active = false; this.currentAttack = null; this.chargePower = 1.0; this.enterState('LAG', atk.lag); }
+        return;
+    }
+    if (atk.type === 'witch_staff_flail') {
+        if (this.stateTimer >= 5 && this.stateTimer <= 22) {
+            var staffScale = this.getWitchScale ? this.getWitchScale() : 1;
+            var staffDir = this.facingRight ? 1 : -1;
+            var staffSweep = Math.sin((this.stateTimer - 5) * 0.85);
+            this.hitbox.active = true;
+            this.hitbox.w = 52; this.hitbox.h = 82;
+            this.hitbox.x = this.x + this.w / 2 + staffDir * 36 * staffScale - this.hitbox.w / 2;
+            this.hitbox.y = this.y + this.h * 0.36 + staffSweep * 26 * staffScale - this.hitbox.h / 2;
+            if (this.stateTimer === 5 || this.stateTimer === 13 || this.stateTimer === 21) this.hasHit = false;
+        } else { this.hitbox.active = false; }
+        if (this.stateTimer >= atk.frames) { this.actionState = 'LAG'; this.stateTimer = atk.lag; this.chargePower = 1.0; this.hitbox.active = false; this.currentAttack = null; }
+        return;
+    }
+    if (atk.type === 'witch_mage_up') {
+        var witchUpStart = 9;
+        if (this.stateTimer === witchUpStart) {
+            var witchUpChargeScale = S.getMageUpChargeScale ? S.getMageUpChargeScale(this.chargePower) : 1;
+            var witchUpVisualScale = this.getWitchScale ? this.getWitchScale() : 1;
+            this._mageUpHitbox = { x: this.x + this.w / 2, y: this.y - 48 * witchUpVisualScale, scale: 0.82 * witchUpChargeScale };
+            S.spawnMageVfx('witch_overhead_explosion', this._mageUpHitbox.x, this._mageUpHitbox.y, { life: 16, scale: this._mageUpHitbox.scale * 0.8 * witchUpVisualScale });
+        }
+        if (this.stateTimer >= witchUpStart && this.stateTimer <= 16) {
+            var fallbackWitchUpScale = this.getWitchScale ? this.getWitchScale() : 1;
+            var anchor = this._mageUpHitbox || { x: this.x + this.w / 2, y: this.y - 48 * fallbackWitchUpScale, scale: 0.82 };
+            var sz = 86 * anchor.scale;
+            this.hitbox.active = true;
+            this.hitbox.w = sz; this.hitbox.h = sz;
+            this.hitbox.x = anchor.x - sz / 2;
+            this.hitbox.y = anchor.y - sz / 2;
         } else { this.hitbox.active = false; }
         if (this.stateTimer >= atk.frames) { this.actionState = 'LAG'; this.stateTimer = atk.lag; this.chargePower = 1.0; this.hitbox.active = false; this.currentAttack = null; }
         return;
@@ -2359,6 +2741,62 @@ window.SMA.getSpriteAsset = function (key, src) {
     }
     return img;
 };
+window.SMA.WITCH_POTION_PROJECTILE_ASSET = {
+    key: 'witch_red_potion_projectile_v1',
+    src: 'assets/characters/witch_apprentice/witch_red_potion_projectile.png?v=1',
+    baseSize: 32
+};
+window.SMA.drawWitchPotionProjectile = function (ctx, p) {
+    var asset = window.SMA.WITCH_POTION_PROJECTILE_ASSET;
+    var img = asset && window.SMA.getSpriteAsset ? window.SMA.getSpriteAsset(asset.key, asset.src) : null;
+    if (!img || !img.complete || !img.naturalWidth) return false;
+    var size = Math.max(asset.baseSize || 32, (p.w || 26) * 1.25);
+    var angle = (p.angle || 0) + Math.atan2(p.vy || 0, p.vx || 1) * 0.15;
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(angle);
+    ctx.imageSmoothingEnabled = true;
+    ctx.shadowColor = 'rgba(255, 56, 80, 0.8)';
+    ctx.shadowBlur = 5;
+    ctx.drawImage(img, -size / 2, -size / 2, size, size);
+    ctx.restore();
+    return true;
+};
+window.SMA.triggerWitchPotionExplosion = function (x, y, scale) {
+    var s = Math.max(0.8, Math.min(2.2, scale || 1));
+    window.SMA.createParticles(x, y, Math.round(14 * s), '#ff334d');
+    window.SMA.createParticles(x, y, Math.round(9 * s), '#ff9f1a');
+    window.SMA.createParticles(x, y, Math.round(5 * s), '#fff0a8');
+    window.SMA.shake = Math.max(window.SMA.shake || 0, Math.round(5 * s));
+    window.SMA.playSound('fire');
+};
+window.SMA.spawnWitchPotionExplosionHit = function (source, x, y, excludedRole) {
+    var s = Math.max(1, (source && source.w ? source.w : 26) / 26);
+    var hitSize = Math.max(46, (source && source.w ? source.w : 26) * 1.75);
+    window.SMA.triggerWitchPotionExplosion(x, y, s);
+    window.SMA.projectiles.push({
+        x: x,
+        y: y,
+        vx: 0,
+        vy: 0,
+        w: hitSize,
+        h: hitSize,
+        hitW: hitSize,
+        hitH: hitSize,
+        ownerRole: source ? source.ownerRole : null,
+        dmg: source ? source.dmg : 6,
+        kb: source ? source.kb : 1.9,
+        attackKbMult: source && source.attackKbMult ? source.attackKbMult : 1.0,
+        scale: source && source.scale !== undefined ? source.scale : 0.04,
+        type: 'witch_potion_explosion',
+        life: 3,
+        maxLife: 3,
+        color: '#ff334d',
+        particleColor: '#ff334d',
+        hitRoles: excludedRole ? [excludedRole] : []
+    });
+};
+window.SMA.getSpriteAsset(window.SMA.WITCH_POTION_PROJECTILE_ASSET.key, window.SMA.WITCH_POTION_PROJECTILE_ASSET.src);
 window.SMA.STAGE_ASSETS = {
     battlefieldBg: { key: 'stage_battlefield_bg_mobile_v1', src: 'assets/stages/battlefield_background_mobile.png?v=1' },
     battlefieldMain: { key: 'stage_battlefield_main_platform_v1', src: 'assets/stages/battlefield_platform_main.png?v=1' },
@@ -2447,7 +2885,8 @@ window.SMA.MAGE_VFX_ANIMS = {
     magicProjectile: { key: 'mage_vfx_magic_projectile', src: 'assets/effects/mage/mage_magic_projectile_sheet.png?v=4', frames: 6, frameMs: 50 },
     fireProjectile: { key: 'mage_vfx_fire_projectile', src: 'assets/effects/mage/mage_fire_projectile_sheet.png?v=4', frames: 6, frameMs: 50 },
     firePillar: { key: 'mage_vfx_fire_pillar', src: 'assets/effects/mage/mage_fire_pillar_sheet.png?v=4', frames: 6, frameMs: 50 },
-    overheadExplosion: { key: 'mage_vfx_overhead_explosion', src: 'assets/effects/mage/mage_overhead_explosion_sheet.png?v=4', frames: 6, frameMs: 45 }
+    overheadExplosion: { key: 'mage_vfx_overhead_explosion', src: 'assets/effects/mage/mage_overhead_explosion_sheet.png?v=4', frames: 6, frameMs: 45 },
+    witchOverheadExplosion: { key: 'witch_vfx_overhead_explosion', src: 'assets/effects/witch/witch_overhead_explosion_sheet.png?v=1', frames: 6, frameMs: 45 }
 };
 window.SMA.preloadMageVfxSprites = function () {
     var anims = window.SMA.MAGE_VFX_ANIMS || {};
@@ -2543,10 +2982,11 @@ window.SMA.drawMageTransientVfx = function (ctx) {
         fx.age = (fx.age || 0) + 1;
         fx.life--;
         var progress = Math.max(0, Math.min(0.999, fx.age / fx.maxLife));
-        if (fx.kind === 'overhead_explosion') {
-            var expFrame = Math.floor(progress * A.overheadExplosion.frames);
+        if (fx.kind === 'overhead_explosion' || fx.kind === 'witch_overhead_explosion') {
+            var explosionAnim = fx.kind === 'witch_overhead_explosion' ? (A.witchOverheadExplosion || A.overheadExplosion) : A.overheadExplosion;
+            var expFrame = Math.floor(progress * explosionAnim.frames);
             var expSize = 122 * (fx.scale || 1);
-            window.SMA.drawMageVfxSheet(ctx, A.overheadExplosion, expFrame, fx.x, fx.y, expSize, expSize, 0, fx.flipX);
+            window.SMA.drawMageVfxSheet(ctx, explosionAnim, expFrame, fx.x, fx.y, expSize, expSize, 0, fx.flipX);
         } else if (fx.kind === 'fire_pillar') {
             var pillarFrame = Math.floor(progress * A.firePillar.frames);
             var pillarH = 154 * (fx.scale || 1);
@@ -4846,6 +5286,231 @@ window.SMA.Fighter.prototype.drawAngelChibiSprite = function (ctx, cx) {
     }
     return true;
 };
+window.SMA.WITCH_CHIBI_FRAME = 128;
+window.SMA.WITCH_CHIBI_FRAME_W = 128;
+window.SMA.WITCH_CHIBI_BASELINE = 116;
+window.SMA.WITCH_CHIBI_RENDER_SCALE = 0.72;
+window.SMA.WITCH_CHIBI_ANIMS = {
+    idle: { key: 'witch_apprentice_chibi_idle_v3', src: 'assets/characters/witch_apprentice/witch_idle_sheet.png?v=3', frames: 4, frameMs: 220, baseline: 116 },
+    run: { key: 'witch_apprentice_chibi_run_v4', src: 'assets/characters/witch_apprentice/witch_run_sheet.png?v=4', frames: 4, frameMs: 78, baseline: 116 },
+    jump: { key: 'witch_apprentice_chibi_jump_v1', src: 'assets/characters/witch_apprentice/witch_jump_sheet.png?v=1', frames: 2, frameMs: 140, baseline: 116, takeoffFrames: 6 },
+    fall: { key: 'witch_apprentice_chibi_fall_v2', src: 'assets/characters/witch_apprentice/witch_fall_sheet.png?v=2', frames: 2, frameMs: 160, baseline: 116, fallStartFrames: 6 },
+    charge: { key: 'witch_apprentice_chibi_charge_v4', src: 'assets/characters/witch_apprentice/witch_charge_sheet.png?v=4', frames: 4, frameMs: 80, baseline: 116, frameW: 160, frameH: 128 },
+    attackNeutral: { key: 'witch_apprentice_chibi_attack_neutral_v1', src: 'assets/characters/witch_apprentice/witch_attack_neutral_sheet.png?v=1', frames: 4, frameMs: 70, baseline: 116 },
+    attackSide: { key: 'witch_apprentice_chibi_attack_side_v1', src: 'assets/characters/witch_apprentice/witch_attack_side_sheet.png?v=1', frames: 6, frameMs: 58, baseline: 116, frameW: 160, frameH: 128, renderScale: 0.66 },
+    attackUp: { key: 'witch_apprentice_chibi_attack_up_v1', src: 'assets/characters/witch_apprentice/witch_attack_up_sheet.png?v=1', frames: 4, frameMs: 70, baseline: 116 },
+    airSide: { key: 'witch_apprentice_chibi_air_side_v3', src: 'assets/characters/witch_apprentice/witch_air_side_sheet.png?v=3', frames: 6, frameMs: 58, baseline: 116, frameW: 180, frameH: 128 },
+    guard: { key: 'witch_apprentice_chibi_guard_v1', src: 'assets/characters/witch_apprentice/witch_guard_sheet.png?v=1', frames: 2, frameMs: 260, baseline: 116 },
+    dodge: { key: 'witch_apprentice_chibi_dodge_v1', src: 'assets/characters/witch_apprentice/witch_dodge_sheet.png?v=1', frames: 4, frameMs: 55, baseline: 116, frameW: 160, frameH: 128 },
+    hurt: { key: 'witch_apprentice_chibi_hurt_v1', src: 'assets/characters/witch_apprentice/witch_hurt_sheet.png?v=1', frames: 3, frameMs: 90, baseline: 116, frameW: 160, frameH: 128 },
+    grab: { key: 'witch_apprentice_chibi_grab_v4', src: 'assets/characters/witch_apprentice/witch_grab_sheet.png?v=4', frames: 4, frameMs: 55, baseline: 116, frameW: 160, frameH: 128 },
+    throw: { key: 'witch_apprentice_chibi_throw_v3', src: 'assets/characters/witch_apprentice/witch_throw_sheet.png?v=3', frames: 4, frameMs: 55, baseline: 116, frameW: 160, frameH: 128 },
+    ledgeHang: { key: 'witch_apprentice_chibi_ledge_hang_v2', src: 'assets/characters/witch_apprentice/witch_ledge_hang_sheet.png?v=2', frames: 4, frameMs: 130, baseline: 116, frameW: 160, frameH: 128 },
+    ledgeUp: { key: 'witch_apprentice_chibi_ledge_up_v1', src: 'assets/characters/witch_apprentice/witch_ledge_up_sheet.png?v=1', frames: 4, frameMs: 70, baseline: 116, frameW: 160, frameH: 128 },
+    ledgeRoll: { key: 'witch_apprentice_chibi_ledge_roll_v1', src: 'assets/characters/witch_apprentice/witch_ledge_roll_sheet.png?v=1', frames: 4, frameMs: 55, baseline: 116, frameW: 160, frameH: 128 },
+    ledgeAttack: { key: 'witch_apprentice_chibi_ledge_attack_v1', src: 'assets/characters/witch_apprentice/witch_ledge_attack_sheet.png?v=1', frames: 4, frameMs: 70, baseline: 116, frameW: 160, frameH: 128, renderScale: 0.6 },
+    downBrew: { key: 'witch_apprentice_chibi_down_brew_v5', src: 'assets/characters/witch_apprentice/witch_down_brew_sheet.png?v=5', frames: 4, frameMs: 120, baseline: 164, frameW: 192, frameH: 176, renderScale: 0.51 },
+    potionComplete: { key: 'witch_apprentice_chibi_potion_complete_v1', src: 'assets/characters/witch_apprentice/witch_potion_complete_sheet.png?v=1', frames: 4, frameMs: 70, baseline: 164, frameW: 192, frameH: 176 },
+    potionDrink: { key: 'witch_apprentice_chibi_potion_drink_v1', src: 'assets/characters/witch_apprentice/witch_potion_drink_sheet.png?v=1', frames: 4, frameMs: 70, baseline: 164, frameW: 192, frameH: 176 }
+};
+for (var witchChibiAnimKey in window.SMA.WITCH_CHIBI_ANIMS) {
+    if (Object.prototype.hasOwnProperty.call(window.SMA.WITCH_CHIBI_ANIMS, witchChibiAnimKey)) {
+        if (!window.SMA.WITCH_CHIBI_ANIMS[witchChibiAnimKey].frameW) window.SMA.WITCH_CHIBI_ANIMS[witchChibiAnimKey].frameW = window.SMA.WITCH_CHIBI_FRAME_W;
+        if (!window.SMA.WITCH_CHIBI_ANIMS[witchChibiAnimKey].frameH) window.SMA.WITCH_CHIBI_ANIMS[witchChibiAnimKey].frameH = window.SMA.WITCH_CHIBI_FRAME;
+    }
+}
+window.SMA.preloadWitchChibiSprites = function () {
+    var anims = window.SMA.WITCH_CHIBI_ANIMS || {};
+    for (var k in anims) {
+        if (Object.prototype.hasOwnProperty.call(anims, k)) {
+            window.SMA.getSpriteAsset(anims[k].key, anims[k].src);
+        }
+    }
+};
+window.SMA.resolveWitchChibiAnim = function (fighter) {
+    var A = window.SMA.WITCH_CHIBI_ANIMS;
+    if (!A || !fighter || fighter.charId !== 'witch_apprentice') return null;
+    if (fighter.actionState === 'POTION_DRINK') return A.potionDrink;
+    if (fighter.actionState === 'POTION_COMPLETE') return A.potionComplete;
+    if (fighter.actionState === 'POTION_BREW') return A.downBrew;
+    if (fighter.actionState === 'SHIELD') return A.guard;
+    if (fighter.actionState === 'STUN' || fighter.actionState === 'GRABBED') return A.hurt;
+    if (fighter.actionState === 'LEDGE') return A.ledgeHang;
+    if (fighter.actionState === 'LEDGE_UP') return A.ledgeUp;
+    if (fighter.actionState === 'LEDGE_ROLL') return A.ledgeRoll;
+    if (fighter.actionState === 'LEDGE_ATK') return A.ledgeAttack;
+    if (fighter.actionState === 'DODGE') return A.dodge;
+    if (fighter.actionState === 'GRAB_ATTEMPT' || fighter.actionState === 'GRABBING') return A.grab;
+    if (fighter.actionState === 'THROWING') return A.throw;
+    if (fighter.actionState === 'CHARGE') return A.charge;
+    if (fighter.actionState === 'LAG') return A.idle;
+    if (fighter.actionState === 'ATTACK' && (fighter.currentAttackType === 'NEUTRAL' || fighter.currentAttackType === 'AIR_NEUTRAL')) return A.attackNeutral;
+    if (fighter.actionState === 'ATTACK' && fighter.currentAttackType === 'SIDE') return A.attackSide;
+    if (fighter.actionState === 'ATTACK' && fighter.currentAttackType === 'AIR_SIDE') return A.airSide;
+    if (fighter.actionState === 'ATTACK' && (fighter.currentAttackType === 'UP' || fighter.currentAttackType === 'AIR_UP')) return A.attackUp;
+    if (fighter.actionState === 'IDLE' && !fighter.isGrounded && fighter.vy < 0) return A.jump;
+    if (fighter.actionState === 'IDLE' && !fighter.isGrounded) return A.fall;
+    if (fighter.actionState === 'IDLE' && fighter.isGrounded && Math.abs(fighter.vx) > 0.45) return A.run;
+    if (fighter.actionState === 'IDLE' && fighter.isGrounded) return A.idle;
+    return null;
+};
+window.SMA.Fighter.prototype.getWitchChibiFrame = function (anim) {
+    var frames = anim.frames || 1;
+    if (frames <= 1) return 0;
+    if (anim.key === 'witch_apprentice_chibi_hurt_v1') {
+        if (this.actionState === 'GRABBED') return 0;
+        var hurtSpeed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+        if (!this.isGrounded || hurtSpeed > 4) return Math.min(2, frames - 1);
+        if ((this.stateTimer || 0) > 20) return Math.min(1, frames - 1);
+        return 0;
+    }
+    if (anim.key === 'witch_apprentice_chibi_jump_v1') {
+        return (this.airborneFrames || 0) <= (anim.takeoffFrames || 6) ? 0 : Math.min(1, frames - 1);
+    }
+    if (anim.key === 'witch_apprentice_chibi_fall_v2') {
+        return (this.witchFallAnimFrames || 0) <= (anim.fallStartFrames || 6) ? 0 : Math.min(1, frames - 1);
+    }
+    if (anim.key === 'witch_apprentice_chibi_attack_neutral_v1') {
+        var neutralT = this.stateTimer || 0;
+        if (neutralT < 4) return 0;
+        if (neutralT < 7) return 1;
+        if (neutralT < 12) return 2;
+        return Math.min(3, frames - 1);
+    }
+    if (anim.key === 'witch_apprentice_chibi_attack_side_v1') {
+        var sideT = this.stateTimer || 0;
+        if (sideT < 2) return 0;
+        if (sideT < 4) return 1;
+        if (sideT < 7) return 2;
+        if (sideT < 10) return 3;
+        return Math.min(4, frames - 1);
+    }
+    if (anim.key === 'witch_apprentice_chibi_attack_up_v1') {
+        var upT = this.stateTimer || 0;
+        if (upT < 5) return 0;
+        if (upT < 9) return 1;
+        if (upT < 17) return 2;
+        return Math.min(3, frames - 1);
+    }
+    if (anim.key === 'witch_apprentice_chibi_air_side_v3') {
+        var airSideT = this.stateTimer || 0;
+        if (airSideT < 4) return 0;
+        if (airSideT < 8) return 1;
+        if (airSideT < 12) return 2;
+        if (airSideT < 16) return 3;
+        if (airSideT < 21) return 4;
+        return Math.min(5, frames - 1);
+    }
+    if (anim.key === 'witch_apprentice_chibi_dodge_v1') {
+        var dodgeT = 25 - (this.stateTimer || 0);
+        if (dodgeT < 4) return 0;
+        if (dodgeT < 10) return 1;
+        if (dodgeT < 17) return 2;
+        return Math.min(3, frames - 1);
+    }
+    if (anim.key === 'witch_apprentice_chibi_grab_v4') {
+        if (this.actionState === 'GRAB_ATTEMPT') {
+            var grabT = this.stateTimer || 0;
+            if (grabT < 3) return 0;
+            if (grabT < 6) return 1;
+            if (grabT < 10) return 2;
+            return Math.min(3, frames - 1);
+        }
+        if (this.actionState === 'GRABBING') return Math.min(2, frames - 1);
+        return Math.min(3, frames - 1);
+    }
+    if (anim.key === 'witch_apprentice_chibi_throw_v3') {
+        var throwT = 15 - (this.stateTimer || 0);
+        if (throwT < 3) return 0;
+        if (throwT < 6) return 1;
+        if (throwT < 10) return 2;
+        return Math.min(3, frames - 1);
+    }
+    if (anim.key === 'witch_apprentice_chibi_ledge_hang_v2') {
+        var ledgeHangSeq = [0, 0, 1, 0, 0, 2, 0, 0, 3, 0];
+        return ledgeHangSeq[Math.floor((this.stateTimer || 0) / 12) % ledgeHangSeq.length];
+    }
+    if (anim.key === 'witch_apprentice_chibi_ledge_up_v1') {
+        var ledgeUpP = Math.max(0, Math.min(0.999, (20 - (this.stateTimer || 0)) / 20));
+        return Math.min(frames - 1, Math.floor(ledgeUpP * frames));
+    }
+    if (anim.key === 'witch_apprentice_chibi_ledge_roll_v1') {
+        var ledgeRollP = Math.max(0, Math.min(0.999, (25 - (this.stateTimer || 0)) / 25));
+        return Math.min(frames - 1, Math.floor(ledgeRollP * frames));
+    }
+    if (anim.key === 'witch_apprentice_chibi_ledge_attack_v1') {
+        var ledgeAtkP = Math.max(0, Math.min(0.999, (30 - (this.stateTimer || 0)) / 30));
+        return Math.min(frames - 1, Math.floor(ledgeAtkP * frames));
+    }
+    if (anim.key === 'witch_apprentice_chibi_charge_v4') {
+        var chargeT = this.stateTimer || 0;
+        var chargeSeq = [0, 1, 2, 3, 2, 1];
+        return chargeSeq[Math.floor(chargeT / 7) % chargeSeq.length];
+    }
+    if (anim.key === 'witch_apprentice_chibi_down_brew_v5') {
+        return Math.floor((this.stateTimer || 0) / 8) % frames;
+    }
+    if (anim.key === 'witch_apprentice_chibi_potion_complete_v1') {
+        return Math.min(frames - 1, Math.floor((this.stateTimer || 0) / 7));
+    }
+    if (anim.key === 'witch_apprentice_chibi_potion_drink_v1') {
+        return Math.min(frames - 1, Math.floor((this.stateTimer || 0) / 7));
+    }
+    return Math.floor(Date.now() / (anim.frameMs || 100)) % frames;
+};
+window.SMA.Fighter.prototype.drawWitchChibiSprite = function (ctx, cx) {
+    var anim = window.SMA.resolveWitchChibiAnim(this);
+    if (!anim) return false;
+    var img = window.SMA.getSpriteAsset(anim.key, anim.src);
+    if (!img.complete || !img.naturalWidth) return false;
+
+    var fw = anim.frameW || window.SMA.WITCH_CHIBI_FRAME_W || 128;
+    var fh = anim.frameH || window.SMA.WITCH_CHIBI_FRAME || 128;
+    var baseline = anim.baseline || window.SMA.WITCH_CHIBI_BASELINE || 116;
+    var spriteScale = (anim.renderScale || window.SMA.WITCH_CHIBI_RENDER_SCALE || 1) * (this.getWitchScale ? this.getWitchScale() : 1);
+    var frame = this.getWitchChibiFrame(anim);
+    var sx = Math.min(frame, (anim.frames || 1) - 1) * fw;
+    var footY = this.y + this.h;
+    var drawCx = cx;
+    var drawFootY = footY;
+
+    if ((this.actionState === 'LEDGE' || this.actionState === 'LEDGE_UP') && this.ledgeGrabbed && this.ledgeGrabbed.platform) {
+        var ledgePlatform = this.ledgeGrabbed.platform;
+        var ledgeDir = this.ledgeGrabbed.dir;
+        var ledgeTopX = (ledgeDir === 'left') ? ledgePlatform.x : (ledgePlatform.x + ledgePlatform.w - this.w);
+        var ledgeTargetCx = ledgeTopX + this.w / 2;
+        if (this.actionState === 'LEDGE') {
+            drawCx = ledgeTargetCx;
+            drawFootY = ledgePlatform.y + this.h;
+        } else {
+            var ledgeUpT = Math.max(0, Math.min(1, (20 - (this.stateTimer || 0)) / 20));
+            var ledgeUpEase = ledgeUpT * ledgeUpT * (3 - 2 * ledgeUpT);
+            drawCx = cx + (ledgeTargetCx - cx) * ledgeUpEase;
+            drawFootY = footY + (ledgePlatform.y - footY) * ledgeUpEase;
+        }
+    }
+
+    ctx.save();
+    ctx.imageSmoothingEnabled = true;
+    ctx.translate(drawCx, drawFootY);
+    if (!this.facingRight) {
+        ctx.scale(-1, 1);
+    }
+    ctx.drawImage(img, sx, 0, fw, fh, -fw * spriteScale / 2, -baseline * spriteScale, fw * spriteScale, fh * spriteScale);
+    ctx.restore();
+
+    if (this.actionState === 'SHIELD') {
+        ctx.save();
+        ctx.fillStyle = 'rgba(116, 185, 255, ' + (this.shieldHP / 150) + ')';
+        ctx.strokeStyle = '#0984e3';
+        ctx.beginPath();
+        ctx.arc(cx, this.y + this.h / 2, 45, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+    }
+    return true;
+};
 window.SMA.preloadSwordChibiSprites();
 window.SMA.preloadMageChibiSprites();
 window.SMA.preloadBrawlerChibiSprites();
@@ -4853,11 +5518,84 @@ window.SMA.preloadHammerChibiSprites();
 window.SMA.preloadSpearChibiSprites();
 window.SMA.preloadMirrorChibiSprites();
 window.SMA.preloadAngelChibiSprites();
+window.SMA.preloadWitchChibiSprites();
 window.SMA.preloadMageVfxSprites();
+window.SMA.Fighter.prototype.drawWitchPotionGauge = function (ctx, cx) {
+    if (this.charId !== 'witch_apprentice' || this.actionState !== 'POTION_BREW') return;
+    var required = this.witchPotionRequired || 420;
+    var ratio = Math.max(0, Math.min(1, (this.witchPotionProgress || 0) / required));
+    var scale = this.getWitchScale ? this.getWitchScale() : 1;
+    var barW = 46 * scale;
+    var barH = 6 * scale;
+    var x = cx - barW / 2;
+    var y = this.y - 30 * scale;
+    ctx.save();
+    ctx.fillStyle = 'rgba(16, 18, 28, 0.72)';
+    ctx.fillRect(x - 2 * scale, y - 2 * scale, barW + 4 * scale, barH + 4 * scale);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.22)';
+    ctx.fillRect(x - 1 * scale, y - 1 * scale, barW + 2 * scale, barH + 2 * scale);
+    ctx.fillStyle = '#2d2444';
+    ctx.fillRect(x, y, barW, barH);
+    ctx.fillStyle = '#ff7ac8';
+    ctx.fillRect(x, y, barW * ratio, barH);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
+    ctx.fillRect(x, y, barW * ratio, Math.max(1, barH * 0.32));
+    ctx.restore();
+};
+window.SMA.Fighter.prototype.drawWitchApprenticeStick = function (ctx, cx) {
+    var scale = this.getWitchScale ? this.getWitchScale() : 1;
+    var top = this.y;
+    var foot = this.y + this.h;
+    var headR = 10 * scale;
+    var headY = top + 12 * scale;
+    var bodyTop = top + 24 * scale;
+    var hipY = foot - 20 * scale;
+    var color = this.color;
+    if (this.actionState === 'STUN') color = '#ffeaa7';
+    if (this.actionState === 'LAG') color = '#b2bec3';
+    if (this.actionState === 'GRABBED') color = '#a29bfe';
+    ctx.save();
+    ctx.strokeStyle = color; ctx.lineWidth = 4 * scale; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.beginPath(); ctx.arc(cx, headY, headR, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx, bodyTop); ctx.lineTo(cx, hipY); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx, hipY); ctx.lineTo(cx - 9 * scale, foot); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx, hipY); ctx.lineTo(cx + 9 * scale, foot); ctx.stroke();
+    var dir = this.facingRight ? 1 : -1;
+    var handX = cx + dir * 18 * scale;
+    var handY = top + 35 * scale;
+    var staffTipForward = false;
+    var staffSweep = 0;
+    if (this.actionState === 'POTION_BREW') {
+        handX = cx + dir * 10 * scale; handY = foot - 28 * scale;
+    } else if (this.actionState === 'ATTACK' && this.currentAttack) {
+        if (this.currentAttack.type === 'witch_trip') { handX = cx + dir * 42 * scale; handY = foot - 8 * scale; }
+        else if (this.currentAttack.type === 'witch_staff_flail') { staffTipForward = true; staffSweep = Math.sin((this.stateTimer - 5) * 0.85); handX = cx + dir * 24 * scale; handY = top + 35 * scale; }
+        else if (this.currentAttack.type === 'witch_mage_up') { handX = cx; handY = top - 12 * scale; }
+    } else if (this.actionState === 'CHARGE') {
+        handX = cx + dir * (18 + (this.chargePower - 1) * 20) * scale; handY = top + 32 * scale;
+    }
+    ctx.beginPath(); ctx.moveTo(cx, bodyTop + 8 * scale); ctx.lineTo(handX, handY); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx, bodyTop + 8 * scale); ctx.lineTo(cx - dir * 14 * scale, top + 38 * scale); ctx.stroke();
+    ctx.strokeStyle = '#5b3a21'; ctx.lineWidth = 3 * scale;
+    if (staffTipForward) {
+        ctx.beginPath(); ctx.moveTo(handX - dir * 8 * scale, handY + 20 * scale); ctx.lineTo(handX + dir * 48 * scale, handY + staffSweep * 34 * scale); ctx.stroke();
+    } else {
+        ctx.beginPath(); ctx.moveTo(handX - dir * 4 * scale, handY + 18 * scale); ctx.lineTo(handX + dir * 4 * scale, handY - 34 * scale); ctx.stroke();
+    }
+    if (this.witchGiantTimer > 0) {
+        ctx.strokeStyle = 'rgba(155,255,122,0.7)'; ctx.lineWidth = 2 * scale;
+        ctx.beginPath(); ctx.arc(cx, top + this.h / 2, 38 * scale, 0, Math.PI * 2); ctx.stroke();
+    }
+    if (this.actionState === 'SHIELD') {
+        ctx.fillStyle = 'rgba(116, 185, 255, ' + (this.shieldHP / 150) + ')'; ctx.strokeStyle = '#0984e3';
+        ctx.beginPath(); ctx.arc(cx, this.y + this.h / 2, 45 * scale, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    }
+    ctx.restore();
+};
 window.SMA.Fighter.prototype.draw = function (ctx) {
     if (this.stocks <= 0 || this.actionState === 'DEAD' || this.actionState === 'RESPAWN') return;
     // V409: Draw check for invincibility (blink)
-    if (this.invincible > 0 && Math.floor(Date.now() / 50) % 2) return;
+    if (this.invincible > 0 && this.actionState !== 'POTION_DRINK' && Math.floor(Date.now() / 50) % 2) return;
 
     var cx = this.x + this.w / 2;
     if (this.actionState === 'DODGE') { ctx.globalAlpha = 0.5; }
@@ -4867,14 +5605,28 @@ window.SMA.Fighter.prototype.draw = function (ctx) {
     ctx.scale(this.animScale.x, this.animScale.y);
 
     var drawn = false;
-    if (this.actionState === 'LEDGE_ROLL' && this.charId !== 'brawler' && this.charId !== 'mage' && this.charId !== 'sword' && this.charId !== 'hammer' && this.charId !== 'spear' && this.charId !== 'mirror' && this.charId !== 'angel') {
+    if (this.actionState === 'LEDGE_ROLL' && this.charId !== 'brawler' && this.charId !== 'mage' && this.charId !== 'sword' && this.charId !== 'hammer' && this.charId !== 'spear' && this.charId !== 'mirror' && this.charId !== 'angel' && this.charId !== 'witch_apprentice') {
         ctx.translate(0, -15); ctx.rotate(this.rotation); ctx.strokeStyle = this.color; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(0, 0, 15, 0, Math.PI * 2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(15, 0); ctx.stroke();
         drawn = true;
     } else {
-        if (!(this.actionState === 'LEDGE_ROLL' && (this.charId === 'brawler' || this.charId === 'mage' || this.charId === 'sword' || this.charId === 'hammer' || this.charId === 'spear' || this.charId === 'mirror' || this.charId === 'angel'))) {
+        if (!(this.actionState === 'LEDGE_ROLL' && (this.charId === 'brawler' || this.charId === 'mage' || this.charId === 'sword' || this.charId === 'hammer' || this.charId === 'spear' || this.charId === 'mirror' || this.charId === 'angel' || this.charId === 'witch_apprentice'))) {
             ctx.rotate(this.rotation);
         }
         ctx.translate(-cx, -(this.y + this.h));
+
+        if (this.charId === 'witch_apprentice') {
+            if (this.drawWitchChibiSprite(ctx, cx)) {
+                ctx.restore();
+                ctx.globalAlpha = 1.0;
+                this.drawWitchPotionGauge(ctx, cx);
+                return;
+            }
+            this.drawWitchApprenticeStick(ctx, cx);
+            ctx.restore();
+            ctx.globalAlpha = 1.0;
+            this.drawWitchPotionGauge(ctx, cx);
+            return;
+        }
 
         if (this.drawSwordChibiSprite(ctx, cx)) {
             ctx.restore();

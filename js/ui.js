@@ -253,6 +253,7 @@ window.onload = function () {
     bindChar('card-hammer', 'hammer');
     bindChar('card-mirror', 'mirror');
     bindChar('card-angel', 'angel');
+    bindChar('card-witch_apprentice', 'witch_apprentice');
 
     // BATTLE HUB BUTTONS
     bindBtn('btn-hub-start', function () {
@@ -363,7 +364,7 @@ window.onload = function () {
                     if (k === 'grab') window.SMA.queueSoloInputEvent(Object.assign({}, window.SMA.myKeys, { triggerGrab: true }));
                 } else {
                     if (k === 'jump') window.SMA.pOne.triggerJump(window.SMA.myKeys);
-                    if (k === 'attack') window.SMA.pOne.startCharge();
+                    if (k === 'attack') window.SMA.pOne.startCharge(window.SMA.myKeys);
                     if (k === 'grab') {
                     var target = null; var minDist = Infinity;
                     window.SMA.players.forEach(function (p) {

@@ -1075,6 +1075,18 @@ select {
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
+.char-card .icon.witch-preview {
+    width: 52px;
+    height: 52px;
+    margin-bottom: 1px;
+    background-image: url('../assets/characters/witch_apprentice/witch_idle_sheet.png?v=3');
+    background-repeat: no-repeat;
+    background-size: 400% 100%;
+    background-position: 0 0;
+    image-rendering: auto;
+    text-shadow: none;
+}
+
 .char-card .label {
     font-size: 10px;
     font-weight: 900;
