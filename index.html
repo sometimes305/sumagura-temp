@@ -11,13 +11,24 @@
     <link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Noto+Sans+JP:wght@700;900&display=swap"
         rel="stylesheet">
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
-    <link rel="stylesheet" href="css/style.css?v=727">
+    <link rel="stylesheet" href="css/style.css?v=728">
 </head>
 
 <body>
     <div id="error-report"></div>
     <div id="version-display">v432</div>
     <div id="game-container">
+        <div id="boot-loader-overlay" aria-live="polite">
+            <div class="boot-loader-card">
+                <div class="boot-loader-subtitle">NOW LOADING</div>
+                <div class="boot-loader-bar" role="progressbar" aria-valuemin="50" aria-valuemax="100"
+                    aria-valuenow="50">
+                    <div id="boot-loader-fill"></div>
+                </div>
+                <div id="boot-loader-percent">50%</div>
+            </div>
+        </div>
+
         <!-- 通知オーバーレイ -->
         <div id="notification-overlay">
             <div id="notification-box">
@@ -322,10 +333,10 @@
     </div>
 
     <!-- メインスクリプト -->
-    <script src="js/main.js?v=718"></script>
+    <script src="js/main.js?v=719"></script>
     <script src="js/network.js?v=714"></script>
     <script src="js/audio.js?v=713"></script>
-    <script src="js/game.js?v=970"></script>
+    <script src="js/game.js?v=971"></script>
     <script src="js/ui.js?v=719"></script>
 </body>
 

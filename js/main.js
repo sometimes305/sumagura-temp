@@ -13,6 +13,74 @@ window.onerror = function (m, u, l) { reportError(m); return false; };
 window.SMA = {};
 window.SMA.ID_PREFIX = "sumagura_v432_";
 window.SMA.VERSION = "v432";
+window.SMA.bootLoadProgress = 50;
+window.SMA.bootLoadTotal = 0;
+window.SMA.bootLoadDone = 0;
+window.SMA.bootLoadDomReady = false;
+window.SMA.bootLoaderActive = true;
+window.SMA.bootLoaderHideTimer = null;
+window.SMA.bootLoaderStartedAt = Date.now();
+window.SMA.BOOT_LOADER_MIN_MS = 450;
+window.SMA.setBootLoadProgress = function (percent) {
+    var p = Math.max(50, Math.min(100, Math.round(percent || 50)));
+    if (p < window.SMA.bootLoadProgress && p < 100) p = window.SMA.bootLoadProgress;
+    window.SMA.bootLoadProgress = p;
+    var fill = document.getElementById('boot-loader-fill');
+    var text = document.getElementById('boot-loader-percent');
+    var bar = document.querySelector('.boot-loader-bar');
+    if (fill) fill.style.width = p + '%';
+    if (text) text.innerText = p + '%';
+    if (bar) bar.setAttribute('aria-valuenow', String(p));
+};
+window.SMA.updateBootLoadProgress = function () {
+    if (!window.SMA.bootLoaderActive) return;
+    var total = window.SMA.bootLoadTotal || 0;
+    var done = window.SMA.bootLoadDone || 0;
+    var ratio = total > 0 ? done / total : 0;
+    window.SMA.setBootLoadProgress(50 + ratio * 48);
+    window.SMA.tryFinishBootLoader();
+};
+window.SMA.trackBootLoadAsset = function (img) {
+    if (!window.SMA.bootLoaderActive || !img || img._smaBootTracked) return;
+    img._smaBootTracked = true;
+    window.SMA.bootLoadTotal++;
+    var finish = function () {
+        if (img._smaBootDone) return;
+        img._smaBootDone = true;
+        window.SMA.bootLoadDone++;
+        window.SMA.updateBootLoadProgress();
+    };
+    if (img.complete) {
+        setTimeout(finish, 0);
+    } else {
+        img.addEventListener('load', finish, { once: true });
+        img.addEventListener('error', finish, { once: true });
+    }
+    window.SMA.updateBootLoadProgress();
+};
+window.SMA.tryFinishBootLoader = function () {
+    if (!window.SMA.bootLoaderActive || !window.SMA.bootLoadDomReady) return;
+    if ((window.SMA.bootLoadTotal || 0) > (window.SMA.bootLoadDone || 0)) return;
+    if (window.SMA.bootLoaderHideTimer) return;
+    var wait = Math.max(0, window.SMA.BOOT_LOADER_MIN_MS - (Date.now() - window.SMA.bootLoaderStartedAt));
+    window.SMA.bootLoaderHideTimer = setTimeout(function () {
+        window.SMA.setBootLoadProgress(100);
+        var overlay = document.getElementById('boot-loader-overlay');
+        if (overlay) {
+            overlay.classList.add('boot-loader-done');
+            setTimeout(function () {
+                if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay);
+            }, 300);
+        }
+        window.SMA.bootLoaderActive = false;
+    }, wait);
+};
+window.SMA.setBootLoadProgress(50);
+window.addEventListener('load', function () {
+    window.SMA.bootLoadDomReady = true;
+    window.SMA.updateBootLoadProgress();
+    window.SMA.tryFinishBootLoader();
+});
 window.SMA.GRAVITY = 0.40; window.SMA.MAX_FALL_SPEED = 9.0;
 window.SMA.FRICTION = 0.82; window.SMA.KB_FRICTION = 0.95;
 window.SMA.SPEED = 1.1; window.SMA.JUMP_FORCE = -10.0;

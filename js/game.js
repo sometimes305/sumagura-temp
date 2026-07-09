@@ -2835,6 +2835,7 @@ window.SMA.getSpriteAsset = function (key, src) {
         img._smaSrc = src;
         img.src = src;
         window.SMA.spriteAssets[key] = img;
+        if (window.SMA.trackBootLoadAsset) window.SMA.trackBootLoadAsset(img);
     }
     return img;
 };

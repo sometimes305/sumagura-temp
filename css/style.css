@@ -44,6 +44,81 @@ body {
     background: #000;
 }
 
+#boot-loader-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background:
+        radial-gradient(circle at 50% 20%, rgba(255, 255, 255, 0.28), transparent 34%),
+        linear-gradient(180deg, #54b9f5 0%, #b7e4ff 100%);
+    color: #fff;
+    opacity: 1;
+    transition: opacity 0.24s ease;
+}
+
+#boot-loader-overlay::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(ellipse at 30% 20%, rgba(255, 255, 255, 0.25) 0%, transparent 50%),
+        radial-gradient(ellipse at 70% 60%, rgba(255, 255, 255, 0.15) 0%, transparent 40%);
+    pointer-events: none;
+}
+
+#boot-loader-overlay.boot-loader-done {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.boot-loader-card {
+    position: relative;
+    z-index: 1;
+    width: min(420px, 88vw);
+    text-align: center;
+}
+
+.boot-loader-subtitle {
+    margin-bottom: 18px;
+    color: #ffffff;
+    font-size: 24px;
+    font-weight: 900;
+    letter-spacing: 5px;
+    text-shadow: 3px 3px 0 #222;
+}
+
+.boot-loader-bar {
+    width: 100%;
+    height: 34px;
+    padding: 5px;
+    overflow: hidden;
+    background: rgba(234, 249, 255, 0.92);
+    border: 5px solid #222;
+    border-radius: 8px;
+    box-shadow: 0 6px 0 rgba(34, 34, 34, 0.72), 0 0 18px rgba(255, 224, 102, 0.34);
+}
+
+#boot-loader-fill {
+    width: 50%;
+    height: 100%;
+    background: linear-gradient(90deg, #00cec9 0%, #74b9ff 55%, #ffe066 100%);
+    border-radius: 4px;
+    box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.32), inset 0 -4px 0 rgba(0, 0, 0, 0.16);
+    transition: width 0.16s ease-out;
+}
+
+#boot-loader-percent {
+    margin-top: 14px;
+    color: #fff8dc;
+    font-size: 20px;
+    font-weight: 900;
+    text-shadow: 3px 3px 0 #241033;
+}
+
 canvas {
     display: block;
     width: 100%;
