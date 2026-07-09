@@ -800,38 +800,38 @@ window.SMA.gameLoop = function () {
                         var mirAngle = 0;
 
                         if (fighter.actionState === 'ATTACK' && fighter.currentAttack) {
-                            var p = fighter.stateTimer / fighter.currentAttack.frames; // 1 -> 0
-                            var forwardP = 1.0 - p; // 0 -> 1
+                            var p = Math.max(0, Math.min(0.999, fighter.stateTimer / Math.max(1, fighter.currentAttack.frames || 1)));
+                            var arc = Math.sin(p * Math.PI);
                             var atkType = fighter.currentAttack.type;
 
                             if (atkType === 'mirror_spin' || fighter.currentAttackType === 'AIR_NEUTRAL') {
-                                var spinAngle = forwardP * Math.PI * 2;
-                                var r = 52;
-                                mirX = cx + (fr ? 1 : -1) * Math.cos(spinAngle) * r;
-                                mirY = cY + 25 + Math.sin(spinAngle) * r;
+                                var spinAngle = p * Math.PI * 2;
+                                mirX = cx + (fr ? 1 : -1) * Math.cos(spinAngle) * 58;
+                                mirY = cY + fighter.h - 62 * 0.78 + Math.sin(spinAngle) * 42 * 0.78;
+                                mirScale = 1.05;
                                 mirAngle = 0;
                             } else if (atkType === 'mirror_throw_up' || fighter.currentAttackType === 'UP' || fighter.currentAttackType === 'AIR_UP') {
-                                mirScale = 1.5;
-                                mirAngle = forwardP * Math.PI * 4;
-                                var throwH = 50;
+                                mirScale = 1.25;
+                                mirAngle = p * Math.PI * 4;
+                                var throwH = 46;
                                 mirX = cx;
-                                mirY = cY - 10 - Math.sin(forwardP * Math.PI) * throwH;
+                                mirY = cY + fighter.h - (82 + arc * throwH) * 0.78;
                             } else if (atkType === 'mirror_throw' || fighter.currentAttackType === 'SIDE' || fighter.currentAttackType === 'AIR_SIDE') {
-                                mirScale = 1.6;
-                                mirAngle = forwardP * Math.PI * 4;
+                                mirScale = 1.25;
+                                mirAngle = p * Math.PI * 4;
                                 var throwDist = 58;
-                                var distX = Math.sin(forwardP * Math.PI) * throwDist;
-                                mirX = cx + (fr ? 30 + distX : -30 - distX);
-                                mirY = cY + 25;
-                            } else if (fighter.currentAttackType === 'NEUTRAL' || atkType === 'mirror_slash') {
-                                var pokeDist = Math.sin(forwardP * Math.PI) * 22;
-                                mirX = cx + (fr ? 30 + pokeDist : -30 - pokeDist);
+                                mirX = cx + (fr ? 1 : -1) * (30 + arc * throwDist);
+                                mirY = cY + fighter.h - 57 * 0.78;
+                            } else if (atkType === 'mirror_slash' || fighter.currentAttackType === 'NEUTRAL') {
+                                mirX = cx + (fr ? 1 : -1) * (30 + arc * 22);
+                                mirY = cY + fighter.h - 60 * 0.78;
+                                mirAngle = (fr ? 1 : -1) * 0.4;
+                                mirScale = 1.15;
                             } else if (fighter.currentAttackType === 'DOWN' || fighter.currentAttackType === 'AIR_DOWN' || atkType === 'mirror_place') {
-                                mirScale = 1.5;
-                                mirAngle = forwardP * Math.PI * 4;
-                                var throwH = 40;
-                                mirX = cx + (fr ? 28 : -28);
-                                mirY = cY + 40 + Math.sin(forwardP * Math.PI) * throwH;
+                                mirScale = fighter._mirrorChibiDownVariant === 'swap' ? 1.45 : 1.2;
+                                mirAngle = p * Math.PI * 3;
+                                mirX = cx + (fr ? 1 : -1) * 34;
+                                mirY = cY + fighter.h - (24 + arc * 32) * 0.78;
                             }
                         }
 
@@ -1386,7 +1386,7 @@ window.SMA.CHAR_DATA = {
         moveMult: 1.4,
         airAttackMoveMult: 1.4,
         jumpMult: 1.15,
-        kbMult: 1.1,
+        kbMult: 1.15,
         attacks: {
             NEUTRAL: { dmg: 3, kb: 0.5, scale: 0.02, angle: -30, frames: 8, lag: 4, stun: 4, color: '#f1c40f' },
             SIDE: { type: 'lunge', dmg: 14, kb: 2.8, scale: 0.12, angle: -30, frames: 25, lag: 20, stun: 10, color: '#e67e22' },
@@ -1414,7 +1414,7 @@ window.SMA.CHAR_DATA = {
             NEUTRAL: { type: 'poke', range: 120, dmg: 5, kb: 1.46, scale: 0.1, angle: -20, frames: 18, lag: 10, color: '#00b894' },
             SIDE: { type: 'boomerang', dmg: 8, kb: 1.17, scale: 0.08, angle: -30, frames: 30, lag: 22, color: '#00b894' }, 
             UP: { type: 'boomerang_up', range: 100, dmg: 7, kb: 1.28, scale: 0.08, angle: -80, frames: 30, lag: 22, color: '#00b894' }, 
-            DOWN: { type: 'ground_shock', range: 130, dmg: 9, kb: 1.46, scale: 0.08, angle: -45, frames: 35, lag: 20, color: '#00b894' },
+            DOWN: { type: 'ground_shock', range: 130, dmg: 9, kb: 1.46, scale: 0.08, angle: -45, frames: 35, lag: 13, shockFrame: 22, color: '#00b894' },
             AIR_NEUTRAL: { type: 'poke', range: 100, dmg: 8, kb: 1.62, scale: 0.1, angle: -30, frames: 20, lag: 10, color: '#00b894' },
             AIR_SIDE: { type: 'boomerang', dmg: 8, kb: 1.46, scale: 0.08, angle: -25, frames: 30, lag: 22, color: '#00b894' }, 
             AIR_UP: { type: 'boomerang_up', range: 100, dmg: 7, kb: 1.28, scale: 0.08, angle: -80, frames: 30, lag: 22, color: '#00b894' }, 
@@ -2563,13 +2563,13 @@ window.SMA.Fighter.prototype.handleAttackFrame = function () {
         } return;
     }
     if (atk.type === 'ground_shock') {
-        if (this.stateTimer === 10) {
+        if (this.stateTimer === (atk.shockFrame || 10)) {
             var startY = this.y + 50;
             var baseX = this.x + this.w / 2;
             // FIX: Pass scale
             var atkScale = (atk.scale !== undefined) ? atk.scale : 0.1;
             var spawnSpearShockwave = function (dir) {
-                S.projectiles.push({ x: baseX + dir * 30, y: startY, vx: dir * 10, vy: 0, w: 40, h: 30, hitW: 115, hitH: 30, hitOffsetX: dir * 37.5, ownerRole: this.playerRole, dmg: atk.dmg, kb: atk.kb, scale: atkScale, type: 'shockwave', life: 30, color: '#ffeaa7', visualKind: 'spear_ground_shock' });
+                S.projectiles.push({ x: baseX + dir * 30, y: startY, vx: dir * 10, vy: 0, w: 40, h: 30, hitW: 115, hitH: 30, hitOffsetX: dir * 37.5, ownerRole: this.playerRole, dmg: atk.dmg, kb: atk.kb, scale: atkScale, type: 'shockwave', life: 30, color: '#ffeaa7', particleColor: '#050505', visualKind: 'spear_ground_shock' });
             }.bind(this);
             spawnSpearShockwave(this.facingRight ? 1 : -1);
             spawnSpearShockwave(this.facingRight ? -1 : 1);
