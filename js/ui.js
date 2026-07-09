@@ -33,6 +33,8 @@ window.onload = function () {
                     if (window.SMA.soundEnabled) btn.classList.remove('sound-off'); else btn.classList.add('sound-off');
                 }
             }
+            var cpuLevel = parseInt(localStorage.getItem('sma_cpu_level'), 10);
+            if (isFinite(cpuLevel) && window.SMA.setCpuLevel) window.SMA.setCpuLevel(cpuLevel);
         } catch (e) { }
     };
     window.SMA.loadSettings();
@@ -254,6 +256,18 @@ window.onload = function () {
     bindChar('card-mirror', 'mirror');
     bindChar('card-angel', 'angel');
     bindChar('card-witch_apprentice', 'witch_apprentice');
+
+    document.querySelectorAll('.cpu-level-btn').forEach(function (btn) {
+        var act = function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (window.SMA.amIReady) return;
+            window.SMA.setCpuLevel(btn.getAttribute('data-cpu-level'));
+        };
+        btn.addEventListener('touchstart', act, { passive: false });
+        btn.addEventListener('click', act);
+    });
+    if (window.SMA.updateCpuLevelUi) window.SMA.updateCpuLevelUi();
 
     // BATTLE HUB BUTTONS
     bindBtn('btn-hub-start', function () {

@@ -425,7 +425,7 @@ window.SMA.bootGame = function () {
         for (var pi = 1; pi < pc; pi++) {
             var pObj = window.SMA.connections.find(function (x) { return x.role === window.SMA.PLAYER_ROLES[pi]; });
             var hudName = document.getElementById('p' + (pi + 1) + '-name');
-            if (hudName) hudName.innerText = window.SMA.isOnline && pObj ? pObj.name : "CPU";
+            if (hudName) hudName.innerText = window.SMA.isOnline && pObj ? pObj.name : "CPU " + (window.SMA.getCpuProfile ? window.SMA.getCpuProfile().label : "");
         }
     }
     // HUD陦ｨ遉ｺ蛻ｶ蠕｡
@@ -437,7 +437,7 @@ window.SMA.bootGame = function () {
     if (matchTimerEl) { matchTimerEl.style.display = 'block'; matchTimerEl.innerText = window.SMA.formatMatchTimer(); matchTimerEl.classList.remove('sudden-death'); }
     window.SMA.camera.x = mainPlat.x + mainPlat.w / 2; window.SMA.camera.y = mainPlat.y - 200; window.SMA.gameLoop();
 };
-window.SMA.updateCPU = function (cpu, targets) {
+window.SMA.updateCPULegacy = function (cpu, targets) {
     // 譛繧りｿ代＞謨ｵ繧偵ち繝ｼ繧ｲ繝・ヨ縺ｫ
     var target = targets[0];
     var minDist = Infinity;
@@ -448,6 +448,104 @@ window.SMA.updateCPU = function (cpu, targets) {
     }
     if (!target) target = targets[0];
     var inp = { left: false, right: false, up: false, down: false, shield: false }; if (cpu.actionState !== 'DEAD' && cpu.actionState !== 'RESPAWN') { var dx = target.x - cpu.x; var dist = Math.abs(dx); if (Math.abs(dx) > 200) { if (dx > 0) inp.right = true; else inp.left = true; } if (cpu.y > window.SMA.platforms[0].y && cpu.jumps < 2 && Math.random() < 0.1) cpu.triggerJump(inp); if (Math.abs(dx) < 300 && Math.random() < 0.05) { cpu.startCharge(); cpu.cpuTimer = 20; } if (cpu.cpuTimer > 0) { cpu.cpuTimer--; if (cpu.cpuTimer <= 0) cpu.releaseAttack('NEUTRAL'); } } cpu.update(inp, target);
+};
+window.SMA.updateCPU = function (cpu, targets) {
+    var S = window.SMA;
+    var profile = S.getCpuProfile ? S.getCpuProfile() : { thinkInterval: 8, moveDeadzone: 170, pursueChance: 0.94, jumpChance: 0.11, attackChance: 0.052, grabChance: 0.008, dodgeChance: 0.004, chargeFrames: 21, attackRange: 320, recoverJumpChance: 0.16, ledgeActionDelay: 45 };
+    var target = targets[0];
+    var minScore = Infinity;
+    for (var ti = 0; ti < targets.length; ti++) {
+        var candidate = targets[ti];
+        if (candidate === cpu || !candidate || candidate.stocks <= 0) continue;
+        var dx0 = (candidate.x + candidate.w / 2) - (cpu.x + cpu.w / 2);
+        var dy0 = (candidate.y + candidate.h / 2) - (cpu.y + cpu.h / 2);
+        var score = Math.abs(dx0) + Math.abs(dy0) * 0.35;
+        if (score < minScore) { minScore = score; target = candidate; }
+    }
+    if (!target) target = targets[0];
+
+    var inp = { left: false, right: false, up: false, down: false, shield: false };
+    if (cpu.actionState === 'DEAD' || cpu.actionState === 'RESPAWN') {
+        cpu.update(inp, target);
+        return;
+    }
+
+    var mainPlat = S.platforms && S.platforms[0];
+    var cx = cpu.x + cpu.w / 2;
+    var tx = target ? target.x + target.w / 2 : cx;
+    var ty = target ? target.y + target.h / 2 : cpu.y;
+    var dx = tx - cx;
+    var dy = ty - (cpu.y + cpu.h / 2);
+    var dist = Math.sqrt(dx * dx + dy * dy);
+    var maxJumps = (S.CHAR_DATA[cpu.charId] && S.CHAR_DATA[cpu.charId].maxJumps) || 2;
+    var offstage = !!(mainPlat && (cx < mainPlat.x + 35 || cx > mainPlat.x + mainPlat.w - 35 || cpu.y > mainPlat.y - 25));
+
+    cpu.cpuThinkTimer = (cpu.cpuThinkTimer || 0) - 1;
+    if (cpu.cpuThinkTimer <= 0 || !cpu.cpuIntent) {
+        cpu.cpuThinkTimer = profile.thinkInterval;
+        cpu.cpuIntent = {
+            chase: Math.random() < profile.pursueChance,
+            attack: Math.random() < profile.attackChance,
+            grab: Math.random() < profile.grabChance,
+            dodge: Math.random() < profile.dodgeChance
+        };
+    }
+
+    if (offstage && mainPlat) {
+        var homeX = cx;
+        if (cx < mainPlat.x + 70) homeX = mainPlat.x + 135;
+        else if (cx > mainPlat.x + mainPlat.w - 70) homeX = mainPlat.x + mainPlat.w - 135;
+        else homeX = Math.max(mainPlat.x + 110, Math.min(mainPlat.x + mainPlat.w - 110, tx));
+        var homeDx = homeX - cx;
+        if (homeDx > 18) inp.right = true;
+        else if (homeDx < -18) inp.left = true;
+        if (cpu.vy > -1 && cpu.jumps < maxJumps && Math.random() < profile.recoverJumpChance) {
+            cpu.triggerJump(inp);
+        } else if (cpu.y > mainPlat.y + 45 && Math.random() < profile.recoverJumpChance * 0.55) {
+            cpu.releaseAttack('UP');
+        }
+    } else if (cpu.actionState === 'LEDGE') {
+        if ((cpu.stateTimer || 0) > profile.ledgeActionDelay) {
+            inp.up = true;
+            cpu.triggerJump(inp);
+        }
+    } else {
+        if (cpu.cpuIntent.chase && Math.abs(dx) > profile.moveDeadzone) {
+            if (dx > 0) inp.right = true;
+            else inp.left = true;
+        }
+        if (dy < -115 && cpu.jumps < maxJumps && Math.random() < profile.jumpChance) {
+            cpu.triggerJump(inp);
+        }
+        if (target && dist < profile.attackRange && cpu.actionState === 'IDLE') {
+            cpu.facingRight = dx >= 0;
+            if (cpu.cpuIntent.grab && cpu.isGrounded && Math.abs(dx) < 92) {
+                cpu.tryGrab(target);
+                cpu.cpuIntent.grab = false;
+            } else if (cpu.cpuIntent.dodge && Math.abs(dx) < 140) {
+                inp.shield = true;
+                cpu.performDodge(inp);
+                cpu.cpuIntent.dodge = false;
+            } else if (cpu.cpuIntent.attack) {
+                var absDx = Math.abs(dx);
+                var type = 'NEUTRAL';
+                if (dy < -65) type = 'UP';
+                else if (dy > 95) type = 'DOWN';
+                else if (absDx > 115) type = 'SIDE';
+                cpu.startCharge(inp);
+                cpu.cpuTimer = Math.max(1, profile.chargeFrames + Math.floor(Math.random() * Math.max(1, profile.thinkInterval)));
+                cpu.cpuAttackType = type;
+                cpu.cpuIntent.attack = false;
+            }
+        }
+    }
+
+    if (cpu.cpuTimer > 0) {
+        cpu.cpuTimer--;
+        if (target) cpu.facingRight = ((target.x + target.w / 2) >= (cpu.x + cpu.w / 2));
+        if (cpu.cpuTimer <= 0) cpu.releaseAttack(cpu.cpuAttackType || 'NEUTRAL');
+    }
+    cpu.update(inp, target);
 };
 window.SMA.gameLoop = function () {
     if (!window.SMA.gameRunning) return;

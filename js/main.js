@@ -51,6 +51,35 @@ window.SMA.myStageId = 'battlefield';
 window.SMA.p1Stage = 'battlefield'; window.SMA.p2Stage = 'battlefield'; window.SMA.p3Stage = 'battlefield'; window.SMA.p4Stage = 'battlefield';
 window.SMA.p1StageReady = false; window.SMA.p2StageReady = false; window.SMA.p3StageReady = false; window.SMA.p4StageReady = false;
 window.SMA.selectedStage = 'battlefield';
+window.SMA.cpuLevel = 3;
+window.SMA.CPU_LEVELS = [
+    { level: 1, label: 'Lv.1', name: 'Easy', thinkInterval: 18, moveDeadzone: 260, pursueChance: 0.72, jumpChance: 0.045, attackChance: 0.012, grabChance: 0.002, dodgeChance: 0.001, chargeFrames: 10, attackRange: 230, recoverJumpChance: 0.05, ledgeActionDelay: 95 },
+    { level: 2, label: 'Lv.2', name: 'Normal', thinkInterval: 12, moveDeadzone: 220, pursueChance: 0.84, jumpChance: 0.075, attackChance: 0.028, grabChance: 0.004, dodgeChance: 0.002, chargeFrames: 16, attackRange: 275, recoverJumpChance: 0.10, ledgeActionDelay: 70 },
+    { level: 3, label: 'Lv.3', name: 'Hard', thinkInterval: 8, moveDeadzone: 170, pursueChance: 0.94, jumpChance: 0.11, attackChance: 0.052, grabChance: 0.008, dodgeChance: 0.004, chargeFrames: 21, attackRange: 320, recoverJumpChance: 0.16, ledgeActionDelay: 45 },
+    { level: 4, label: 'Lv.4', name: 'Expert', thinkInterval: 5, moveDeadzone: 130, pursueChance: 0.98, jumpChance: 0.15, attackChance: 0.082, grabChance: 0.014, dodgeChance: 0.007, chargeFrames: 27, attackRange: 360, recoverJumpChance: 0.23, ledgeActionDelay: 24 },
+    { level: 5, label: 'Lv.5', name: 'Master', thinkInterval: 3, moveDeadzone: 95, pursueChance: 1.0, jumpChance: 0.20, attackChance: 0.118, grabChance: 0.022, dodgeChance: 0.011, chargeFrames: 34, attackRange: 405, recoverJumpChance: 0.32, ledgeActionDelay: 10 }
+];
+
+window.SMA.getCpuProfile = function () {
+    var lvl = Math.max(1, Math.min(5, parseInt(window.SMA.cpuLevel, 10) || 3));
+    return window.SMA.CPU_LEVELS[lvl - 1] || window.SMA.CPU_LEVELS[2];
+};
+
+window.SMA.updateCpuLevelUi = function () {
+    var profile = window.SMA.getCpuProfile();
+    var label = document.getElementById('cpu-level-label');
+    if (label) label.innerText = profile.label + ' ' + profile.name;
+    document.querySelectorAll('.cpu-level-btn').forEach(function (btn) {
+        btn.classList.toggle('selected', parseInt(btn.getAttribute('data-cpu-level'), 10) === profile.level);
+    });
+};
+
+window.SMA.setCpuLevel = function (level) {
+    var next = Math.max(1, Math.min(5, parseInt(level, 10) || 3));
+    window.SMA.cpuLevel = next;
+    try { localStorage.setItem('sma_cpu_level', String(next)); } catch (e) { }
+    window.SMA.updateCpuLevelUi();
+};
 
 window.SMA.audioCtx = null; window.SMA.soundEnabled = false; window.SMA.audioUnlocked = false; window.SMA.audioUnlockBound = false;
 window.SMA.angelChargeVisualDelay = 10;

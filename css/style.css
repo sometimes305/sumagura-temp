@@ -1081,6 +1081,57 @@ select {
     transform: scale(1.08);
 }
 
+.cpu-level-panel {
+    width: calc(100% - 24px);
+    max-width: 520px;
+    margin: 12px auto 2px;
+    padding: 10px 12px;
+    background: rgba(255, 255, 255, 0.88);
+    border: 3px solid #222;
+    border-radius: 8px;
+    box-shadow: 0 4px 0 #bbb, 0 6px 10px rgba(0, 0, 0, 0.14);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    box-sizing: border-box;
+}
+
+.cpu-level-title {
+    font-size: 13px;
+    font-weight: 900;
+    color: #222;
+    letter-spacing: 1px;
+}
+
+.cpu-level-buttons {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.cpu-level-btn {
+    width: 36px;
+    height: 34px;
+    padding: 0;
+    border: 3px solid #222;
+    border-radius: 7px;
+    background: #f8f9fa;
+    color: #222;
+    font-size: 15px;
+    font-weight: 900;
+    cursor: pointer;
+    box-shadow: 0 3px 0 #999;
+}
+
+.cpu-level-btn.selected {
+    background: #f1c40f;
+    border-color: #222;
+    box-shadow: 0 3px 0 #b58105, 0 0 14px rgba(241, 196, 15, 0.45);
+    transform: translateY(-2px);
+}
+
 .char-card .icon {
     font-size: 34px;
     margin-bottom: 3px;

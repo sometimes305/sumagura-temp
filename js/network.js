@@ -1235,6 +1235,9 @@ window.SMA.showHubSelectPanel = function () {
     // バグ5: 「ステージ選択へ進む」ボタンを非表示にする
     var gotoBtn = document.getElementById('btn-goto-sss');
     if (gotoBtn) gotoBtn.style.display = 'none';
+    var cpuPanel = document.getElementById('cpu-level-panel');
+    if (cpuPanel) cpuPanel.style.display = window.SMA.isOnline ? 'none' : 'flex';
+    if (window.SMA.updateCpuLevelUi) window.SMA.updateCpuLevelUi();
 
     window.SMA.amIReady = false;
     window.SMA.pendingHubReady = null;
